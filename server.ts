@@ -1,6 +1,7 @@
 import { createYoga, createPubSub } from 'graphql-yoga';
 import { createServer } from 'node:http';
 import { v4 as uuidv4 } from 'uuid';
+import { makeExecutableSchema } from '@graphql-tools/schema';
 
 // TODO: more sophisticated storage
 interface Roll {
@@ -77,7 +78,7 @@ const resolvers = {
             };
 
             rolls.push(newRoll);
-            pubsub.publish('ROLL_ADDED', newRoll); // Publish the new roll
+            pubsub.publish('ROLL_ADDED', newRoll);
 
             console.log(`Rolled dice: ${expression} for user ${user}. Result: ${result}`);
 
@@ -87,16 +88,18 @@ const resolvers = {
     Subscription: {
         rollAdded: {
             subscribe: () => pubsub.subscribe('ROLL_ADDED'),
-            resolve: (payload: any) => payload, // Payload is the new roll
+            resolve: (payload: any) => payload,
         },
     },
 };
 
+const schema = makeExecutableSchema({
+    typeDefs,
+    resolvers,
+});
+
 const yoga = createYoga({
-    schema: {
-        typeDefs,
-        resolvers,
-    },
+    schema,
     graphqlEndpoint: '/dice/graphql',
 });
 
