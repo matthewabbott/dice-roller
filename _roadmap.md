@@ -12,7 +12,7 @@ Set up the foundational structure and dependencies for the project.
 - **Commit 1.3:** Install necessary dependencies.
   - Install required libraries:
     ```bash
-    npm install tailwindcss postcss autoprefixer @apollo/client graphql graphql-yoga @react-three/fiber @react-three/drei three
+    npm install tailwindcss@3.4.16 postcss autoprefixer @apollo/client graphql graphql-yoga @react-three/fiber @react-three/drei three
     npm install -D concurrently
     ```
 
