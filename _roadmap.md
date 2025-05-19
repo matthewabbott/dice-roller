@@ -51,7 +51,7 @@ Establish a GraphQL server to handle real-time dice rolling and chat functionali
   - Update `package.json` with:
     ```json
     "scripts": {
-      "server": "ts-node server.ts"
+      "server": <command to run the server>
     }
     ```
 
@@ -84,7 +84,7 @@ Integrate the front-end with the GraphQL server for real-time updates.
   - Add Apollo Client setup in `src/main.tsx`.
 
 - **Commit 4.2:** Configure Apollo Client to connect to the GraphQL server.
-  - Point Apollo Client to `http://localhost:4000/graphql` in `src/main.tsx`.
+  - Point Apollo Client to `http://localhost:4000/dice/graphql` in `src/main.tsx`.
 
 - **Commit 4.3:** Create GraphQL queries and mutations for dice rolling.
   - Add `src/graphql/dice.graphql` with roll-related operations.
@@ -185,7 +185,7 @@ Here’s the full roadmap wrapped in a single artifact for easy reference:
 - **Commit 2.4:** Set up the GraphQL server using graphql-yoga.  
   - Configure server in `server.ts`
 - **Commit 2.5:** Add a script to run the server.  
-  - Update `package.json` with `"server": "ts-node server.ts"`
+  - Update `package.json` with `"server": <server initialization command>`
 
 ## Feature 3: Basic UI Components
 - **Commit 3.1:** Create a basic layout component.  

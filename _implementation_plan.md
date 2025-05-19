@@ -141,7 +141,7 @@ The widget should enhance AlchemyRPG’s mission of making tabletop RPGs effortl
     import { getMainDefinition } from '@apollo/client/utilities';
 
     const httpLink = new HttpLink({ uri: '/dice/graphql' });
-    const wsLink = new GraphQLWsLink(createClient({ url: 'ws://localhost:4000/graphql' }));
+    const wsLink = new GraphQLWsLink(createClient({ url: 'ws://localhost:4000/dice/graphql' }));
     const splitLink = split(
       ({ query }) => {
         const definition = getMainDefinition(query);
