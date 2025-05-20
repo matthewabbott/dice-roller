@@ -10,13 +10,13 @@ const staticRolls = [
 
 const RollLog: React.FC = () => {
     return (
-        <div className="p-4 bg-gray-800 rounded-md shadow-lg h-64 overflow-y-auto">
-            <h2 className="text-xl font-semibold text-white mb-3">Roll Log</h2>
-            <p className="text-sm text-gray-400 mb-2">(Displaying static example data)</p> {/* UI Note */}
-            <ul className="space-y-2 text-gray-300">
+        <div className="card h-64 overflow-y-auto">
+            <h2 className="text-xl font-semibold text-brand-text mb-3">Roll Log</h2>
+            <p className="text-sm text-brand-text-muted mb-2">(Displaying static example data)</p>
+            <ul className="space-y-2 text-brand-text-muted">
                 {staticRolls.map((roll) => (
-                    <li key={roll.id} className="bg-gray-700 p-2 rounded">
-                        <strong className="text-white">{roll.user}:</strong> Rolled {roll.expression} ({roll.rolls.join(', ')}) = {roll.result}
+                    <li key={roll.id} className="bg-brand-surface p-2 rounded">
+                        <strong className="text-brand-text">{roll.user}:</strong> Rolled {roll.expression} ({roll.rolls.join(', ')}) = {roll.result}
                     </li>
                 ))}
             </ul>

@@ -20,13 +20,13 @@ const DiceRoller: React.FC = () => {
     const commonDice = [4, 6, 8, 10, 12, 20];
 
     return (
-        <div className="p-4 bg-gray-700 rounded-md shadow-lg">
-            <h2 className="text-xl font-semibold text-white mb-3">Roll Dice</h2>
+        <div className="card">
+            <h2 className="text-xl font-semibold text-brand-text mb-3">Roll Dice</h2>
             <div className="flex space-x-2 mb-3">
                 {commonDice.map((die) => (
                     <button
                         key={die}
-                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                        className="btn-secondary px-3 py-1"
                         onClick={() => handleDieButtonClick(die)}
                     >
                         d{die}
@@ -36,13 +36,13 @@ const DiceRoller: React.FC = () => {
             <div className="flex space-x-2">
                 <input
                     type="text"
-                    className="flex-grow px-3 py-2 rounded bg-gray-800 text-white border border-gray-600 focus:outline-none focus:border-blue-500"
+                    className="input-field flex-grow"
                     placeholder="e.g., 2d6+3"
                     value={expression}
                     onChange={handleInputChange}
                 />
                 <button
-                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+                    className="btn-primary px-4 py-2"
                     onClick={handleRollClick}
                 >
                     Roll
