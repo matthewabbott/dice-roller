@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
+import { useMutation } from '@apollo/client';
+import { ROLL_DICE_MUTATION } from '../graphql/operations';
 
 const DiceRoller: React.FC = () => {
     const [expression, setExpression] = useState('');
+    const [rollDice, { data, loading, error }] = useMutation(ROLL_DICE_MUTATION);
 
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setExpression(event.target.value);
@@ -11,10 +14,21 @@ const DiceRoller: React.FC = () => {
         setExpression(`1d${dieType}`);
     };
 
-    const handleRollClick = () => {
-        // TODO: Implement GraphQL mutation (Feature 4)
-        console.log(`Rolling: ${expression}`);
-        setExpression(''); // Clear input after "rolling"
+    const handleRollClick = async () => {
+        if (!expression) return; // Don't roll if input is empty
+
+        try {
+            const result = await rollDice({
+                variables: {
+                    user: "UserX", // Placeholder: hardcoded user. TODO: fix this
+                    expression,
+                },
+            });
+            console.log('Mutation result:', result);
+            setExpression(''); // Clear input after rolling
+        } catch (err) {
+            console.error('Error rolling dice:', err);
+        }
     };
 
     const commonDice = [4, 6, 8, 10, 12, 20];
