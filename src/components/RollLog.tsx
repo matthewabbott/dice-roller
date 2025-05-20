@@ -13,14 +13,24 @@ interface Roll {
 const RollLog: React.FC = () => {
     const [rolls, setRolls] = useState<Roll[]>([]);
 
-    useSubscription(ROLL_ADDED_SUBSCRIPTION, {
-        onSubscriptionData: ({ subscriptionData }) => {
-            if (subscriptionData.data?.rollAdded) {
-                // Add new roll to the beginning of the array
+    const { data, loading, error } = useSubscription<{ rollAdded: Roll }>(ROLL_ADDED_SUBSCRIPTION, {
+        onData: ({ client, data: subscriptionData }) => {
+            console.log('Received subscription data:', subscriptionData);
+
+            if (subscriptionData?.data?.rollAdded) {
+                console.log('New roll from subscription:', subscriptionData.data.rollAdded);
                 setRolls(prevRolls => [subscriptionData.data.rollAdded, ...prevRolls]);
+            } else {
+                console.log('Subscription data received, but no rollAdded field:', subscriptionData?.data);
             }
         },
+        onError: (err) => {
+            console.error('Error in GraphQL subscription:', err);
+        }
     });
+
+    if (loading) console.log('Subscription loading...');
+    if (error) console.error('Subscription hook error object:', error);
 
     // (Debug) log rolls when changed
     // useEffect(() => {
