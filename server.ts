@@ -2,6 +2,8 @@ import { createYoga, createPubSub } from 'graphql-yoga';
 import { createServer } from 'node:http';
 import { v4 as uuidv4 } from 'uuid';
 import { makeExecutableSchema } from '@graphql-tools/schema';
+import { WebSocketServer } from 'ws';
+import { useServer } from 'graphql-ws/use/ws';
 
 // TODO: more sophisticated storage
 interface Roll {
@@ -105,6 +107,14 @@ const yoga = createYoga({
 
 // HTTP
 const server = createServer(yoga);
+
+// WebSocket
+const wsServer = new WebSocketServer({
+    server, // same HTTP server
+    path: '/dice/graphql',
+});
+
+useServer({ schema }, wsServer);
 
 server.listen(4000, () => {
     console.info('Server is running on http://localhost:4000/dice/graphql');
