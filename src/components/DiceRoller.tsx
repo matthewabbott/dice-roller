@@ -12,7 +12,18 @@ import { ROLL_DICE_MUTATION } from '../graphql/operations';
 const DiceRoller: React.FC = () => {
     const [expression, setExpression] = useState('');
     const [username, setUsername] = useState('Anonymous')
-    const [rollDice, { data, loading, error }] = useMutation(ROLL_DICE_MUTATION);
+    const [rollDice, { data, loading, error }] = useMutation(ROLL_DICE_MUTATION, {
+        onCompleted: (data) => {
+            console.log('Mutation completed:', data);
+            setExpression('');
+        },
+        onError: (apolloError) => {
+            // callback triggered by Apollo Client when the mutation results in an error (GraphQL or network)
+            console.error('useMutation onError callback:', apolloError);
+            // The 'error' state variable from the hook should get populated.
+            // The 'loading' state should automatically be set to false.
+        }
+    });
 
     const handleExpressionChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setExpression(event.target.value);
@@ -26,22 +37,18 @@ const DiceRoller: React.FC = () => {
         setExpression(`1d${dieType}`);
     };
 
-    const handleRollClick = async () => {
-        if (!expression) return; // Don't roll if expression input is empty
-        const userToRoll = username.trim() === '' ? 'Anonymous' : username; // Default to Anonymous if username is empty
+    const handleRollClick = () => {
+        if (!expression) return;
+        const userToRoll = username.trim() === '' ? 'Anonymous' : username;
 
-        try {
-            const result = await rollDice({
-                variables: {
-                    user: userToRoll,
-                    expression,
-                },
-            });
-            console.log('Mutation result:', result);
-            setExpression('');
-        } catch (err) {
-            console.error('Error rolling dice:', err);
-        }
+        // Client will handle loading, error, and onCompleted states.
+        rollDice({
+            variables: {
+                user: userToRoll,
+                expression,
+            },
+        });
+        // Omitting .then() or .catch() here. Relying on hook's state and callbacks.
     };
 
     const commonDice = [4, 6, 8, 10, 12, 20];
@@ -89,10 +96,13 @@ const DiceRoller: React.FC = () => {
                 <button
                     className="btn-primary px-4 py-2"
                     onClick={handleRollClick}
+                    disabled={loading}
                 >
-                    Roll
+                    {loading ? 'Rolling...' : 'Roll'}
                 </button>
             </div>
+            {loading && <p className="text-sm text-brand-text-muted mt-2">Rolling...</p>}
+            {error && <p className="text-sm text-brand-primary mt-2">Error rolling dice: {error.message}</p>}
         </div>
     );
 };
