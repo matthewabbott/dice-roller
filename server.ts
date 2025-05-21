@@ -42,15 +42,38 @@ const typeDefs = /* GraphQL */ `
 
 // Basic XdY dice parser
 function parseAndRoll(expression: string): { result: number; rolls: number[] } {
-    const match = expression.toLowerCase().match(/^(\d+)d(\d+)$/);
+    // Regex: capture number of dice (optional), 'd', and die type (ex: 10 = ten-sided die)
+    // Allows for "d6" (defaults to 1d6) or "2d6"
+    const match = expression.toLowerCase().match(/^(?:(\d+))?d(\d+)$/);
+
     if (!match) {
-        // TODO: more sophisticated error handling
-        console.error(`Invalid dice expression format: ${expression}`);
+        // TODO: more sophisticated error handling for various invalid formats
+        console.error(`Invalid dice expression format: ${expression}. Expected format like "XdY" or "dY".`);
         return { result: 0, rolls: [] };
     }
 
-    const numDice = parseInt(match[1], 10);
-    const dieType = parseInt(match[2], 10);
+    // match[1]: numDice (optional), match[2]: dieType
+    let numDice = match[1] ? parseInt(match[1], 10) : 1; // Default to 1 if not specified
+    let dieType = parseInt(match[2], 10);
+
+    const MAX_DICE = 10001; // Surely you don't need to roll more than 10000 dice...
+
+    if (numDice > MAX_DICE) {
+        console.warn(`User attempted to roll ${numDice}d${dieType}. Capping at ${MAX_DICE} dice.`);
+        numDice = MAX_DICE;
+    }
+
+    if (numDice <= 0) { // You have to roll at least one die. This makes you. (e.g. "0d6" becomes "1d6")
+        console.warn(`User attempted to roll ${numDice} dice. Defaulting to 1 die.`);
+        numDice = 1;
+    }
+
+    // dice can't have less than one side
+    if (dieType < 1) {
+        console.warn(`Invalid die type: ${dieType}. Defaulting to d1.`);
+        dieType = 1;
+    }
+
     const rolledResults: number[] = [];
     let totalResult = 0;
 
