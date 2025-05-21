@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useSubscription } from '@apollo/client';
 import { ROLL_ADDED_SUBSCRIPTION } from '../graphql/operations';
 
+// TODO: don't spam the chat on rolls with lots of dice (compress with, eg, collapsible, summary, histogram).
+// TODO: display how input was actually interpreted by the server if it was modified (e.g., '0d6' became '1d6'). Likely requires changing resolvers.
+
 interface Roll {
     id: string;
     user: string;

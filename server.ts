@@ -43,7 +43,7 @@ const typeDefs = /* GraphQL */ `
 // Basic XdY dice parser
 function parseAndRoll(expression: string): { result: number; rolls: number[] } {
     // Regex: capture number of dice (optional), 'd', and die type (ex: 10 = ten-sided die)
-    // Allows for "d6" (defaults to 1d6) or "2d6"
+    // Allows for, eg, "d6" (read as 1d6) or stuff like "3d77"
     const match = expression.toLowerCase().match(/^(?:(\d+))?d(\d+)$/);
 
     if (!match) {
@@ -92,6 +92,7 @@ const resolvers = {
     },
     Mutation: {
         rollDice: (_: any, { user, expression }: { user: string; expression: string }) => {
+            // TODO: server-side username sanitization (e.g., trim, check length, disallow certain characters).
             const { result, rolls: rolledResults } = parseAndRoll(expression);
 
             const newRoll: Roll = {
