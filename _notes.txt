@@ -1,4 +1,17 @@
 
+TODO:
+error handling on the client for requests that don't make it/get rejected
+roll-log todos
+3d stuff
+whatever else is in the roadmap
+polish
+
+Minor snag,
+- Add error handling, but useMutation hook's onError callback never gets reached
+- Seems like the browser was holding back the request in a `Stalled` state if the server was down
+- Apollo never interpreted that as an error, so we'd just be locked 
+- Solution: manually implement timeouts
+
 Major snag, fixed by e48bc33:
 - Needed to change server.ts to explicitly define a websocket server to handle requests against `ws://localhost:4000/dice/graphql`
 - Apollo documentation at https://www.apollographql.com/docs/apollo-server/data/subscriptions was out of date
