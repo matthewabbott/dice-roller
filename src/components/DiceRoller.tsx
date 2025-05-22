@@ -30,7 +30,19 @@ const DiceRoller: React.FC = () => {
     };
 
     const handleUsernameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setUsername(event.target.value);
+        let newUsername = event.target.value;
+
+        // Regex: Allow letters, numbers, spaces, and _'. -
+        //    Remove anything else
+        const allowedCharsRegex = /[^a-zA-Z0-9 _'.\-]/g;
+        newUsername = newUsername.replace(allowedCharsRegex, '');
+
+        const maxLength = 60;
+        if (newUsername.length > maxLength) {
+            newUsername = newUsername.slice(0, maxLength);
+        }
+
+        setUsername(newUsername);
     };
 
     const handleDieButtonClick = (dieType: number) => {
@@ -39,7 +51,8 @@ const DiceRoller: React.FC = () => {
 
     const handleRollClick = () => {
         if (!expression) return;
-        const userToRoll = username.trim() === '' ? 'Anonymous' : username;
+        const trimmedUsername = username.trim();
+        const userToRoll = trimmedUsername === '' ? 'Anonymous' : trimmedUsername;
 
         // Client will handle loading, error, and onCompleted states.
         rollDice({
