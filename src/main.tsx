@@ -9,9 +9,17 @@ import { createClient } from 'graphql-ws';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { ApolloProvider } from '@apollo/client';
 import TimeoutLink from 'apollo-link-timeout';
+import { getSessionId } from './utils/sessionId';
+
+// Get session ID for consistent identity across requests
+const sessionId = getSessionId();
+console.log('Using session ID:', sessionId);
 
 const httpLink = new HttpLink({
   uri: 'http://localhost:4000/dice/graphql',
+  headers: {
+    'x-session-id': sessionId
+  }
 });
 
 // Timeout link - e.g., 5 seconds (5000 milliseconds)
@@ -26,6 +34,9 @@ const httpLinkWithTimeout = from([timeoutLink as ApolloLink, httpLink]);
 const wsLink = new GraphQLWsLink(
   createClient({
     url: 'ws://localhost:4000/dice/graphql',
+    connectionParams: {
+      sessionId: sessionId
+    }
   })
 );
 
