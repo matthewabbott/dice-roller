@@ -95,12 +95,26 @@ const resolvers = {
     },
     Mutation: {
         rollDice: (_: any, { user, expression }: { user: string; expression: string }) => {
-            // TODO: server-side username sanitization (e.g., trim, check length, disallow certain characters).
+
+            let sanitizedUser = user.trim();
+            if (sanitizedUser === '') {
+                sanitizedUser = 'Anonymous';
+            }
+            const allowedCharsRegex = /[^a-zA-Z0-9 _'.\-]/g; // Escaped hyphen
+            sanitizedUser = sanitizedUser.replace(allowedCharsRegex, '');
+            const maxLength = 60;
+            if (sanitizedUser.length > maxLength) {
+                sanitizedUser = sanitizedUser.slice(0, maxLength);
+            }
+            if (sanitizedUser.trim() === '') {
+                sanitizedUser = 'Anonymous';
+            }
+
             const { result, rolls: rolledResults, interpretedExpression } = parseAndRoll(expression);
 
             const newRoll: Roll = {
                 id: uuidv4(),
-                user,
+                user: sanitizedUser,
                 expression,
                 interpretedExpression,
                 result,
@@ -110,7 +124,7 @@ const resolvers = {
             rolls.push(newRoll);
             pubsub.publish('ROLL_ADDED', newRoll);
 
-            console.log(`Rolled dice: ${expression} (interpreted as ${interpretedExpression}) for user ${user}. Result: ${result}`);
+            console.log(`Rolled dice: ${expression} (interpreted as ${interpretedExpression}) for user ${sanitizedUser}. Result: ${result}`);
 
             return newRoll;
         },
