@@ -1,29 +1,83 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useMutation } from '@apollo/client';
-import { ROLL_DICE_MUTATION } from '../graphql/operations';
+import { ROLL_DICE_MUTATION, REGISTER_USERNAME_MUTATION } from '../graphql/operations';
 
 // TODO: advanced user management stuff:
-// - enforce username uniqueness (except for "Anonymous").
 // - display a list of users in the lobby/room.
 // - show a message when a username changes. (resolver needed?)
 // - allow username color selection.
-// - username input sanitization.
 
 const DiceRoller: React.FC = () => {
     const [expression, setExpression] = useState('');
-    const [username, setUsername] = useState('Anonymous')
+    const [username, setUsername] = useState('Anonymous');
+    const [pendingUsername, setPendingUsername] = useState('');
+    const [isUsernameRegistered, setIsUsernameRegistered] = useState(true); // Anonymous is always registered
+    const [registrationMessage, setRegistrationMessage] = useState<string | null>(null);
+    const [registrationStatus, setRegistrationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+    const usernameDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+    // Roll dice mutatio
     const [rollDice, { data, loading, error }] = useMutation(ROLL_DICE_MUTATION, {
         onCompleted: (data) => {
-            console.log('Mutation completed:', data);
+            console.log('Roll mutation completed:', data);
             setExpression('');
         },
         onError: (apolloError) => {
-            // callback triggered by Apollo Client when the mutation results in an error (GraphQL or network)
-            console.error('useMutation onError callback:', apolloError);
-            // The 'error' state variable from the hook should get populated.
-            // The 'loading' state should automatically be set to false.
+            console.error('Roll mutation error:', apolloError);
         }
     });
+
+    const [registerUsername, { loading: registerLoading, error: registerError }] = useMutation(REGISTER_USERNAME_MUTATION, {
+        onCompleted: (data) => {
+            console.log('Username registration completed:', data);
+            const { success, username: registeredName, message } = data.registerUsername;
+
+            if (success) {
+                setUsername(registeredName || 'Anonymous');
+                setIsUsernameRegistered(true);
+                setRegistrationStatus('success');
+            } else {
+                setIsUsernameRegistered(false);
+                setRegistrationStatus('error');
+            }
+
+            setRegistrationMessage(message);
+        },
+        onError: (apolloError) => {
+            console.error('Username registration error:', apolloError);
+            setIsUsernameRegistered(false);
+            setRegistrationStatus('error');
+            setRegistrationMessage('Error registering username. Please try again.');
+        }
+    });
+
+    useEffect(() => {
+        if (pendingUsername && pendingUsername !== 'Anonymous' && pendingUsername !== username) {
+            if (usernameDebounceTimer.current) {
+                clearTimeout(usernameDebounceTimer.current);
+            }
+
+            setRegistrationStatus('loading');
+            setRegistrationMessage('Checking username availability...');
+
+            usernameDebounceTimer.current = setTimeout(() => {
+                attemptUsernameRegistration(pendingUsername);
+            }, 800); // 800ms debounce
+        }
+    }, [pendingUsername]);
+
+    const attemptUsernameRegistration = (usernameToRegister: string) => {
+        if (!usernameToRegister || usernameToRegister === '') {
+            usernameToRegister = 'Anonymous';
+        }
+
+        registerUsername({
+            variables: {
+                username: usernameToRegister
+            }
+        });
+    };
 
     const handleExpressionChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setExpression(event.target.value);
@@ -42,7 +96,18 @@ const DiceRoller: React.FC = () => {
             newUsername = newUsername.slice(0, maxLength);
         }
 
-        setUsername(newUsername);
+        setPendingUsername(newUsername);
+
+        // If switching to Anonymous, immediately set
+        if (newUsername === 'Anonymous') {
+            setUsername('Anonymous');
+            setIsUsernameRegistered(true);
+            setRegistrationStatus('success');
+            setRegistrationMessage('Using Anonymous name.');
+        } else {
+            // For non-Anonymous, mark as unregistered until confirmed
+            setIsUsernameRegistered(false);
+        }
     };
 
     const handleDieButtonClick = (dieType: number) => {
@@ -51,17 +116,28 @@ const DiceRoller: React.FC = () => {
 
     const handleRollClick = () => {
         if (!expression) return;
-        const trimmedUsername = username.trim();
-        const userToRoll = trimmedUsername === '' ? 'Anonymous' : trimmedUsername;
 
-        // Client will handle loading, error, and onCompleted states.
+        if (!isUsernameRegistered && username !== 'Anonymous') {
+            setRegistrationMessage('Please choose a valid username before rolling dice.');
+            return;
+        }
+
+
         rollDice({
             variables: {
-                user: userToRoll,
+                user: username,
                 expression,
             },
         });
-        // Omitting .then() or .catch() here. Relying on hook's state and callbacks.
+    };
+
+    const getRegistrationStatusColor = () => {
+        switch (registrationStatus) {
+            case 'success': return 'text-green-500';
+            case 'error': return 'text-red-500';
+            case 'loading': return 'text-yellow-500';
+            default: return 'text-brand-text-muted';
+        }
     };
 
     const commonDice = [4, 6, 8, 10, 12, 20];
@@ -69,19 +145,29 @@ const DiceRoller: React.FC = () => {
     return (
         <div className="card">
             <h2 className="text-xl font-semibold text-brand-text mb-3">Roll Dice</h2>
+
             {/* Username Input */}
             <div className="mb-3">
                 <label htmlFor="username" className="block text-sm font-medium text-brand-text-muted mb-1">
                     Username
                 </label>
-                <input
-                    type="text"
-                    id="username"
-                    className="input-field w-full"
-                    placeholder="Enter your name"
-                    value={username}
-                    onChange={handleUsernameChange}
-                />
+                <div className="space-y-1">
+                    <input
+                        type="text"
+                        id="username"
+                        className={`input-field w-full ${!isUsernameRegistered && username !== 'Anonymous' ? 'border-red-500' : ''}`}
+                        placeholder="Enter your name"
+                        value={pendingUsername || username}
+                        onChange={handleUsernameChange}
+                        disabled={registerLoading}
+                    />
+                    {registrationMessage && (
+                        <p className={`text-xs ${getRegistrationStatusColor()}`}>
+                            {registrationStatus === 'loading' && <span className="inline-block animate-pulse mr-1">⋯</span>}
+                            {registrationMessage}
+                        </p>
+                    )}
+                </div>
             </div>
 
             {/* Dice Buttons */}
@@ -109,7 +195,7 @@ const DiceRoller: React.FC = () => {
                 <button
                     className="btn-primary px-4 py-2"
                     onClick={handleRollClick}
-                    disabled={loading}
+                    disabled={loading || (!isUsernameRegistered && username !== 'Anonymous')}
                 >
                     {loading ? 'Rolling...' : 'Roll'}
                 </button>
