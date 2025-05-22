@@ -9,6 +9,7 @@ interface Roll {
     id: string;
     user: string;
     expression: string;
+    interpretedExpression: string;
     result: number;
     rolls: number[];
 }
@@ -17,12 +18,11 @@ const RollLog: React.FC = () => {
     const [rolls, setRolls] = useState<Roll[]>([]);
 
     const { data, loading, error } = useSubscription<{ rollAdded: Roll }>(ROLL_ADDED_SUBSCRIPTION, {
-        onData: ({ client, data: subscriptionData }) => {
-            console.log('Received subscription data:', subscriptionData);
-
-            if (subscriptionData?.data?.rollAdded) {
-                console.log('New roll from subscription:', subscriptionData.data.rollAdded);
-                setRolls(prevRolls => [subscriptionData.data.rollAdded, ...prevRolls]);
+        onData: ({ data: subscriptionData }) => {
+            const newRoll = subscriptionData?.data?.rollAdded;
+            if (newRoll) {
+                console.log('New roll from subscription:', newRoll);
+                setRolls(prevRolls => [newRoll, ...prevRolls]);
             } else {
                 console.log('Subscription data received, but no rollAdded field:', subscriptionData?.data);
             }
@@ -46,7 +46,14 @@ const RollLog: React.FC = () => {
             <ul className="space-y-2 text-brand-text-muted">
                 {rolls.map((roll) => (
                     <li key={roll.id} className="bg-brand-surface p-2 rounded">
-                        <strong className="text-brand-text">{roll.user}:</strong> Rolled {roll.expression} ({roll.rolls.join(', ')}) = {roll.result}
+                        <strong className="text-brand-text">{roll.user}:</strong> Rolled {roll.expression}
+                        {roll.interpretedExpression && roll.interpretedExpression !== "invalid" && roll.expression !== roll.interpretedExpression && (
+                            <span className="text-brand-text-muted"> (interpreted as {roll.interpretedExpression})</span>
+                        )}
+                        {roll.interpretedExpression === "invalid" && (
+                            <span className="text-brand-error"> (invalid expression)</span>
+                        )}
+                        {' '}({roll.rolls.join(', ')}) = {roll.result}
                     </li>
                 ))}
                 {rolls.length === 0 && ( // Display message if no rolls yet

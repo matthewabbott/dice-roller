@@ -6,6 +6,7 @@ export const ROLL_DICE_MUTATION = gql`
       id
       user
       expression
+      interpretedExpression
       result
       rolls
     }
@@ -18,6 +19,7 @@ export const ROLL_ADDED_SUBSCRIPTION = gql`
       id
       user
       expression
+      interpretedExpression
       result
       rolls
     }
@@ -31,6 +33,7 @@ export const GET_ROLLS_QUERY = gql`
       id
       user
       expression
+      interpretedExpression
       result
       rolls
     }

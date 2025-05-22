@@ -10,6 +10,7 @@ interface Roll {
     id: string;
     user: string;
     expression: string;
+    interpretedExpression: string;
     result: number;
     rolls: number[];
 }
@@ -23,6 +24,7 @@ const typeDefs = /* GraphQL */ `
     id: ID!
     user: String!
     expression: String!
+    interpretedExpression: String!
     result: Int!
     rolls: [Int!]!
   }
@@ -41,7 +43,7 @@ const typeDefs = /* GraphQL */ `
 `;
 
 // Basic XdY dice parser
-function parseAndRoll(expression: string): { result: number; rolls: number[] } {
+function parseAndRoll(expression: string): { result: number; rolls: number[]; interpretedExpression: string } {
     // Regex: capture number of dice (optional), 'd', and die type (ex: 10 = ten-sided die)
     // Allows for, eg, "d6" (read as 1d6) or stuff like "3d77"
     const match = expression.toLowerCase().match(/^(?:(\d+))?d(\d+)$/);
@@ -49,7 +51,7 @@ function parseAndRoll(expression: string): { result: number; rolls: number[] } {
     if (!match) {
         // TODO: more sophisticated error handling for various invalid formats
         console.error(`Invalid dice expression format: ${expression}. Expected format like "XdY" or "dY".`);
-        return { result: 0, rolls: [] };
+        return { result: 0, rolls: [], interpretedExpression: "invalid" };
     }
 
     // match[1]: numDice (optional), match[2]: dieType
@@ -74,6 +76,7 @@ function parseAndRoll(expression: string): { result: number; rolls: number[] } {
         dieType = 1;
     }
 
+    const interpretedExpressionString = `${numDice}d${dieType}`;
     const rolledResults: number[] = [];
     let totalResult = 0;
 
@@ -83,7 +86,7 @@ function parseAndRoll(expression: string): { result: number; rolls: number[] } {
         totalResult += roll;
     }
 
-    return { result: totalResult, rolls: rolledResults };
+    return { result: totalResult, rolls: rolledResults, interpretedExpression: interpretedExpressionString };
 }
 
 const resolvers = {
@@ -93,12 +96,13 @@ const resolvers = {
     Mutation: {
         rollDice: (_: any, { user, expression }: { user: string; expression: string }) => {
             // TODO: server-side username sanitization (e.g., trim, check length, disallow certain characters).
-            const { result, rolls: rolledResults } = parseAndRoll(expression);
+            const { result, rolls: rolledResults, interpretedExpression } = parseAndRoll(expression);
 
             const newRoll: Roll = {
                 id: uuidv4(),
                 user,
                 expression,
+                interpretedExpression,
                 result,
                 rolls: rolledResults,
             };
@@ -106,7 +110,7 @@ const resolvers = {
             rolls.push(newRoll);
             pubsub.publish('ROLL_ADDED', newRoll);
 
-            console.log(`Rolled dice: ${expression} for user ${user}. Result: ${result}`);
+            console.log(`Rolled dice: ${expression} (interpreted as ${interpretedExpression}) for user ${user}. Result: ${result}`);
 
             return newRoll;
         },

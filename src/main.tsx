@@ -21,7 +21,6 @@ const timeoutLink = new TimeoutLink(5000);
 // timeoutLink is cast because its type definitions (Observable<unknown>)
 // are not directly compatible with Apollo Client 3's expected Link types (Observable<FetchResult>).
 // so not ideal... but works for now
-// TODO: update to Apollo Client 4
 const httpLinkWithTimeout = from([timeoutLink as ApolloLink, httpLink]);
 
 const wsLink = new GraphQLWsLink(
