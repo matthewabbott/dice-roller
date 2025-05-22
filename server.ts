@@ -15,6 +15,16 @@ interface Roll {
     rolls: number[];
 }
 
+interface UserContext {
+    connectionId: string;
+    getUsername: () => string | undefined;
+    setUsername: (username: string) => void;
+    clearUsername: () => void;
+}
+
+const activeUsernames = new Set<string>();
+const connectionToUsername = new Map<string, string>();
+
 const rolls: Roll[] = [];
 
 const pubsub = createPubSub();
@@ -29,18 +39,47 @@ const typeDefs = /* GraphQL */ `
     rolls: [Int!]!
   }
 
+  type RegisterUsernameResponse {
+    success: Boolean!
+    username: String
+    message: String
+  }
+
   type Query {
     rolls: [Roll!]!
   }
 
   type Mutation {
     rollDice(user: String!, expression: String!): Roll!
+    registerUsername(username: String!): RegisterUsernameResponse!
   }
 
   type Subscription {
     rollAdded: Roll!
   }
 `;
+
+function sanitizeUsername(username: string): string {
+    let sanitizedUser = username.trim();
+    if (sanitizedUser === '') {
+        return 'Anonymous';
+    }
+
+    const allowedCharsRegex = /[^a-zA-Z0-9 _'.\-]/g; // Escaped hyphen
+    sanitizedUser = sanitizedUser.replace(allowedCharsRegex, '');
+
+    const maxLength = 60;
+    if (sanitizedUser.length > maxLength) {
+        sanitizedUser = sanitizedUser.slice(0, maxLength);
+    }
+
+    // If after all sanitization, username is empty, default to Anonymous
+    if (sanitizedUser.trim() === '') {
+        return 'Anonymous';
+    }
+
+    return sanitizedUser;
+}
 
 // Basic XdY dice parser
 function parseAndRoll(expression: string): { result: number; rolls: number[]; interpretedExpression: string } {
@@ -94,21 +133,8 @@ const resolvers = {
         rolls: () => rolls,
     },
     Mutation: {
-        rollDice: (_: any, { user, expression }: { user: string; expression: string }) => {
-
-            let sanitizedUser = user.trim();
-            if (sanitizedUser === '') {
-                sanitizedUser = 'Anonymous';
-            }
-            const allowedCharsRegex = /[^a-zA-Z0-9 _'.\-]/g; // Escaped hyphen
-            sanitizedUser = sanitizedUser.replace(allowedCharsRegex, '');
-            const maxLength = 60;
-            if (sanitizedUser.length > maxLength) {
-                sanitizedUser = sanitizedUser.slice(0, maxLength);
-            }
-            if (sanitizedUser.trim() === '') {
-                sanitizedUser = 'Anonymous';
-            }
+        rollDice: (_: any, { user, expression }: { user: string; expression: string }, context: UserContext) => {
+            let sanitizedUser = sanitizeUsername(user);
 
             const { result, rolls: rolledResults, interpretedExpression } = parseAndRoll(expression);
 
@@ -128,6 +154,44 @@ const resolvers = {
 
             return newRoll;
         },
+        registerUsername: (_: any, { username }: { username: string }, context: UserContext) => {
+            const sanitizedUsername = sanitizeUsername(username);
+
+            const currentUsername = context.getUsername();
+
+            if (currentUsername && currentUsername !== 'Anonymous') {
+                activeUsernames.delete(currentUsername);
+                console.log(`User changed name from '${currentUsername}' to '${sanitizedUsername}'`);
+            }
+
+            if (sanitizedUsername === 'Anonymous') {
+                context.setUsername('Anonymous');
+                return {
+                    success: true,
+                    username: 'Anonymous',
+                    message: 'Registered as Anonymous.'
+                };
+            }
+
+            if (activeUsernames.has(sanitizedUsername)) {
+                return {
+                    success: false,
+                    username: null,
+                    message: `Username '${sanitizedUsername}' is already taken.`
+                };
+            }
+
+            activeUsernames.add(sanitizedUsername);
+            context.setUsername(sanitizedUsername);
+
+            console.log(`User registered with username: ${sanitizedUsername}`);
+
+            return {
+                success: true,
+                username: sanitizedUsername,
+                message: 'Username registered successfully.'
+            };
+        }
     },
     Subscription: {
         rollAdded: {
@@ -142,9 +206,30 @@ const schema = makeExecutableSchema({
     resolvers,
 });
 
+function createUserContext(connectionId: string): UserContext {
+    return {
+        connectionId,
+        getUsername: () => connectionToUsername.get(connectionId),
+        setUsername: (username: string) => {
+            connectionToUsername.set(connectionId, username);
+        },
+        clearUsername: () => {
+            const username = connectionToUsername.get(connectionId);
+            if (username && username !== 'Anonymous') {
+                activeUsernames.delete(username);
+            }
+            connectionToUsername.delete(connectionId);
+        }
+    };
+}
+
 const yoga = createYoga({
     schema,
     graphqlEndpoint: '/dice/graphql',
+    context: ({ request }) => {
+        const connectionId = uuidv4();
+        return createUserContext(connectionId);
+    }
 });
 
 // HTTP
@@ -156,7 +241,28 @@ const wsServer = new WebSocketServer({
     path: '/dice/graphql',
 });
 
-useServer({ schema }, wsServer);
+useServer({
+    schema,
+    context: (ctx) => {
+        const connectionId = uuidv4();
+        console.log(`New WebSocket connection established with ID: ${connectionId}`);
+        return createUserContext(connectionId);
+    },
+    onDisconnect: (ctx, code, reason) => {
+        // Access the context directly from the ctx object
+        // TODO: check if this is right for this ver of graphql-ws
+        if (ctx.extra && ctx.extra.context) {
+            const context = ctx.extra.context as UserContext;
+            const username = context.getUsername();
+            if (username && username !== 'Anonymous') {
+                console.log(`User '${username}' disconnected. Removing from active usernames.`);
+                activeUsernames.delete(username);
+            }
+            connectionToUsername.delete(context.connectionId);
+            console.log(`WebSocket connection ${context.connectionId} disconnected. Code: ${code}, Reason: ${reason}`);
+        }
+    }
+}, wsServer);
 
 server.listen(4000, () => {
     console.info('Server is running on http://localhost:4000/dice/graphql');
