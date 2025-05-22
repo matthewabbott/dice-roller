@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
@@ -11,7 +11,6 @@ import { ApolloProvider } from '@apollo/client';
 import TimeoutLink from 'apollo-link-timeout';
 import { getSessionId } from './utils/sessionId';
 
-// Get session ID for consistent identity across requests
 const sessionId = getSessionId();
 console.log('Using session ID:', sessionId);
 
@@ -31,14 +30,27 @@ const timeoutLink = new TimeoutLink(5000);
 // so not ideal... but works for now
 const httpLinkWithTimeout = from([timeoutLink as ApolloLink, httpLink]);
 
-const wsLink = new GraphQLWsLink(
-  createClient({
-    url: 'ws://localhost:4000/dice/graphql',
-    connectionParams: {
-      sessionId: sessionId
-    }
-  })
-);
+const wsClient = createClient({
+  url: 'ws://localhost:4000/dice/graphql',
+  connectionParams: {
+    sessionId: sessionId
+  },
+  keepAlive: 10000,
+});
+
+const wsLink = new GraphQLWsLink(wsClient);
+
+window.addEventListener('beforeunload', (event) => {
+  console.log('Tab is closing, cleaning up WebSocket connection...');
+
+  if (wsClient) {
+    wsClient.dispose();
+    console.log('WebSocket connection disposed');
+  }
+
+  event.preventDefault();
+  event.returnValue = '';
+});
 
 // Queries/mutations to HTTP endpoint (with timeout), subscriptions to WebSocket
 const splitLink = split(
@@ -58,10 +70,24 @@ const client = new ApolloClient({
   cache: new InMemoryCache(),
 });
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ApolloProvider client={client}>
-      <App />
-    </ApolloProvider>
-  </StrictMode>
-);
+
+function AppWrapper() {
+  useEffect(() => {
+    return () => {
+      console.log('App component unmounting, cleaning up connections...');
+      if (wsClient) {
+        wsClient.dispose();
+      }
+    };
+  }, []);
+
+  return (
+    <StrictMode>
+      <ApolloProvider client={client}>
+        <App />
+      </ApolloProvider>
+    </StrictMode>
+  );
+}
+
+createRoot(document.getElementById('root')!).render(<AppWrapper />);

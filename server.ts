@@ -24,8 +24,6 @@ interface UserContext {
 
 const activeUsernames = new Set<string>();
 const sessionToUsername = new Map<string, string>();
-
-// Store mapping from username to sessionId for cleanup
 const usernameToSession = new Map<string, string>();
 
 const rolls: Roll[] = [];
@@ -162,17 +160,16 @@ const resolvers = {
             const sessionId = context.sessionId;
             console.log(`Session ${sessionId} attempting to register username: ${sanitizedUsername}`);
 
-            // Get current username for this session
             const currentUsername = context.getUsername();
 
-            // If user already has a registered non-Anonymous username, remove it from active list
+            // if user already has a registered non-Anonymous username, unregister
             if (currentUsername && currentUsername !== 'Anonymous') {
                 console.log(`Session ${sessionId} changing name from '${currentUsername}' to '${sanitizedUsername}'`);
                 activeUsernames.delete(currentUsername);
                 usernameToSession.delete(currentUsername);
             }
 
-            // If registering as Anonymous, always allow
+            // ff registering as Anonymous, always allow
             if (sanitizedUsername === 'Anonymous') {
                 context.setUsername('Anonymous');
                 return {
@@ -182,11 +179,11 @@ const resolvers = {
                 };
             }
 
-            // Check if username is taken by another session
+            // check if username is taken by another session
             if (activeUsernames.has(sanitizedUsername)) {
                 const existingSessionId = usernameToSession.get(sanitizedUsername);
 
-                // If the same session is re-registering the same name, allow it
+                // if the same session is re-registering the same name, allow it
                 if (existingSessionId === sessionId) {
                     console.log(`Session ${sessionId} reaffirming username: ${sanitizedUsername}`);
                     return {
@@ -204,7 +201,6 @@ const resolvers = {
                 };
             }
 
-            // Register the new username
             activeUsernames.add(sanitizedUsername);
             context.setUsername(sanitizedUsername);
             usernameToSession.set(sanitizedUsername, sessionId);
@@ -270,26 +266,70 @@ const wsServer = new WebSocketServer({
     path: '/dice/graphql',
 });
 
+// Enhance WebSocketServer with connection tracking
+const activeSessions = new Set<string>();
+
+wsServer.on('connection', (socket, request) => {
+    console.log(`Raw WebSocket connection received. Total connections: ${wsServer.clients.size}`);
+
+    socket.on('close', (code, reason) => {
+        console.log(`Raw WebSocket close event. Code: ${code}, Reason: ${Buffer.from(reason).toString()}`);
+        console.log(`Remaining connections: ${wsServer.clients.size}`);
+    });
+});
+
 useServer({
     schema,
     context: (ctx) => {
         // Extract session ID from connection params or generate new one if not provided
         const sessionId = ctx.connectionParams?.sessionId as string || uuidv4();
         console.log(`WebSocket connection established for session: ${sessionId}`);
+        activeSessions.add(sessionId);
+        console.log(`Active sessions: ${Array.from(activeSessions).join(', ')}`);
         return createUserContext(sessionId);
     },
     onDisconnect: (ctx, code, reason) => {
+        console.log(`onDisconnect triggered. Code: ${code}, Reason: ${reason || 'No reason provided'}`);
+        console.log(`onDisconnect ctx details: ${JSON.stringify({
+            connectionParams: ctx.connectionParams,
+            hasExtra: !!ctx.extra,
+            extraKeys: ctx.extra ? Object.keys(ctx.extra) : []
+        }, null, 2)}`);
+
         // Use the session ID to clean up when WebSocket disconnects
         if (ctx.extra && ctx.extra.context) {
             const context = ctx.extra.context as UserContext;
             const username = context.getUsername();
+            const sessionId = context.sessionId;
+
+            activeSessions.delete(sessionId);
+            console.log(`Session removed from active sessions. Remaining: ${Array.from(activeSessions).join(', ')}`);
+
             if (username && username !== 'Anonymous') {
-                console.log(`Session ${context.sessionId} disconnected with username '${username}'. Removing from active usernames.`);
+                console.log(`Session ${sessionId} disconnected with username '${username}'. Removing from active usernames.`);
                 activeUsernames.delete(username);
                 usernameToSession.delete(username);
             }
-            sessionToUsername.delete(context.sessionId);
-            console.log(`WebSocket disconnected for session ${context.sessionId}. Code: ${code}, Reason: ${reason}`);
+            sessionToUsername.delete(sessionId);
+            console.log(`WebSocket disconnected for session ${sessionId}. Code: ${code}, Reason: ${reason || 'No reason provided'}`);
+        } else {
+            console.log(`Could not access context in onDisconnect. ctx.extra: ${ctx.extra ? 'exists' : 'undefined'}`);
+
+            // Try to find session ID in connection params
+            const sessionId = ctx.connectionParams?.sessionId as string;
+            if (sessionId) {
+                console.log(`Found sessionId ${sessionId} in connectionParams, attempting cleanup.`);
+                const username = sessionToUsername.get(sessionId);
+                if (username && username !== 'Anonymous') {
+                    console.log(`Cleanup for session ${sessionId} with username '${username}'.`);
+                    activeUsernames.delete(username);
+                    usernameToSession.delete(username);
+                }
+                sessionToUsername.delete(sessionId);
+                activeSessions.delete(sessionId);
+            } else {
+                console.log('Could not find sessionId in connectionParams.');
+            }
         }
     }
 }, wsServer);
