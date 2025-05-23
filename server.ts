@@ -40,6 +40,12 @@ const typeDefs = /* GraphQL */ `
     rolls: [Int!]!
   }
 
+  type User {
+    sessionId: ID!
+    username: String!
+    isActive: Boolean!
+  }
+
   type RegisterUsernameResponse {
     success: Boolean!
     username: String
@@ -48,6 +54,7 @@ const typeDefs = /* GraphQL */ `
 
   type Query {
     rolls: [Roll!]!
+    activeUsers: [User!]!
   }
 
   type Mutation {
@@ -57,6 +64,7 @@ const typeDefs = /* GraphQL */ `
 
   type Subscription {
     rollAdded: Roll!
+    userListChanged: [User!]!
   }
 `;
 
@@ -80,6 +88,43 @@ function sanitizeUsername(username: string): string {
     }
 
     return sanitizedUser;
+}
+
+function getActiveUsers(): Array<{ sessionId: string; username: string; isActive: boolean }> {
+    return Array.from(activeUsernames).map(username => ({
+        sessionId: usernameToSession.get(username) || '',
+        username: username,
+        isActive: true
+    }));
+}
+
+function publishUserListUpdate() {
+    const activeUsers = getActiveUsers();
+    pubsub.publish('USER_LIST_CHANGED', activeUsers);
+    console.log('Published user list update:', activeUsers.map(u => u.username));
+}
+
+// safety checking ensure data structure consistency when removing usernames
+// kludge-y, implemented because of onDisconnect issues when closing browser tabs
+function removeUsernameSafely(username: string, sessionId: string): boolean {
+    // check that the username actually belongs to this session before removing
+    const registeredSessionId = usernameToSession.get(username);
+    if (registeredSessionId === sessionId) {
+        activeUsernames.delete(username);
+        usernameToSession.delete(username);
+        sessionToUsername.delete(sessionId);
+        console.log(`Safely removed username '${username}' for session ${sessionId}`);
+        return true;
+    } else if (registeredSessionId) {
+        console.warn(`Username '${username}' belongs to session ${registeredSessionId}, not ${sessionId}. Skipping removal.`);
+        return false;
+    } else {
+        console.warn(`Username '${username}' not found in usernameToSession mapping.`);
+        // clean up stale entries
+        activeUsernames.delete(username);
+        sessionToUsername.delete(sessionId);
+        return false;
+    }
 }
 
 // Basic XdY dice parser
@@ -132,6 +177,7 @@ function parseAndRoll(expression: string): { result: number; rolls: number[]; in
 const resolvers = {
     Query: {
         rolls: () => rolls,
+        activeUsers: () => getActiveUsers(),
     },
     Mutation: {
         rollDice: (_: any, { user, expression }: { user: string; expression: string }, context: UserContext) => {
@@ -159,14 +205,15 @@ const resolvers = {
             const sanitizedUsername = sanitizeUsername(username);
             const sessionId = context.sessionId;
             console.log(`Session ${sessionId} attempting to register username: ${sanitizedUsername}`);
+            console.log(`Debug - Active usernames: [${Array.from(activeUsernames).join(', ')}]`);
+            console.log(`Debug - Active sessions: [${Array.from(activeSessions).join(', ')}]`);
 
             const currentUsername = context.getUsername();
 
             // if user already has a registered non-Anonymous username, unregister
             if (currentUsername && currentUsername !== 'Anonymous') {
                 console.log(`Session ${sessionId} changing name from '${currentUsername}' to '${sanitizedUsername}'`);
-                activeUsernames.delete(currentUsername);
-                usernameToSession.delete(currentUsername);
+                removeUsernameSafely(currentUsername, sessionId);
             }
 
             // ff registering as Anonymous, always allow
@@ -193,12 +240,21 @@ const resolvers = {
                     };
                 }
 
-                console.log(`Username '${sanitizedUsername}' is taken by session ${existingSessionId}`);
-                return {
-                    success: false,
-                    username: null,
-                    message: `Username '${sanitizedUsername}' is already taken.`
-                };
+                if (existingSessionId && !activeSessions.has(existingSessionId)) {
+                    console.warn(`Username '${sanitizedUsername}' is registered to inactive session ${existingSessionId}. Cleaning up orphaned username.`);
+                    activeUsernames.delete(sanitizedUsername);
+                    usernameToSession.delete(sanitizedUsername);
+                    if (sessionToUsername.get(existingSessionId) === sanitizedUsername) {
+                        sessionToUsername.delete(existingSessionId);
+                    }
+                } else {
+                    console.log(`Username '${sanitizedUsername}' is taken by session ${existingSessionId}`);
+                    return {
+                        success: false,
+                        username: null,
+                        message: `Username '${sanitizedUsername}' is already taken.`
+                    };
+                }
             }
 
             activeUsernames.add(sanitizedUsername);
@@ -206,6 +262,8 @@ const resolvers = {
             usernameToSession.set(sanitizedUsername, sessionId);
 
             console.log(`Session ${sessionId} registered username: ${sanitizedUsername}`);
+
+            publishUserListUpdate();
 
             return {
                 success: true,
@@ -217,6 +275,10 @@ const resolvers = {
     Subscription: {
         rollAdded: {
             subscribe: () => pubsub.subscribe('ROLL_ADDED'),
+            resolve: (payload: any) => payload,
+        },
+        userListChanged: {
+            subscribe: () => pubsub.subscribe('USER_LIST_CHANGED'),
             resolve: (payload: any) => payload,
         },
     },
@@ -266,7 +328,7 @@ const wsServer = new WebSocketServer({
     path: '/dice/graphql',
 });
 
-// Enhance WebSocketServer with connection tracking
+// connection tracking
 const activeSessions = new Set<string>();
 
 wsServer.on('connection', (socket, request) => {
@@ -307,11 +369,13 @@ useServer({
 
             if (username && username !== 'Anonymous') {
                 console.log(`Session ${sessionId} disconnected with username '${username}'. Removing from active usernames.`);
-                activeUsernames.delete(username);
-                usernameToSession.delete(username);
+                removeUsernameSafely(username, sessionId);
+            } else {
+                sessionToUsername.delete(sessionId);
             }
-            sessionToUsername.delete(sessionId);
             console.log(`WebSocket disconnected for session ${sessionId}. Code: ${code}, Reason: ${reason || 'No reason provided'}`);
+
+            publishUserListUpdate();
         } else {
             console.log(`Could not access context in onDisconnect. ctx.extra: ${ctx.extra ? 'exists' : 'undefined'}`);
 
@@ -322,11 +386,13 @@ useServer({
                 const username = sessionToUsername.get(sessionId);
                 if (username && username !== 'Anonymous') {
                     console.log(`Cleanup for session ${sessionId} with username '${username}'.`);
-                    activeUsernames.delete(username);
-                    usernameToSession.delete(username);
+                    removeUsernameSafely(username, sessionId);
+                } else {
+                    sessionToUsername.delete(sessionId);
                 }
-                sessionToUsername.delete(sessionId);
                 activeSessions.delete(sessionId);
+
+                publishUserListUpdate();
             } else {
                 console.log('Could not find sessionId in connectionParams.');
             }

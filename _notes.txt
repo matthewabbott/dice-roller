@@ -1,4 +1,3 @@
-
 TODO:
 error handling on the client for requests that don't make it/get rejected
 roll-log todos
@@ -6,13 +5,25 @@ roll-log todos
 whatever else is in the roadmap
 polish
 
+Major snag, username tracking synchronization bug:
+- Data structures `activeUsernames`, `sessionToUsername`, and `usernameToSession` were getting out of sync
+- Caused "ghost" usernames: registered, but orphaned from disconnected sessions
+- Root cause: incomplete cleanup during username changes and WebSocket disconnects
+- Fixed by adding removeUsernameSafely() helper to enforce atomic updates
+- Also added orphaned username detection for cleanup on improper disconnections
+- Also was seeing an error in onDisconnect when WebSocket context was unavaiable. Added fallback cleanup.
+- TODO: invariant based setup of a contract between `activeUsernames`, `sessionToUsername`, `usernameToSession`. (Or just better structuring)
+
+Major snag,
+- HOW do you kill sessions after a browser tab closes? After a browser window closes?
+
 Minor snag,
 - Add error handling, but useMutation hook's onError callback never gets reached
 - Seems like the browser was holding back the request in a `Stalled` state if the server was down
 - Apollo never interpreted that as an error, so we'd just be locked 
 - Solution: manually implement timeouts
 
-Major snag, fixed by e48bc33:
+Major snag, http requests to websocket, fixed by e48bc33:
 - Needed to change server.ts to explicitly define a websocket server to handle requests against `ws://localhost:4000/dice/graphql`
 - Apollo documentation at https://www.apollographql.com/docs/apollo-server/data/subscriptions was out of date
 - Documentation shows `import { useServer } from 'graphql-ws/lib/use/ws';`
