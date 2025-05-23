@@ -1,8 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useMutation } from '@apollo/client';
-import { ROLL_DICE_MUTATION, REGISTER_USERNAME_MUTATION } from '../graphql/operations';
+import { useMutation, useQuery, useSubscription } from '@apollo/client';
+import { ROLL_DICE_MUTATION, REGISTER_USERNAME_MUTATION, GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
 import ColorPicker from './ColorPicker';
 import { PRESET_COLORS } from '../constants/colors';
+import { getSessionId } from '../utils/sessionId';
+
+interface User {
+    sessionId: string;
+    username: string;
+    color?: string;
+    isActive: boolean;
+}
 
 const DiceRoller: React.FC = () => {
     const [expression, setExpression] = useState('');
@@ -14,8 +22,35 @@ const DiceRoller: React.FC = () => {
     const [userColor, setUserColor] = useState<string>(() => {
         return PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];
     });
+    const [users, setUsers] = useState<User[]>([]);
 
+    const currentSessionId = getSessionId();
     const usernameDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+    // Query active users to get current user's color
+    const { data: usersData } = useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY, {
+        onCompleted: (data) => {
+            setUsers(data.activeUsers);
+            const currentUser = data.activeUsers.find(user => user.sessionId === currentSessionId);
+            if (currentUser && currentUser.color) {
+                setUserColor(currentUser.color);
+            }
+        }
+    });
+
+    // Subscribe to user list changes to keep color in sync
+    useSubscription<{ userListChanged: User[] }>(USER_LIST_CHANGED_SUBSCRIPTION, {
+        onData: ({ data: subscriptionData }) => {
+            const updatedUsers = subscriptionData?.data?.userListChanged;
+            if (updatedUsers) {
+                setUsers(updatedUsers);
+                const currentUser = updatedUsers.find(user => user.sessionId === currentSessionId);
+                if (currentUser && currentUser.color) {
+                    setUserColor(currentUser.color);
+                }
+            }
+        }
+    });
 
     const [rollDice, { data, loading, error }] = useMutation(ROLL_DICE_MUTATION, {
         onCompleted: (data) => {

@@ -190,8 +190,8 @@ function removeUsernameSafely(username: string, sessionId: string): boolean {
         activeUsernames.delete(username);
         usernameToSession.delete(username);
         sessionToUsername.delete(sessionId);
-        sessionToColor.delete(sessionId);
-        console.log(`Safely removed username '${username}' and color for session ${sessionId}`);
+        // intentionally don't delete sessionToColor here to preserve user's color
+        console.log(`Safely removed username '${username}' for session ${sessionId}, preserving color`);
         return true;
     } else if (registeredSessionId) {
         console.warn(`Username '${username}' belongs to session ${registeredSessionId}, not ${sessionId}. Skipping removal.`);
@@ -201,7 +201,6 @@ function removeUsernameSafely(username: string, sessionId: string): boolean {
         // clean up stale entries
         activeUsernames.delete(username);
         sessionToUsername.delete(sessionId);
-        sessionToColor.delete(sessionId);
         return false;
     }
 }
@@ -485,7 +484,12 @@ useServer({
         activeSessions.add(sessionId);
         console.log(`Active sessions: ${Array.from(activeSessions).join(', ')}`);
 
-        // Assign a random color to new users if they don't have one
+        if (!sessionToUsername.has(sessionId)) {
+            sessionToUsername.set(sessionId, 'Anonymous');
+            console.log(`Set default username 'Anonymous' for new session ${sessionId}`);
+        }
+
+        // Assign a random color to new users
         if (!sessionToColor.has(sessionId)) {
             const randomColor = generateRandomColor();
             sessionToColor.set(sessionId, randomColor);
