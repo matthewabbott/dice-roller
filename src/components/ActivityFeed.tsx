@@ -30,6 +30,8 @@ interface User {
 const ActivityFeed: React.FC = () => {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [users, setUsers] = useState<User[]>([]);
+    const [showRolls, setShowRolls] = useState(true);
+    const [showSystemMessages, setShowSystemMessages] = useState(true);
 
     const { data: usersData } = useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY, {
         onCompleted: (data) => {
@@ -75,6 +77,10 @@ const ActivityFeed: React.FC = () => {
     };
 
     const renderActivity = (activity: Activity) => {
+        // Filter activities based on user preferences
+        if (activity.type === 'ROLL' && !showRolls) return null;
+        if (activity.type === 'SYSTEM_MESSAGE' && !showSystemMessages) return null;
+
         if (activity.type === 'ROLL' && activity.roll) {
             const roll = activity.roll;
             const userColor = getUserColor(roll.user);
@@ -123,13 +129,48 @@ const ActivityFeed: React.FC = () => {
         return null;
     };
 
+    const filteredActivities = activities.filter(activity => {
+        if (activity.type === 'ROLL' && !showRolls) return false;
+        if (activity.type === 'SYSTEM_MESSAGE' && !showSystemMessages) return false;
+        return true;
+    });
+
     return (
-        <div className="card h-64 overflow-y-auto">
-            <h2 className="text-xl font-semibold text-brand-text mb-3">Activity Feed</h2>
+        <div className="card h-96 overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xl font-semibold text-brand-text">Activity Feed</h2>
+
+                {/* Filter buttons */}
+                <div className="flex space-x-1">
+                    <button
+                        className={`px-2 py-1 text-xs rounded transition-colors ${showRolls
+                            ? 'bg-brand-primary text-white'
+                            : 'bg-brand-surface text-brand-text-muted hover:text-brand-text'
+                            }`}
+                        onClick={() => setShowRolls(!showRolls)}
+                        title={showRolls ? 'Hide dice rolls' : 'Show dice rolls'}
+                    >
+                        🎲
+                    </button>
+                    <button
+                        className={`px-2 py-1 text-xs rounded transition-colors ${showSystemMessages
+                            ? 'bg-brand-primary text-white'
+                            : 'bg-brand-surface text-brand-text-muted hover:text-brand-text'
+                            }`}
+                        onClick={() => setShowSystemMessages(!showSystemMessages)}
+                        title={showSystemMessages ? 'Hide system messages' : 'Show system messages'}
+                    >
+                        💬
+                    </button>
+                </div>
+            </div>
+
             <ul className="space-y-2 text-brand-text-muted">
-                {activities.map(renderActivity)}
-                {activities.length === 0 && (
-                    <li className="text-center text-brand-text-muted">No activity yet.</li>
+                {filteredActivities.map(renderActivity)}
+                {filteredActivities.length === 0 && (
+                    <li className="text-center text-brand-text-muted">
+                        {activities.length === 0 ? 'No activity yet.' : 'No activities match current filters.'}
+                    </li>
                 )}
             </ul>
         </div>

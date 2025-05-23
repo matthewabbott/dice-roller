@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useMutation } from '@apollo/client';
 import { ROLL_DICE_MUTATION, REGISTER_USERNAME_MUTATION } from '../graphql/operations';
 import ColorPicker from './ColorPicker';
-
+import { PRESET_COLORS } from '../constants/colors';
 
 const DiceRoller: React.FC = () => {
     const [expression, setExpression] = useState('');
@@ -11,7 +11,9 @@ const DiceRoller: React.FC = () => {
     const [isUsernameRegistered, setIsUsernameRegistered] = useState(true); // Anonymous is always registered
     const [registrationMessage, setRegistrationMessage] = useState<string | null>(null);
     const [registrationStatus, setRegistrationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-    const [userColor, setUserColor] = useState<string>('#3B82F6');
+    const [userColor, setUserColor] = useState<string>(() => {
+        return PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];
+    });
 
     const usernameDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 

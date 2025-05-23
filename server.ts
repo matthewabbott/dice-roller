@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/use/ws';
+import { PRESET_COLORS } from './constants/colors';
 
 // TODO: more sophisticated storage
 interface Roll {
@@ -122,6 +123,10 @@ function sanitizeUsername(username: string): string {
 function validateColor(color: string): boolean {
     // Basic hex color validation - allows 3 or 6 character hex codes
     return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color);
+}
+
+function generateRandomColor(): string {
+    return PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];
 }
 
 function getActiveUsers(): Array<{ sessionId: string; username: string; color: string | undefined; isActive: boolean }> {
@@ -382,9 +387,10 @@ const resolvers = {
 
             console.log(`Session ${sessionId} updated user color to: ${color}`);
 
-            // Publish color change activity (without showing the hex code to keep it clean)
-            if (currentColor && currentColor !== color) {
-                const systemMessage = createSystemMessage(`${context.getUsername()} changed their color`);
+            // Publish color change activity only for users with registered usernames (not Anonymous)
+            const username = context.getUsername();
+            if (currentColor && currentColor !== color && username && username !== 'Anonymous') {
+                const systemMessage = createSystemMessage(`${username} changed their color`);
                 publishActivity(systemMessage);
             }
 
@@ -478,6 +484,13 @@ useServer({
         console.log(`WebSocket connection established for session: ${sessionId}`);
         activeSessions.add(sessionId);
         console.log(`Active sessions: ${Array.from(activeSessions).join(', ')}`);
+
+        // Assign a random color to new users if they don't have one
+        if (!sessionToColor.has(sessionId)) {
+            const randomColor = generateRandomColor();
+            sessionToColor.set(sessionId, randomColor);
+            console.log(`Assigned random color ${randomColor} to new session ${sessionId}`);
+        }
 
         publishUserListUpdate();
 
