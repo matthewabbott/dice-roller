@@ -1,11 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useMutation } from '@apollo/client';
 import { ROLL_DICE_MUTATION, REGISTER_USERNAME_MUTATION } from '../graphql/operations';
+import ColorPicker from './ColorPicker';
 
-// TODO: advanced user management stuff:
-// - display a list of users in the lobby/room.
-// - show a message when a username changes. (resolver needed?)
-// - allow username color selection.
 
 const DiceRoller: React.FC = () => {
     const [expression, setExpression] = useState('');
@@ -14,6 +11,7 @@ const DiceRoller: React.FC = () => {
     const [isUsernameRegistered, setIsUsernameRegistered] = useState(true); // Anonymous is always registered
     const [registrationMessage, setRegistrationMessage] = useState<string | null>(null);
     const [registrationStatus, setRegistrationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const [userColor, setUserColor] = useState<string>('#3B82F6');
 
     const usernameDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -167,6 +165,11 @@ const DiceRoller: React.FC = () => {
                         </p>
                     )}
                 </div>
+            </div>
+
+            {/* Color Picker */}
+            <div className="mb-3">
+                <ColorPicker currentColor={userColor} onColorChange={setUserColor} />
             </div>
 
             {/* Dice Buttons */}

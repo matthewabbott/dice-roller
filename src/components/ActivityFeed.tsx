@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useSubscription } from '@apollo/client';
-import { ACTIVITY_ADDED_SUBSCRIPTION } from '../graphql/operations';
+import { useQuery, useSubscription } from '@apollo/client';
+import { ACTIVITY_ADDED_SUBSCRIPTION, GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
 
 interface Roll {
     id: string;
@@ -20,8 +20,32 @@ interface Activity {
     roll?: Roll;
 }
 
+interface User {
+    sessionId: string;
+    username: string;
+    color?: string;
+    isActive: boolean;
+}
+
 const ActivityFeed: React.FC = () => {
     const [activities, setActivities] = useState<Activity[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
+
+    const { data: usersData } = useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY, {
+        onCompleted: (data) => {
+            setUsers(data.activeUsers);
+        }
+    });
+
+    // keep colors up to date
+    useSubscription<{ userListChanged: User[] }>(USER_LIST_CHANGED_SUBSCRIPTION, {
+        onData: ({ data: subscriptionData }) => {
+            const updatedUsers = subscriptionData?.data?.userListChanged;
+            if (updatedUsers) {
+                setUsers(updatedUsers);
+            }
+        }
+    });
 
     const { data, loading, error } = useSubscription<{ activityAdded: Activity }>(ACTIVITY_ADDED_SUBSCRIPTION, {
         onData: ({ data: subscriptionData }) => {
@@ -46,21 +70,33 @@ const ActivityFeed: React.FC = () => {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    const getUserColor = (username: string): string | undefined => {
+        return users.find(user => user.username === username)?.color;
+    };
+
     const renderActivity = (activity: Activity) => {
         if (activity.type === 'ROLL' && activity.roll) {
             const roll = activity.roll;
+            const userColor = getUserColor(roll.user);
+
             return (
                 <li key={activity.id} className="bg-brand-surface p-2 rounded">
                     <div className="flex justify-between items-start">
                         <div className="flex-grow">
-                            <strong className="text-brand-text">{roll.user}:</strong> Rolled {roll.expression}
+                            <strong
+                                className="font-medium"
+                                style={{ color: userColor || '#ffffff' }}
+                            >
+                                {roll.user}:
+                            </strong>
+                            <span className="text-brand-text"> Rolled {roll.expression}</span>
                             {roll.interpretedExpression && roll.interpretedExpression !== "invalid" && roll.expression !== roll.interpretedExpression && (
                                 <span className="text-brand-text-muted"> (interpreted as {roll.interpretedExpression})</span>
                             )}
                             {roll.interpretedExpression === "invalid" && (
                                 <span className="text-brand-error"> (invalid expression)</span>
                             )}
-                            {' '}({roll.rolls.join(', ')}) = {roll.result}
+                            <span className="text-brand-text"> ({roll.rolls.join(', ')}) = {roll.result}</span>
                         </div>
                         <span className="text-xs text-brand-text-muted ml-2 flex-shrink-0">
                             {formatTimestamp(activity.timestamp)}

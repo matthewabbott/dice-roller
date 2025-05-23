@@ -5,6 +5,7 @@ import { GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graph
 interface User {
     sessionId: string;
     username: string;
+    color?: string;
     isActive: boolean;
 }
 
@@ -72,7 +73,10 @@ const UserList: React.FC = () => {
                         <div className={`w-2 h-2 rounded-full ${user.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
 
                         {/* Username */}
-                        <span className="text-brand-text truncate">
+                        <span
+                            className="text-brand-text truncate font-medium"
+                            style={{ color: user.color || '#ffffff' }}
+                        >
                             {user.username}
                         </span>
                     </li>

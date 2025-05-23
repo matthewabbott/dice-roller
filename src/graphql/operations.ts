@@ -23,6 +23,16 @@ export const ROLL_DICE_MUTATION = gql`
   }
 `;
 
+export const SET_USER_COLOR_MUTATION = gql`
+  mutation SetUserColor($color: String!) {
+    setUserColor(color: $color) {
+      success
+      color
+      message
+    }
+  }
+`;
+
 // Activity feed operations
 export const GET_ACTIVITIES_QUERY = gql`
   query GetActivities {
@@ -69,6 +79,7 @@ export const GET_ACTIVE_USERS_QUERY = gql`
     activeUsers {
       sessionId
       username
+      color
       isActive
     }
   }
@@ -79,6 +90,7 @@ export const USER_LIST_CHANGED_SUBSCRIPTION = gql`
     userListChanged {
       sessionId
       username
+      color
       isActive
     }
   }

@@ -29,11 +29,14 @@ interface UserContext {
     getUsername: () => string | undefined;
     setUsername: (username: string) => void;
     clearUsername: () => void;
+    getUserColor: () => string | undefined;
+    setUserColor: (color: string) => void;
 }
 
 const activeUsernames = new Set<string>();
 const sessionToUsername = new Map<string, string>();
 const usernameToSession = new Map<string, string>();
+const sessionToColor = new Map<string, string>();
 
 const activities: Activity[] = [];
 
@@ -61,12 +64,19 @@ const typeDefs = /* GraphQL */ `
   type User {
     sessionId: ID!
     username: String!
+    color: String
     isActive: Boolean!
   }
 
   type RegisterUsernameResponse {
     success: Boolean!
     username: String
+    message: String
+  }
+
+  type SetUserColorResponse {
+    success: Boolean!
+    color: String
     message: String
   }
 
@@ -78,6 +88,7 @@ const typeDefs = /* GraphQL */ `
   type Mutation {
     rollDice(user: String!, expression: String!): Roll!
     registerUsername(username: String!): RegisterUsernameResponse!
+    setUserColor(color: String!): SetUserColorResponse!
   }
 
   type Subscription {
@@ -108,16 +119,23 @@ function sanitizeUsername(username: string): string {
     return sanitizedUser;
 }
 
-function getActiveUsers(): Array<{ sessionId: string; username: string; isActive: boolean }> {
-    const users: Array<{ sessionId: string; username: string; isActive: boolean }> = [];
+function validateColor(color: string): boolean {
+    // Basic hex color validation - allows 3 or 6 character hex codes
+    return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color);
+}
+
+function getActiveUsers(): Array<{ sessionId: string; username: string; color: string | undefined; isActive: boolean }> {
+    const users: Array<{ sessionId: string; username: string; color: string | undefined; isActive: boolean }> = [];
 
     // If we didn't care about anonymous users, we could just use `activeUsernames`
     for (const sessionId of activeSessions) {
         const username = sessionToUsername.get(sessionId) || 'Anonymous';
+        const color = sessionToColor.get(sessionId);
 
         users.push({
             sessionId,
             username: username,
+            color: color,
             isActive: true
         });
     }
@@ -167,7 +185,8 @@ function removeUsernameSafely(username: string, sessionId: string): boolean {
         activeUsernames.delete(username);
         usernameToSession.delete(username);
         sessionToUsername.delete(sessionId);
-        console.log(`Safely removed username '${username}' for session ${sessionId}`);
+        sessionToColor.delete(sessionId);
+        console.log(`Safely removed username '${username}' and color for session ${sessionId}`);
         return true;
     } else if (registeredSessionId) {
         console.warn(`Username '${username}' belongs to session ${registeredSessionId}, not ${sessionId}. Skipping removal.`);
@@ -177,6 +196,7 @@ function removeUsernameSafely(username: string, sessionId: string): boolean {
         // clean up stale entries
         activeUsernames.delete(username);
         sessionToUsername.delete(sessionId);
+        sessionToColor.delete(sessionId);
         return false;
     }
 }
@@ -334,6 +354,47 @@ const resolvers = {
                 username: sanitizedUsername,
                 message: 'Username registered successfully.'
             };
+        },
+        setUserColor: (_: any, { color }: { color: string }, context: UserContext) => {
+            const sessionId = context.sessionId;
+            console.log(`Session ${sessionId} attempting to set user color: ${color}`);
+
+            // Validate color format
+            if (!validateColor(color)) {
+                return {
+                    success: false,
+                    color: null,
+                    message: 'Invalid color format. Please use a valid hex color (e.g., #FF0000).'
+                };
+            }
+
+            const currentColor = context.getUserColor();
+            if (currentColor === color) {
+                return {
+                    success: true,
+                    color: currentColor,
+                    message: 'Color is already set to the specified color.'
+                };
+            }
+
+            context.setUserColor(color);
+            sessionToColor.set(sessionId, color);
+
+            console.log(`Session ${sessionId} updated user color to: ${color}`);
+
+            // Publish color change activity (without showing the hex code to keep it clean)
+            if (currentColor && currentColor !== color) {
+                const systemMessage = createSystemMessage(`${context.getUsername()} changed their color`);
+                publishActivity(systemMessage);
+            }
+
+            publishUserListUpdate();
+
+            return {
+                success: true,
+                color: color,
+                message: 'User color updated successfully.'
+            };
         }
     },
     Subscription: {
@@ -368,6 +429,11 @@ function createUserContext(sessionId: string): UserContext {
                 console.log(`Cleared username '${username}' for session ${sessionId}`);
             }
             sessionToUsername.delete(sessionId);
+            sessionToColor.delete(sessionId);
+        },
+        getUserColor: () => sessionToColor.get(sessionId),
+        setUserColor: (color: string) => {
+            sessionToColor.set(sessionId, color);
         }
     };
 }
@@ -439,6 +505,7 @@ useServer({
                 removeUsernameSafely(username, sessionId);
             } else {
                 sessionToUsername.delete(sessionId);
+                sessionToColor.delete(sessionId);
             }
             console.log(`WebSocket disconnected for session ${sessionId}. Code: ${code}, Reason: ${reason || 'No reason provided'}`);
 
@@ -456,6 +523,7 @@ useServer({
                     removeUsernameSafely(username, sessionId);
                 } else {
                     sessionToUsername.delete(sessionId);
+                    sessionToColor.delete(sessionId);
                 }
                 activeSessions.delete(sessionId);
 
