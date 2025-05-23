@@ -18,10 +18,10 @@ interface Roll {
 
 interface Activity {
     id: string;
-    type: 'ROLL' | 'SYSTEM_MESSAGE';
+    type: 'ROLL' | 'SYSTEM_MESSAGE' | 'CHAT_MESSAGE';
     timestamp: string;
     user?: string;  // Optional for system messages
-    message?: string;  // For system messages
+    message?: string;  // For system messages and chat messages
     roll?: Roll;  // For dice rolls
 }
 
@@ -90,6 +90,7 @@ const typeDefs = /* GraphQL */ `
     rollDice(user: String!, expression: String!): Roll!
     registerUsername(username: String!): RegisterUsernameResponse!
     setUserColor(color: String!): SetUserColorResponse!
+    sendChatMessage(message: String!): Activity!
   }
 
   type Subscription {
@@ -168,6 +169,16 @@ function createSystemMessage(message: string, user?: string): Activity {
     return {
         id: uuidv4(),
         type: 'SYSTEM_MESSAGE',
+        timestamp: new Date().toISOString(),
+        user: user,
+        message: message
+    };
+}
+
+function createChatMessage(message: string, user: string): Activity {
+    return {
+        id: uuidv4(),
+        type: 'CHAT_MESSAGE',
         timestamp: new Date().toISOString(),
         user: user,
         message: message
@@ -400,6 +411,26 @@ const resolvers = {
                 color: color,
                 message: 'User color updated successfully.'
             };
+        },
+        sendChatMessage: (_: any, { message }: { message: string }, context: UserContext) => {
+            const username = context.getUsername() || 'Anonymous';
+            const trimmedMessage = message.trim();
+
+            if (!trimmedMessage) {
+                throw new Error('Message cannot be empty');
+            }
+
+            const maxLength = 1000;
+            const finalMessage = trimmedMessage.length > maxLength
+                ? trimmedMessage.slice(0, maxLength)
+                : trimmedMessage;
+
+            const chatActivity = createChatMessage(finalMessage, username);
+            publishActivity(chatActivity);
+
+            console.log(`Chat message from ${username}: ${finalMessage}`);
+
+            return chatActivity;
         }
     },
     Subscription: {

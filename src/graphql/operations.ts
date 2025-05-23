@@ -33,6 +33,18 @@ export const SET_USER_COLOR_MUTATION = gql`
   }
 `;
 
+export const SEND_CHAT_MESSAGE_MUTATION = gql`
+  mutation SendChatMessage($message: String!) {
+    sendChatMessage(message: $message) {
+      id
+      type
+      timestamp
+      user
+      message
+    }
+  }
+`;
+
 // Activity feed operations
 export const GET_ACTIVITIES_QUERY = gql`
   query GetActivities {

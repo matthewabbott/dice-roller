@@ -13,7 +13,7 @@ interface Roll {
 
 interface Activity {
     id: string;
-    type: 'ROLL' | 'SYSTEM_MESSAGE';
+    type: 'ROLL' | 'SYSTEM_MESSAGE' | 'CHAT_MESSAGE';
     timestamp: string;
     user?: string;
     message?: string;
@@ -32,6 +32,7 @@ const ActivityFeed: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [showRolls, setShowRolls] = useState(true);
     const [showSystemMessages, setShowSystemMessages] = useState(true);
+    const [showChatMessages, setShowChatMessages] = useState(true);
 
     const { data: usersData } = useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY, {
         onCompleted: (data) => {
@@ -80,6 +81,7 @@ const ActivityFeed: React.FC = () => {
         // Filter activities based on user preferences
         if (activity.type === 'ROLL' && !showRolls) return null;
         if (activity.type === 'SYSTEM_MESSAGE' && !showSystemMessages) return null;
+        if (activity.type === 'CHAT_MESSAGE' && !showChatMessages) return null;
 
         if (activity.type === 'ROLL' && activity.roll) {
             const roll = activity.roll;
@@ -110,7 +112,32 @@ const ActivityFeed: React.FC = () => {
                     </div>
                 </li>
             );
-        } else if (activity.type === 'SYSTEM_MESSAGE' && activity.message) {
+        }
+
+        if (activity.type === 'CHAT_MESSAGE' && activity.message && activity.user) {
+            const userColor = getUserColor(activity.user);
+
+            return (
+                <li key={activity.id} className="bg-brand-surface p-2 rounded">
+                    <div className="flex justify-between items-start">
+                        <div className="flex-grow">
+                            <strong
+                                className="font-medium"
+                                style={{ color: userColor || '#ffffff' }}
+                            >
+                                {activity.user}:
+                            </strong>
+                            <span className="text-brand-text ml-1">{activity.message}</span>
+                        </div>
+                        <span className="text-xs text-brand-text-muted ml-2 flex-shrink-0">
+                            {formatTimestamp(activity.timestamp)}
+                        </span>
+                    </div>
+                </li>
+            );
+        }
+
+        if (activity.type === 'SYSTEM_MESSAGE' && activity.message) {
             return (
                 <li key={activity.id} className="bg-brand-background p-2 rounded border-l-2 border-brand-primary">
                     <div className="flex justify-between items-start">
@@ -132,35 +159,46 @@ const ActivityFeed: React.FC = () => {
     const filteredActivities = activities.filter(activity => {
         if (activity.type === 'ROLL' && !showRolls) return false;
         if (activity.type === 'SYSTEM_MESSAGE' && !showSystemMessages) return false;
+        if (activity.type === 'CHAT_MESSAGE' && !showChatMessages) return false;
         return true;
     });
 
     return (
         <div className="card h-96 overflow-y-auto">
-            <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-semibold text-brand-text">Activity Feed</h2>
+            <div className="mb-3">
+                <h2 className="text-xl font-semibold text-brand-text mb-3">Activity Feed</h2>
 
-                {/* Filter buttons */}
-                <div className="flex space-x-1">
+                {/* Filter Toggle Buttons */}
+                <div className="flex space-x-2">
                     <button
-                        className={`px-2 py-1 text-xs rounded transition-colors ${showRolls
+                        className={`px-3 py-1 rounded text-sm transition-colors ${showRolls
                             ? 'bg-brand-primary text-white'
-                            : 'bg-brand-surface text-brand-text-muted hover:text-brand-text'
+                            : 'bg-brand-surface text-brand-text-muted hover:bg-brand-background'
                             }`}
                         onClick={() => setShowRolls(!showRolls)}
-                        title={showRolls ? 'Hide dice rolls' : 'Show dice rolls'}
+                        title="Toggle dice rolls"
                     >
-                        🎲
+                        🎲 Rolls
                     </button>
                     <button
-                        className={`px-2 py-1 text-xs rounded transition-colors ${showSystemMessages
+                        className={`px-3 py-1 rounded text-sm transition-colors ${showChatMessages
                             ? 'bg-brand-primary text-white'
-                            : 'bg-brand-surface text-brand-text-muted hover:text-brand-text'
+                            : 'bg-brand-surface text-brand-text-muted hover:bg-brand-background'
+                            }`}
+                        onClick={() => setShowChatMessages(!showChatMessages)}
+                        title="Toggle chat messages"
+                    >
+                        💬 Chat
+                    </button>
+                    <button
+                        className={`px-3 py-1 rounded text-sm transition-colors ${showSystemMessages
+                            ? 'bg-brand-primary text-white'
+                            : 'bg-brand-surface text-brand-text-muted hover:bg-brand-background'
                             }`}
                         onClick={() => setShowSystemMessages(!showSystemMessages)}
-                        title={showSystemMessages ? 'Hide system messages' : 'Show system messages'}
+                        title="Toggle system messages"
                     >
-                        💬
+                        ℹ️ System
                     </button>
                 </div>
             </div>

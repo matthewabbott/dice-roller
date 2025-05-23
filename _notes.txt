@@ -1,9 +1,7 @@
-TODO:
-error handling on the client for requests that don't make it/get rejected
-roll-log todos
-3d stuff
-whatever else is in the roadmap
-polish
+TODOs:
+- have color change system message show TO and FROM colors
+- fix anonymous user registry, or at least codify current behavior as intentional
+- initialized user color sometimes is different from ui listed color (might be a session persistence thing?)
 
 Major snag, username tracking synchronization bug:
 - Data structures `activeUsernames`, `sessionToUsername`, and `usernameToSession` were getting out of sync
