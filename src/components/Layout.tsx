@@ -1,7 +1,7 @@
 import React from 'react';
 import Header from './Header';
 import DiceRoller from './DiceRoller';
-import RollLog from './RollLog';
+import ActivityFeed from './ActivityFeed';
 import UserList from './UserList';
 
 const Layout: React.FC = () => {
@@ -15,9 +15,9 @@ const Layout: React.FC = () => {
                     <UserList />
                 </div>
 
-                {/* Middle Column: Roll Log */}
+                {/* Middle Column: Activity Feed */}
                 <div className="flex flex-col">
-                    <RollLog />
+                    <ActivityFeed />
                 </div>
 
                 {/* Right Column: 3D Dice Canvas Placeholder (TODO: implement, Feature 5) */}

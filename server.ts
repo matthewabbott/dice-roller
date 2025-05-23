@@ -15,6 +15,15 @@ interface Roll {
     rolls: number[];
 }
 
+interface Activity {
+    id: string;
+    type: 'ROLL' | 'SYSTEM_MESSAGE';
+    timestamp: string;
+    user?: string;  // Optional for system messages
+    message?: string;  // For system messages
+    roll?: Roll;  // For dice rolls
+}
+
 interface UserContext {
     sessionId: string;
     getUsername: () => string | undefined;
@@ -26,7 +35,7 @@ const activeUsernames = new Set<string>();
 const sessionToUsername = new Map<string, string>();
 const usernameToSession = new Map<string, string>();
 
-const rolls: Roll[] = [];
+const activities: Activity[] = [];
 
 const pubsub = createPubSub();
 
@@ -38,6 +47,15 @@ const typeDefs = /* GraphQL */ `
     interpretedExpression: String!
     result: Int!
     rolls: [Int!]!
+  }
+
+  type Activity {
+    id: ID!
+    type: String!
+    timestamp: String!
+    user: String
+    message: String
+    roll: Roll
   }
 
   type User {
@@ -53,7 +71,7 @@ const typeDefs = /* GraphQL */ `
   }
 
   type Query {
-    rolls: [Roll!]!
+    activities: [Activity!]!
     activeUsers: [User!]!
   }
 
@@ -63,7 +81,7 @@ const typeDefs = /* GraphQL */ `
   }
 
   type Subscription {
-    rollAdded: Roll!
+    activityAdded: Activity!
     userListChanged: [User!]!
   }
 `;
@@ -111,6 +129,32 @@ function publishUserListUpdate() {
     const activeUsers = getActiveUsers();
     pubsub.publish('USER_LIST_CHANGED', activeUsers);
     console.log('Published user list update:', activeUsers.map(u => u.username));
+}
+
+function createRollActivity(roll: Roll): Activity {
+    return {
+        id: uuidv4(),
+        type: 'ROLL',
+        timestamp: new Date().toISOString(),
+        user: roll.user,
+        roll: roll
+    };
+}
+
+function createSystemMessage(message: string, user?: string): Activity {
+    return {
+        id: uuidv4(),
+        type: 'SYSTEM_MESSAGE',
+        timestamp: new Date().toISOString(),
+        user: user,
+        message: message
+    };
+}
+
+function publishActivity(activity: Activity) {
+    activities.push(activity);
+    pubsub.publish('ACTIVITY_ADDED', activity);
+    console.log(`Published activity: ${activity.type} - ${activity.message || (activity.roll ? `${activity.user} rolled dice` : 'unknown')}`);
 }
 
 // safety checking ensure data structure consistency when removing usernames
@@ -186,7 +230,7 @@ function parseAndRoll(expression: string): { result: number; rolls: number[]; in
 
 const resolvers = {
     Query: {
-        rolls: () => rolls,
+        activities: () => activities,
         activeUsers: () => getActiveUsers(),
     },
     Mutation: {
@@ -204,8 +248,8 @@ const resolvers = {
                 rolls: rolledResults,
             };
 
-            rolls.push(newRoll);
-            pubsub.publish('ROLL_ADDED', newRoll);
+            const rollActivity = createRollActivity(newRoll);
+            publishActivity(rollActivity);
 
             console.log(`Rolled dice: ${expression} (interpreted as ${interpretedExpression}) for user ${sanitizedUser}. Result: ${result}`);
 
@@ -226,7 +270,8 @@ const resolvers = {
                 removeUsernameSafely(currentUsername, sessionId);
             }
 
-            // ff registering as Anonymous, always allow
+            // if registering as Anonymous, always allow
+            // TODO: still need to update user list to include new anonymous
             if (sanitizedUsername === 'Anonymous') {
                 context.setUsername('Anonymous');
                 return {
@@ -273,6 +318,15 @@ const resolvers = {
 
             console.log(`Session ${sessionId} registered username: ${sanitizedUsername}`);
 
+            // Publish username change activity
+            if (currentUsername && currentUsername !== 'Anonymous' && currentUsername !== sanitizedUsername) {
+                const systemMessage = createSystemMessage(`${currentUsername} changed their name to ${sanitizedUsername}`);
+                publishActivity(systemMessage);
+            } else if (!currentUsername || currentUsername === 'Anonymous') {
+                const systemMessage = createSystemMessage(`${sanitizedUsername} joined the room`);
+                publishActivity(systemMessage);
+            }
+
             publishUserListUpdate();
 
             return {
@@ -283,8 +337,8 @@ const resolvers = {
         }
     },
     Subscription: {
-        rollAdded: {
-            subscribe: () => pubsub.subscribe('ROLL_ADDED'),
+        activityAdded: {
+            subscribe: () => pubsub.subscribe('ACTIVITY_ADDED'),
             resolve: (payload: any) => payload,
         },
         userListChanged: {

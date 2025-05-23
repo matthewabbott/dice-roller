@@ -23,29 +23,43 @@ export const ROLL_DICE_MUTATION = gql`
   }
 `;
 
-export const ROLL_ADDED_SUBSCRIPTION = gql`
-  subscription RollAdded {
-    rollAdded {
+// Activity feed operations
+export const GET_ACTIVITIES_QUERY = gql`
+  query GetActivities {
+    activities {
       id
+      type
+      timestamp
       user
-      expression
-      interpretedExpression
-      result
-      rolls
+      message
+      roll {
+        id
+        user
+        expression
+        interpretedExpression
+        result
+        rolls
+      }
     }
   }
 `;
 
-// Get all existing rolls
-export const GET_ROLLS_QUERY = gql`
-  query GetRolls {
-    rolls {
+export const ACTIVITY_ADDED_SUBSCRIPTION = gql`
+  subscription ActivityAdded {
+    activityAdded {
       id
+      type
+      timestamp
       user
-      expression
-      interpretedExpression
-      result
-      rolls
+      message
+      roll {
+        id
+        user
+        expression
+        interpretedExpression
+        result
+        rolls
+      }
     }
   }
 `;
