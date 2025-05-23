@@ -4,6 +4,7 @@ import DiceRoller from './DiceRoller';
 import ActivityFeed from './ActivityFeed';
 import UserList from './UserList';
 import ChatInput from './ChatInput';
+import DiceCanvas from './DiceCanvas';
 
 const Layout: React.FC = () => {
     return (
@@ -22,9 +23,9 @@ const Layout: React.FC = () => {
                     <ActivityFeed />
                 </div>
 
-                {/* Right Column: 3D Dice Canvas Placeholder (TODO: implement, Feature 5) */}
-                <div className="card flex items-center justify-center">
-                    <p className="text-brand-text-muted">3D Dice Canvas Placeholder (Feature 5)</p>
+                {/* Right Column: 3D Dice Canvas */}
+                <div className="card">
+                    <DiceCanvas />
                 </div>
             </main>
         </div>
