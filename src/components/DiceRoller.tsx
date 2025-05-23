@@ -17,7 +17,6 @@ const DiceRoller: React.FC = () => {
 
     const usernameDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-    // Roll dice mutatio
     const [rollDice, { data, loading, error }] = useMutation(ROLL_DICE_MUTATION, {
         onCompleted: (data) => {
             console.log('Roll mutation completed:', data);

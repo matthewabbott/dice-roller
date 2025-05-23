@@ -16,6 +16,6 @@ Major snag, fixed by e48bc33:
 - Needed to change server.ts to explicitly define a websocket server to handle requests against `ws://localhost:4000/dice/graphql`
 - Apollo documentation at https://www.apollographql.com/docs/apollo-server/data/subscriptions was out of date
 - Documentation shows `import { useServer } from 'graphql-ws/lib/use/ws';`
-- Correct import in graphql v6 is `import { useServer } from 'graphql-ws/use/ws';`
+- Correct import in graphql v6 is `import { useServer } from 'graphql-ws/use/ws';` (per https://the-guild.dev/graphql/ws/recipes)
 - Apollo has the latest graphql as a dependency. So doc examples just don't actually work.
 - Imagine having to go check the graphql documentation. This was actually me. I had to. All the king's AIs and all the king's client documentation couldn't put my imports back together again.
