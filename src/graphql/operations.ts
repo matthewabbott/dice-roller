@@ -49,3 +49,23 @@ export const GET_ROLLS_QUERY = gql`
     }
   }
 `;
+
+export const GET_ACTIVE_USERS_QUERY = gql`
+  query GetActiveUsers {
+    activeUsers {
+      sessionId
+      username
+      isActive
+    }
+  }
+`;
+
+export const USER_LIST_CHANGED_SUBSCRIPTION = gql`
+  subscription UserListChanged {
+    userListChanged {
+      sessionId
+      username
+      isActive
+    }
+  }
+`;
