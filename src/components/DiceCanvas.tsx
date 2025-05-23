@@ -1,10 +1,144 @@
 import React, { useRef, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, extend } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
+import * as THREE from 'three';
+import { DICE_COLORS } from '../constants/colors';
+
+// Extend R3F with the geometry we need
+extend({ EdgesGeometry: THREE.EdgesGeometry });
 
 interface DiceCanvasProps {
     // TODO
 }
+
+// D6 Component with toy-like styling
+const D6: React.FC<{ position?: [number, number, number] }> = ({ position = [0, 0, 0] }) => {
+
+    const dotSize = 0.1; // Bigger dots - was 0.06
+    const faceOffset = 0.501; // Just outside the cube surface
+
+    return (
+        <group position={position}>
+            {/* Main die body - bright white with slight roundness */}
+            <mesh>
+                <boxGeometry args={[1, 1, 1]} />
+                <meshStandardMaterial
+                    color={DICE_COLORS.WHITE}
+                    roughness={0.3}
+                    metalness={0.1}
+                />
+            </mesh>
+
+            {/* Thick black edges for toy-like look */}
+            <lineSegments>
+                <edgesGeometry args={[new THREE.BoxGeometry(1, 1, 1)]} />
+                <lineBasicMaterial color={DICE_COLORS.EDGE_BLACK} linewidth={4} />
+            </lineSegments>
+
+            {/* Extra thick corner emphasis */}
+            <lineSegments>
+                <edgesGeometry args={[new THREE.BoxGeometry(1.01, 1.01, 1.01)]} />
+                <lineBasicMaterial color={DICE_COLORS.EDGE_GRAY} linewidth={2} opacity={0.6} transparent />
+            </lineSegments>
+
+            {/* Face 1 (front face) - 1 dot center */}
+            <mesh position={[0, 0, faceOffset]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+
+            {/* Face 2 (right face) - 2 dots diagonal */}
+            <mesh position={[faceOffset, 0.2, -0.2]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+            <mesh position={[faceOffset, -0.2, 0.2]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+
+            {/* Face 3 (top face) - 3 dots diagonal */}
+            <mesh position={[-0.2, faceOffset, 0.2]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+            <mesh position={[0, faceOffset, 0]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+            <mesh position={[0.2, faceOffset, -0.2]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+
+            {/* Face 4 (bottom face) - 4 dots corners */}
+            <mesh position={[-0.2, -faceOffset, 0.2]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+            <mesh position={[0.2, -faceOffset, 0.2]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+            <mesh position={[-0.2, -faceOffset, -0.2]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+            <mesh position={[0.2, -faceOffset, -0.2]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+
+            {/* Face 5 (left face) - 5 dots (4 corners + center) */}
+            <mesh position={[-faceOffset, 0.2, 0.2]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+            <mesh position={[-faceOffset, -0.2, 0.2]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+            <mesh position={[-faceOffset, 0, 0]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+            <mesh position={[-faceOffset, 0.2, -0.2]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+            <mesh position={[-faceOffset, -0.2, -0.2]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+
+            {/* Face 6 (back face) - 6 dots (2 columns of 3) */}
+            <mesh position={[-0.15, 0.25, -faceOffset]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+            <mesh position={[-0.15, 0, -faceOffset]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+            <mesh position={[-0.15, -0.25, -faceOffset]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+            <mesh position={[0.15, 0.25, -faceOffset]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+            <mesh position={[0.15, 0, -faceOffset]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+            <mesh position={[0.15, -0.25, -faceOffset]}>
+                <sphereGeometry args={[dotSize, 8, 8]} />
+                <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
+            </mesh>
+        </group>
+    );
+};
 
 const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const controlsRef = useRef<any>(null);
@@ -34,14 +168,11 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                     {/* Ground plane */}
                     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
                         <planeGeometry args={[10, 10]} />
-                        <meshStandardMaterial color="#2a2a2a" />
+                        <meshStandardMaterial color={DICE_COLORS.TABLE_DARK} />
                     </mesh>
 
-                    {/* Test cube to verify 3D setup */}
-                    <mesh position={[0, 0, 0]}>
-                        <boxGeometry args={[1, 1, 1]} />
-                        <meshStandardMaterial color="orange" />
-                    </mesh>
+                    {/* D6 Dice */}
+                    <D6 position={[0, 0.5, 0]} />
                 </Canvas>
 
                 {/* Full screen controls */}
@@ -78,14 +209,11 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                 {/* Ground plane */}
                 <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
                     <planeGeometry args={[10, 10]} />
-                    <meshStandardMaterial color="#2a2a2a" />
+                    <meshStandardMaterial color={DICE_COLORS.TABLE_DARK} />
                 </mesh>
 
-                {/* Test cube to verify 3D setup */}
-                <mesh position={[0, 0, 0]}>
-                    <boxGeometry args={[1, 1, 1]} />
-                    <meshStandardMaterial color="orange" />
-                </mesh>
+                {/* D6 Dice */}
+                <D6 position={[0, 0.5, 0]} />
             </Canvas>
 
             {/* Normal mode controls */}
