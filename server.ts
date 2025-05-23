@@ -91,11 +91,20 @@ function sanitizeUsername(username: string): string {
 }
 
 function getActiveUsers(): Array<{ sessionId: string; username: string; isActive: boolean }> {
-    return Array.from(activeUsernames).map(username => ({
-        sessionId: usernameToSession.get(username) || '',
-        username: username,
-        isActive: true
-    }));
+    const users: Array<{ sessionId: string; username: string; isActive: boolean }> = [];
+
+    // If we didn't care about anonymous users, we could just use `activeUsernames`
+    for (const sessionId of activeSessions) {
+        const username = sessionToUsername.get(sessionId) || 'Anonymous';
+
+        users.push({
+            sessionId,
+            username: username,
+            isActive: true
+        });
+    }
+
+    return users;
 }
 
 function publishUserListUpdate() {
@@ -105,7 +114,8 @@ function publishUserListUpdate() {
 }
 
 // safety checking ensure data structure consistency when removing usernames
-// kludge-y, implemented because of onDisconnect issues when closing browser tabs
+// enforces synchronization between `activeUsernames`, `sessionToUsername`, and `usernameToSession`
+// ideally the code would have invariants that naturally enforce that relationship, but this was expedient...
 function removeUsernameSafely(username: string, sessionId: string): boolean {
     // check that the username actually belongs to this session before removing
     const registeredSessionId = usernameToSession.get(username);
@@ -348,6 +358,9 @@ useServer({
         console.log(`WebSocket connection established for session: ${sessionId}`);
         activeSessions.add(sessionId);
         console.log(`Active sessions: ${Array.from(activeSessions).join(', ')}`);
+
+        publishUserListUpdate();
+
         return createUserContext(sessionId);
     },
     onDisconnect: (ctx, code, reason) => {
