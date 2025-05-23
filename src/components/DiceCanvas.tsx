@@ -16,6 +16,7 @@ const D6: React.FC<{ position?: [number, number, number] }> = ({ position = [0, 
 
     const dotSize = 0.1; // Bigger dots - was 0.06
     const faceOffset = 0.501; // Just outside the cube surface
+    const spacing = 0.28; // Increased spacing between dots - was 0.2
 
     return (
         <group position={position}>
@@ -48,17 +49,17 @@ const D6: React.FC<{ position?: [number, number, number] }> = ({ position = [0, 
             </mesh>
 
             {/* Face 2 (right face) - 2 dots diagonal */}
-            <mesh position={[faceOffset, 0.2, -0.2]}>
+            <mesh position={[faceOffset, spacing, -spacing]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
-            <mesh position={[faceOffset, -0.2, 0.2]}>
+            <mesh position={[faceOffset, -spacing, spacing]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
 
             {/* Face 3 (top face) - 3 dots diagonal */}
-            <mesh position={[-0.2, faceOffset, 0.2]}>
+            <mesh position={[-spacing, faceOffset, spacing]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
@@ -66,35 +67,35 @@ const D6: React.FC<{ position?: [number, number, number] }> = ({ position = [0, 
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
-            <mesh position={[0.2, faceOffset, -0.2]}>
+            <mesh position={[spacing, faceOffset, -spacing]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
 
             {/* Face 4 (bottom face) - 4 dots corners */}
-            <mesh position={[-0.2, -faceOffset, 0.2]}>
+            <mesh position={[-spacing, -faceOffset, spacing]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
-            <mesh position={[0.2, -faceOffset, 0.2]}>
+            <mesh position={[spacing, -faceOffset, spacing]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
-            <mesh position={[-0.2, -faceOffset, -0.2]}>
+            <mesh position={[-spacing, -faceOffset, -spacing]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
-            <mesh position={[0.2, -faceOffset, -0.2]}>
+            <mesh position={[spacing, -faceOffset, -spacing]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
 
             {/* Face 5 (left face) - 5 dots (4 corners + center) */}
-            <mesh position={[-faceOffset, 0.2, 0.2]}>
+            <mesh position={[-faceOffset, spacing, spacing]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
-            <mesh position={[-faceOffset, -0.2, 0.2]}>
+            <mesh position={[-faceOffset, -spacing, spacing]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
@@ -102,37 +103,37 @@ const D6: React.FC<{ position?: [number, number, number] }> = ({ position = [0, 
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
-            <mesh position={[-faceOffset, 0.2, -0.2]}>
+            <mesh position={[-faceOffset, spacing, -spacing]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
-            <mesh position={[-faceOffset, -0.2, -0.2]}>
+            <mesh position={[-faceOffset, -spacing, -spacing]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
 
             {/* Face 6 (back face) - 6 dots (2 columns of 3) */}
-            <mesh position={[-0.15, 0.25, -faceOffset]}>
+            <mesh position={[-0.18, 0.3, -faceOffset]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
-            <mesh position={[-0.15, 0, -faceOffset]}>
+            <mesh position={[-0.18, 0, -faceOffset]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
-            <mesh position={[-0.15, -0.25, -faceOffset]}>
+            <mesh position={[-0.18, -0.3, -faceOffset]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
-            <mesh position={[0.15, 0.25, -faceOffset]}>
+            <mesh position={[0.18, 0.3, -faceOffset]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
-            <mesh position={[0.15, 0, -faceOffset]}>
+            <mesh position={[0.18, 0, -faceOffset]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
-            <mesh position={[0.15, -0.25, -faceOffset]}>
+            <mesh position={[0.18, -0.3, -faceOffset]}>
                 <sphereGeometry args={[dotSize, 8, 8]} />
                 <meshStandardMaterial color={DICE_COLORS.DOT_BLACK} />
             </mesh>
