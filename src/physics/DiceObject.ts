@@ -184,14 +184,27 @@ export abstract class DiceObject {
      * @returns The created physics body
      */
     private createBody(): CANNON.Body {
-        // Create shape from Three.js geometry
-        const shape = PhysicsUtils.createConvexPolyhedronFromGeometry(this.object.geometry);
+        // For now, use a simple box shape for D6 (cube)
+        // TODO: Add proper shape creation for other dice types
+        const halfExtents = new CANNON.Vec3(0.5, 0.5, 0.5); // Unit cube
+        const shape = new CANNON.Box(halfExtents);
 
         // Create body with the shape
         const body = new CANNON.Body({
             mass: this.geometry.mass,
             shape: shape,
             material: DiceManager.getMaterials()?.dice
+        });
+
+        // Add damping to help dice come to rest naturally
+        body.linearDamping = 0.1;    // Linear velocity damping
+        body.angularDamping = 0.1;   // Angular velocity damping
+
+        console.log('🎲 Created physics body:', {
+            mass: this.geometry.mass,
+            shape: 'Box',
+            halfExtents: halfExtents,
+            material: !!DiceManager.getMaterials()?.dice
         });
 
         return body;
@@ -277,6 +290,9 @@ export abstract class DiceObject {
     public setPosition(position: THREE.Vector3): void {
         this.body.position.copy(PhysicsUtils.threeVectorToCannon(position));
         this.object.position.copy(position);
+
+        // Wake up the physics body to ensure it responds to physics
+        this.body.wakeUp();
     }
 
     /**
@@ -294,6 +310,9 @@ export abstract class DiceObject {
     public setRotation(quaternion: THREE.Quaternion): void {
         this.body.quaternion.copy(PhysicsUtils.threeQuaternionToCannon(quaternion));
         this.object.quaternion.copy(quaternion);
+
+        // Wake up the physics body to ensure it responds to physics
+        this.body.wakeUp();
     }
 
     /**
@@ -322,6 +341,9 @@ export abstract class DiceObject {
         // Update Three.js object
         this.object.position.copy(PhysicsUtils.cannonVectorToThree(vectors.position));
         this.object.quaternion.copy(PhysicsUtils.cannonQuaternionToThree(vectors.quaternion));
+
+        // Wake up the physics body to ensure it responds to physics
+        this.body.wakeUp();
     }
 
     /**

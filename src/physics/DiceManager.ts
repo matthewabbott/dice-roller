@@ -25,10 +25,10 @@ export class DiceManagerClass {
     };
 
     /** Stability threshold for considering dice stationary */
-    private readonly stabilityThreshold = 1;
+    private readonly stabilityThreshold = 0.01;
 
     /** Number of consecutive stable frames required before dice is considered settled */
-    private readonly requiredStableFrames = 50;
+    private readonly requiredStableFrames = 10;
 
     /**
      * Initializes the physics world with the specified configuration
@@ -59,6 +59,10 @@ export class DiceManagerClass {
 
             // Set sleep behavior
             this.world.allowSleep = finalConfig.allowSleep;
+
+            // Add global damping to help objects come to rest
+            this.world.defaultContactMaterial.friction = 0.01;
+            this.world.defaultContactMaterial.restitution = 0.3;
 
             // Initialize materials system
             this.initializeMaterials();
@@ -348,7 +352,8 @@ export class DiceManagerClass {
                     let allStable = true;
 
                     for (const diceValue of diceValues) {
-                        if (diceValue.dice.isFinished()) {
+                        const isFinished = diceValue.dice.isFinished();
+                        if (isFinished) {
                             diceValue.stableCount = (diceValue.stableCount || 0) + 1;
                         } else {
                             diceValue.stableCount = 0;
@@ -356,6 +361,16 @@ export class DiceManagerClass {
 
                         if ((diceValue.stableCount || 0) < this.requiredStableFrames) {
                             allStable = false;
+                        }
+
+                        // Debug log every 60 frames (1 second)
+                        if ((Date.now() - startTime) % 1000 < 16) {
+                            console.log('🎲 Stability check:', {
+                                isFinished,
+                                stableCount: diceValue.stableCount,
+                                requiredFrames: this.requiredStableFrames,
+                                elapsed: ((Date.now() - startTime) / 1000).toFixed(1) + 's'
+                            });
                         }
                     }
 
@@ -437,15 +452,17 @@ export class DiceManagerClass {
      * @returns True if the dice is stable
      */
     public isDiceStable(dice: any): boolean {
-        if (!dice || !dice.object || !dice.object.userData.body) {
+        if (!dice || !dice.body) {
+            console.log('🎲 isDiceStable: No dice or body found');
             return false;
         }
 
-        const body = dice.object.userData.body as CANNON.Body;
+        // Access the physics body directly instead of going through userData
+        const body = dice.body as CANNON.Body;
         const angularVelocity = body.angularVelocity;
         const velocity = body.velocity;
 
-        return (
+        const isStable = (
             Math.abs(angularVelocity.x) < this.stabilityThreshold &&
             Math.abs(angularVelocity.y) < this.stabilityThreshold &&
             Math.abs(angularVelocity.z) < this.stabilityThreshold &&
@@ -453,6 +470,21 @@ export class DiceManagerClass {
             Math.abs(velocity.y) < this.stabilityThreshold &&
             Math.abs(velocity.z) < this.stabilityThreshold
         );
+
+        // Debug logging - show actual values to help tune threshold
+        const maxVel = Math.max(Math.abs(velocity.x), Math.abs(velocity.y), Math.abs(velocity.z));
+        const maxAngVel = Math.max(Math.abs(angularVelocity.x), Math.abs(angularVelocity.y), Math.abs(angularVelocity.z));
+
+        if (!isStable) {
+            // Only log every 30th frame to avoid spam
+            if (Math.random() < 0.03) {
+                console.log('🎲 Dice not stable yet - maxVel:', maxVel.toFixed(4), 'maxAngVel:', maxAngVel.toFixed(4), 'threshold:', this.stabilityThreshold);
+            }
+        } else {
+            console.log('🎲 Dice is stable!');
+        }
+
+        return isStable;
     }
 
     /**

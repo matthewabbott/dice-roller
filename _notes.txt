@@ -3,6 +3,11 @@ TODOs:
 - fix anonymous user registry, or at least codify current behavior as intentional
 - initialized user color sometimes is different from ui listed color (might be a session persistence thing?)
 
+
+Minor snag, physics body sleeping issue
+- Dice would freeze when they come to a full stop
+- Cannon.js behavior that puts them to 'sleep' and requires they explicitly be 'woken up'
+
 Major snag, username tracking synchronization bug:
 - Data structures `activeUsernames`, `sessionToUsername`, and `usernameToSession` were getting out of sync
 - Caused "ghost" usernames: registered, but orphaned from disconnected sessions

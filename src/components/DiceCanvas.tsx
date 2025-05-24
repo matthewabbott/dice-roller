@@ -128,8 +128,14 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
         try {
             console.log('🎲 Rolling dice...');
 
+            // Check initial state
+            console.log('🎲 Before throw - position:', dice.getPosition(), 'body position:', dice.body.position);
+
             // Throw the dice with physics
             dice.throwDice(1.5); // Medium force
+
+            // Check state after throw
+            console.log('🎲 After throw - position:', dice.getPosition(), 'velocity:', dice.body.velocity);
 
             // Wait for the dice to settle and get the result
             const result = await DiceManager.rollSingle(dice, Math.floor(Math.random() * 6) + 1, 8000);
@@ -151,11 +157,12 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
         dice.setPosition(new THREE.Vector3(0, 2, 0));
         dice.body.velocity.set(0, 0, 0);
         dice.body.angularVelocity.set(0, 0, 0);
+        dice.body.wakeUp(); // Ensure body is awake after reset
 
         setCurrentValue(null);
         setIsRolling(false);
 
-        console.log('🎲 Dice reset');
+        console.log('🎲 Dice reset and woken up');
     }, [dice]);
 
     const resetCamera = () => {

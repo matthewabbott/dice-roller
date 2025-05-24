@@ -207,6 +207,16 @@ export class DiceD6 extends DiceObject {
             PhysicsUtils.randomBetween(-10, 10) * throwForce
         );
         this.body.angularVelocity.copy(angularVel);
+
+        // Ensure the body is awake and ready for physics simulation
+        this.body.wakeUp();
+
+        console.log('🎲 throwDice: Body woken up, velocities set:', {
+            position: this.body.position,
+            velocity: this.body.velocity,
+            angularVelocity: this.body.angularVelocity,
+            sleepState: this.body.sleepState
+        });
     }
 
     /**
