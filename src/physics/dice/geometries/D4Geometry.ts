@@ -25,19 +25,20 @@ export const D4Geometry: DiceGeometry = {
      * Face definitions using vertex indices
      * Each face is defined by vertices in counter-clockwise order (when viewed from outside)
      * D4 faces are triangular, not quadrilateral like D6
+     * Fixed ordering to ensure outward-pointing normals for cannon-es
      */
     faces: [
         // Face 0 (base): hidden face - this determines the dice value
-        [0, 2, 1], // base triangle (bottom face) - VALUE READ FROM THIS FACE
+        [0, 1, 2], // base triangle (bottom face) - CCW when viewed from below
 
         // Face 1: front face (visible when value 1 is up)
-        [0, 1, 3], // front triangular face
+        [0, 3, 1], // front triangular face - CCW when viewed from front
 
         // Face 2: right face (visible when value 2 is up) 
-        [1, 2, 3], // right triangular face
+        [1, 3, 2], // right triangular face - CCW when viewed from right
 
         // Face 3: left face (visible when value 3 is up)
-        [2, 0, 3], // left triangular face
+        [2, 3, 0], // left triangular face - CCW when viewed from left
     ],
 
     /**

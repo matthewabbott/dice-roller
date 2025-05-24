@@ -1,54 +1,135 @@
-# React + TypeScript + Vite
+# TTRPG Dice Roller 🎲
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A multiplayer dice rolling application for tabletop role-playing games, built with React, TypeScript, and Three.js physics simulation.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 🎲 **Realistic 3D Dice Physics**
+- **D4 (Tetrahedron)** - Four-sided dice with inverted reading (reads from bottom face) ✅
+- **D6 (Cube)** - Standard six-sided dice ✅
+- **D8 (Octahedron)** - Eight-sided dice 🚧 *Coming Soon*
+- **D10 (Pentagonal Trapezohedron)** - Ten-sided dice 🚧 *Coming Soon*
+- **D12 (Dodecahedron)** - Twelve-sided dice 🚧 *Coming Soon*
+- **D20 (Icosahedron)** - Twenty-sided dice 🚧 *Coming Soon*
 
-## Expanding the ESLint configuration
+### 🔧 **Physics Engine**
+- **cannon-es** physics simulation for realistic dice rolling
+- **ConvexPolyhedron** shapes for accurate collision detection
+- **Gravity-based** value determination
+- **Proper mass distribution** and damping for natural dice behavior
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 🎮 **Interactive Interface**
+- **3D Canvas** with orbital controls for viewing dice
+- **Dice Selection Panel** with visual dice type picker
+- **One-click rolling** with physics simulation
+- **Roll History** tracking recent results
+- **Full-screen mode** for immersive experience
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+### 🌐 **Multiplayer Support**
+- Real-time dice rolling with GraphQL subscriptions
+- User registration and activity tracking
+- Live activity feed showing all user rolls
+- WebSocket-based real-time updates
+
+## Getting Started
+
+### Prerequisites
+- Node.js (v16 or higher)
+- npm or yarn
+
+### Installation
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd dice-roller
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+
+# Start the backend server (in another terminal)
+npm run server
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Usage
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. **Select Dice Type**: Choose from available dice types (D4, D6, etc.)
+2. **Roll Dice**: Click the "Roll" button to throw the dice with physics
+3. **View Results**: Watch the dice settle and see the result
+4. **Track History**: Check recent rolls in the history panel
+5. **Multiplayer**: Register a username to see other players' rolls
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+## Technical Implementation
+
+### 🏗️ **Architecture**
+- **Frontend**: React + TypeScript + Three.js + React Three Fiber
+- **Backend**: GraphQL + WebSocket subscriptions
+- **Physics**: cannon-es physics engine
+- **Styling**: Tailwind CSS
+
+### 🎲 **Dice Physics**
+Each dice type has its own implementation:
+
+```typescript
+// D4 Example - Tetrahedron with inverted reading
+const d4 = new DiceD4({
+    size: 100,
+    fontColor: '#000000',
+    backColor: '#ffffff'
+});
+
+// Roll the dice
+d4.throwDice(1.0); // Force multiplier
+
+// Get result (reads from bottom face for D4)
+const value = d4.getUpperValue(); // 1-4
 ```
+
+### 🔧 **Key Features**
+- **Inverted Reading**: D4 dice read from the bottom face (realistic behavior)
+- **Physics Shapes**: ConvexPolyhedron for complex dice, Box for simple cubes
+- **Value Mapping**: Accurate face-to-value relationships for each dice type
+- **Error Handling**: Graceful fallbacks and validation
+
+## Development Roadmap
+
+### ✅ **Completed**
+- ✅ Foundation Setup (Physics world, types, utilities)
+- ✅ Core Physics Engine (DiceManager, DiceObject base class)
+- ✅ D6 Implementation (Cube dice)
+- ✅ D4 Implementation (Tetrahedron dice)
+- ✅ DiceCanvas Integration (3D rendering and controls)
+- ✅ Enhanced UI (Dice selection, roll history)
+
+### 🚧 **In Progress**
+- 🚧 D20 Implementation (Icosahedron)
+- 🚧 D8 Implementation (Octahedron)
+- 🚧 D10 & D12 Implementation
+
+### 📋 **Upcoming**
+- 📋 Advanced Features (Sound effects, animations)
+- 📋 Performance Optimization
+- 📋 Mobile Support
+- 📋 Custom Dice Themes
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- **threejs-dice** - Original inspiration for dice physics implementation
+- **cannon-es** - Modern physics engine
+- **Three.js** - 3D graphics library
+- **React Three Fiber** - React renderer for Three.js
