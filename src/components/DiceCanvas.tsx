@@ -91,15 +91,81 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
         }
     });
 
-    // Create a simple visible representation for now since the dice.object might have rendering issues
-    // We'll render a simple colored shape that matches the dice type
+    // Always call useMemo to avoid hooks order violations
+    const geometry = React.useMemo(() => {
+        const isDiceD4 = dice.diceType === 'd4';
+
+        if (isDiceD4) {
+            // Create custom D4 geometry that matches our physics vertices exactly
+            const d4Geometry = new THREE.BufferGeometry();
+
+            // Use the exact same vertices as our physics body (scaled by dice size)
+            const size = dice.options.size;
+            const vertices = new Float32Array([
+                // Face 1: [0, 1, 2] - base triangle
+                -0.5 * size, 0 * size, -0.289 * size,  // vertex 0
+                0.5 * size, 0 * size, -0.289 * size,   // vertex 1
+                0 * size, 0 * size, 0.577 * size,      // vertex 2
+
+                // Face 2: [0, 3, 1] - front face
+                -0.5 * size, 0 * size, -0.289 * size,  // vertex 0
+                0 * size, 0.816 * size, 0 * size,      // vertex 3
+                0.5 * size, 0 * size, -0.289 * size,   // vertex 1
+
+                // Face 3: [1, 3, 2] - right face
+                0.5 * size, 0 * size, -0.289 * size,   // vertex 1
+                0 * size, 0.816 * size, 0 * size,      // vertex 3
+                0 * size, 0 * size, 0.577 * size,      // vertex 2
+
+                // Face 4: [2, 3, 0] - left face
+                0 * size, 0 * size, 0.577 * size,      // vertex 2
+                0 * size, 0.816 * size, 0 * size,      // vertex 3
+                -0.5 * size, 0 * size, -0.289 * size,  // vertex 0
+            ]);
+
+            // Calculate normals for each triangle
+            const normals = new Float32Array(vertices.length);
+            for (let i = 0; i < vertices.length; i += 9) {
+                const v1 = new THREE.Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
+                const v2 = new THREE.Vector3(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
+                const v3 = new THREE.Vector3(vertices[i + 6], vertices[i + 7], vertices[i + 8]);
+
+                const normal = new THREE.Vector3()
+                    .crossVectors(v2.clone().sub(v1), v3.clone().sub(v1))
+                    .normalize();
+
+                // Apply the same normal to all three vertices of this triangle
+                normals[i] = normal.x; normals[i + 1] = normal.y; normals[i + 2] = normal.z;
+                normals[i + 3] = normal.x; normals[i + 4] = normal.y; normals[i + 5] = normal.z;
+                normals[i + 6] = normal.x; normals[i + 7] = normal.y; normals[i + 8] = normal.z;
+            }
+
+            // Basic UV coordinates for texture mapping
+            const uvs = new Float32Array([
+                // Repeat this pattern for each face
+                0, 0, 1, 0, 0.5, 1,  // Face 1
+                0, 0, 1, 0, 0.5, 1,  // Face 2
+                0, 0, 1, 0, 0.5, 1,  // Face 3
+                0, 0, 1, 0, 0.5, 1,  // Face 4
+            ]);
+
+            d4Geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+            d4Geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+            d4Geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+
+            return d4Geometry;
+        } else {
+            // For D6 and other dice, return null to use built-in geometry
+            return null;
+        }
+    }, [dice.diceType, dice.options.size]);
+
+    // Render based on dice type
     const isDiceD4 = dice.diceType === 'd4';
 
-    if (isDiceD4) {
-        // Simple tetrahedron geometry for D4
+    if (isDiceD4 && geometry) {
         return (
-            <mesh ref={meshRef} castShadow receiveShadow>
-                <tetrahedronGeometry args={[1, 0]} />
+            <mesh ref={meshRef} geometry={geometry} castShadow receiveShadow>
                 <meshStandardMaterial
                     color="#ff6b6b"
                     roughness={0.3}
@@ -108,7 +174,7 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
             </mesh>
         );
     } else {
-        // Simple box geometry for D6
+        // Simple box geometry for D6 (this works fine)
         return (
             <mesh ref={meshRef} castShadow receiveShadow>
                 <boxGeometry args={[1, 1, 1]} />
@@ -130,7 +196,8 @@ const PhysicsGround: React.FC = () => {
         const groundBody = new CANNON.Body({ mass: 0 });
         groundBody.addShape(groundShape);
         groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
-        groundBody.position.set(0, -0.5, 0);
+        // Position ground plane lower to ensure dice don't clip through
+        groundBody.position.set(0, -1, 0);
 
         if (DiceManager.getMaterials()) {
             groundBody.material = DiceManager.getMaterials()!.floor;
@@ -138,13 +205,15 @@ const PhysicsGround: React.FC = () => {
 
         DiceManager.addBody(groundBody);
 
+        console.log('🎲 Ground plane created at Y:', groundBody.position.y);
+
         return () => {
             DiceManager.removeBody(groundBody);
         };
     }, []);
 
     return (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]} receiveShadow>
             <planeGeometry args={[10, 10]} />
             <meshStandardMaterial
                 color={DICE_COLORS.TABLE_DARK}
@@ -214,15 +283,19 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
             try {
                 const newDice = config.create();
                 if (newDice) {
-                    // Position the dice above the ground
-                    newDice.setPosition(new THREE.Vector3(0, 2, 0));
+                    // Position the dice well above the ground (ground is now at Y=-1)
+                    const startPosition = new THREE.Vector3(0, 3, 0);
+                    newDice.setPosition(startPosition);
                     setDice(newDice);
                     setCurrentValue(null);
 
-                    console.log(`🎲 ${selectedDiceType.toUpperCase()} dice created and added to scene`, {
+                    console.log(`🎲 ${selectedDiceType.toUpperCase()} dice created and positioned:`, {
                         type: selectedDiceType,
                         position: newDice.getPosition(),
-                        size: newDice.options.size
+                        bodyPosition: newDice.body.position,
+                        size: newDice.options.size,
+                        mass: newDice.body.mass,
+                        shape: newDice.body.shapes[0].type
                     });
                 }
             } catch (error) {
@@ -282,8 +355,8 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const resetDice = useCallback(() => {
         if (!dice) return;
 
-        // Reset position and clear velocities
-        dice.setPosition(new THREE.Vector3(0, 2, 0));
+        // Reset position and clear velocities (ground is now at Y=-1, so start at Y=3)
+        dice.setPosition(new THREE.Vector3(0, 3, 0));
         dice.body.velocity.set(0, 0, 0);
         dice.body.angularVelocity.set(0, 0, 0);
         dice.body.wakeUp();
@@ -291,7 +364,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
         setCurrentValue(null);
         setIsRolling(false);
 
-        console.log(`🎲 ${selectedDiceType.toUpperCase()} reset`);
+        console.log(`🎲 ${selectedDiceType.toUpperCase()} reset to position:`, dice.getPosition());
     }, [dice, selectedDiceType]);
 
     const resetCamera = () => {
