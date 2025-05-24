@@ -384,20 +384,26 @@ export class DiceManagerClass {
                             const settleDuration = (Date.now() - startTime) / 1000;
 
                             for (const diceValue of diceValues) {
-                                // Set the dice to land on the specified value
-                                diceValue.dice.shiftUpperValue(diceValue.value);
-                                diceValue.dice.setVectors(diceValue.vectors);
+                                // Get the actual value the dice landed on (natural physics result)
+                                const actualValue = diceValue.dice.getUpperValue();
+
                                 diceValue.dice.simulationRunning = false;
 
-                                // Create result object
+                                // Create result object with the natural physics result
                                 const result: DiceRollResult = {
                                     dice: diceValue.dice,
-                                    value: diceValue.value,
+                                    value: actualValue, // Use actual landed value instead of forced value
                                     settleDuration,
                                     finalPosition: diceValue.dice.getPosition(),
                                     finalRotation: diceValue.dice.getRotation()
                                 };
                                 results.push(result);
+
+                                console.log('🎲 Natural dice result:', {
+                                    requestedValue: diceValue.value,
+                                    actualValue: actualValue,
+                                    position: result.finalPosition
+                                });
                             }
 
                             this.throwRunning = false;

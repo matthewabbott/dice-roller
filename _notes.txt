@@ -7,6 +7,8 @@ TODOs:
 Minor snag, physics body sleeping issue
 - Dice would freeze when they come to a full stop
 - Cannon.js behavior that puts them to 'sleep' and requires they explicitly be 'woken up'
+- Also at the end of a throw, to show the die face, we'd rotate the die to show the value...
+  - except it'd restore the vectors from the start of the throw, flinging the die again.
 
 Major snag, username tracking synchronization bug:
 - Data structures `activeUsernames`, `sessionToUsername`, and `usernameToSession` were getting out of sync
