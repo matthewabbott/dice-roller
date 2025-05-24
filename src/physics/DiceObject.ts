@@ -184,10 +184,21 @@ export abstract class DiceObject {
      * @returns The created physics body
      */
     private createBody(): CANNON.Body {
-        // For now, use a simple box shape for D6 (cube)
-        // TODO: Add proper shape creation for other dice types
-        const halfExtents = new CANNON.Vec3(0.5, 0.5, 0.5); // Unit cube
-        const shape = new CANNON.Box(halfExtents);
+        let shape: CANNON.Shape;
+
+        // Create appropriate physics shape based on dice geometry
+        if (this.geometry.values === 6) {
+            // D6 - Simple box shape for cube
+            const halfExtents = new CANNON.Vec3(
+                this.geometry.scaleFactor * this.options.size * 0.5,
+                this.geometry.scaleFactor * this.options.size * 0.5,
+                this.geometry.scaleFactor * this.options.size * 0.5
+            );
+            shape = new CANNON.Box(halfExtents);
+        } else {
+            // Other dice types (D4, D8, D10, D12, D20) - Use ConvexPolyhedron
+            shape = this.createConvexPolyhedronShape();
+        }
 
         // Create body with the shape
         const body = new CANNON.Body({
@@ -202,12 +213,50 @@ export abstract class DiceObject {
 
         console.log('🎲 Created physics body:', {
             mass: this.geometry.mass,
-            shape: 'Box',
-            halfExtents: halfExtents,
+            shape: this.geometry.values === 6 ? 'Box' : 'ConvexPolyhedron',
+            diceType: `D${this.geometry.values}`,
             material: !!DiceManager.getMaterials()?.dice
         });
 
         return body;
+    }
+
+    /**
+     * Creates a ConvexPolyhedron shape from dice geometry
+     * Used for complex dice shapes like D4, D8, D10, D12, D20
+     * @returns ConvexPolyhedron shape for physics simulation
+     */
+    private createConvexPolyhedronShape(): CANNON.ConvexPolyhedron {
+        // Scale vertices to match dice size
+        const scaledVertices = this.geometry.vertices.map(vertex =>
+            vertex.map(coord => coord * this.geometry.scaleFactor * this.options.size)
+        );
+
+        // Convert to Cannon.js Vec3 format
+        const cannonVertices = scaledVertices.map(vertex =>
+            new CANNON.Vec3(vertex[0], vertex[1], vertex[2])
+        );
+
+        // Convert faces to the format expected by ConvexPolyhedron
+        // Cannon.js expects faces as arrays of vertex indices
+        const cannonFaces = this.geometry.faces.map(face => [...face]);
+
+        try {
+            // Create ConvexPolyhedron shape
+            const shape = new CANNON.ConvexPolyhedron({
+                vertices: cannonVertices,
+                faces: cannonFaces
+            });
+
+            return shape;
+        } catch (error) {
+            console.error(`Failed to create ConvexPolyhedron for D${this.geometry.values}:`, error);
+
+            // Fallback to a sphere if ConvexPolyhedron creation fails
+            console.warn(`Falling back to sphere shape for D${this.geometry.values}`);
+            const radius = this.geometry.scaleFactor * this.options.size * 0.5;
+            return new CANNON.Sphere(radius) as any; // Type assertion to match return type
+        }
     }
 
     /**
