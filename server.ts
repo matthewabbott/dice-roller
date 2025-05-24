@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/use/ws';
-import { PRESET_COLORS } from './constants/colors';
+import { PRESET_COLORS } from './src/constants/colors';
 
 // TODO: more sophisticated storage
 interface Roll {
