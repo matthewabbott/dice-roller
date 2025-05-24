@@ -198,13 +198,41 @@ export abstract class DiceObject {
     }
 
     /**
-     * Creates a texture with text for dice faces
-     * @param text - Text to render on the texture
-     * @param color - Color of the text
-     * @param backColor - Background color of the texture
-     * @returns The created texture
-     */
+ * Creates a texture with text for dice faces
+ * @param text - Text to render on the texture
+ * @param color - Color of the text
+ * @param backColor - Background color of the texture
+ * @returns The created texture
+ */
     static createTextTexture(text: string, color: string, backColor: string): THREE.Texture {
+        // Check if we're in a browser environment
+        if (typeof document === 'undefined' || typeof HTMLCanvasElement === 'undefined') {
+            // Create a simple colored texture for testing/server environments
+            const size = 256;
+            const canvas = {
+                width: size,
+                height: size,
+                getContext: () => ({
+                    fillStyle: '',
+                    fillRect: () => { },
+                    textAlign: '',
+                    textBaseline: '',
+                    font: '',
+                    fillText: () => { }
+                })
+            } as any;
+
+            // Return a basic texture that Three.js can handle
+            const texture = new THREE.DataTexture(
+                new Uint8Array(size * size * 4).fill(255), // White texture
+                size,
+                size,
+                THREE.RGBAFormat
+            );
+            texture.needsUpdate = true;
+            return texture;
+        }
+
         const size = PhysicsUtils.calculateTextureSize(256);
         const canvas = document.createElement('canvas');
         canvas.width = size;
