@@ -391,10 +391,8 @@ export class DiceManagerClass {
                             this.throwRunning = false;
                             reject(new Error(`Error processing dice results: ${error}`));
                         }
-                    } else {
-                        // Continue physics simulation
-                        this.world?.fixedStep(this.defaultConfig.timeStep);
                     }
+                    // Note: Removed the recursive fixedStep call - physics stepping is handled by useFrame
                 };
 
                 // Start the stability checking loop
