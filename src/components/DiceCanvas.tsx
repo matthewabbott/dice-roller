@@ -286,9 +286,10 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 for (let vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
                     const vertex = icosahedronVertices[face[vertexIndex]];
                     const arrayIndex = faceIndex * 9 + vertexIndex * 3;
-                    vertices[arrayIndex] = vertex[0] * size;     // X
-                    vertices[arrayIndex + 1] = vertex[1] * size; // Y
-                    vertices[arrayIndex + 2] = vertex[2] * size; // Z
+                    // Apply size scaling and geometry scale factor (0.6 for D20)
+                    vertices[arrayIndex] = vertex[0] * size * 0.6;     // X
+                    vertices[arrayIndex + 1] = vertex[1] * size * 0.6; // Y
+                    vertices[arrayIndex + 2] = vertex[2] * size * 0.6; // Z
                 }
             }
 

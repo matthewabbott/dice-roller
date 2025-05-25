@@ -76,8 +76,9 @@ export const D20Geometry: DiceGeometry = {
     /**
      * Scale factor for adjusting the geometry size
      * Base unit icosahedron will be multiplied by this factor
+     * D20 is scaled down to prevent ground clipping (golden ratio creates large coordinates)
      */
-    scaleFactor: 1.0,
+    scaleFactor: 0.6,
 
     /**
      * Number of faces/values on this dice type
