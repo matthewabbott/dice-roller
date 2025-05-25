@@ -1,6 +1,6 @@
 TODOs:
 - Need threejs-dice source code for geometry context
-  - maybe grab package and put in gitignore?
+  - TODO: credit to https://github.com/byWulf/threejs-dice. Package doesn't work for current ver three.js, but I used his vertex definitions and dicemanager structure.
 - currently I have to click a button to roll, and I'd like to be able to pick up and drag the die,
 - dice with more sides are very hard to construct
 - will also have to broadcast all this info to everyone on the web-page so THEY can see the dice rolling too

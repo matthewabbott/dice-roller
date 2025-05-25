@@ -3,7 +3,7 @@ import { Canvas, extend, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { DICE_COLORS } from '../constants/colors';
-import { DiceManager, DiceD6, DiceD4, DiceD8, DiceD20, PhysicsUtils } from '../physics';
+import { DiceManager, DiceD6, DiceD4, DiceD8, DiceD12, DiceD20, PhysicsUtils } from '../physics';
 import * as CANNON from 'cannon-es';
 
 // Extend R3F with the geometry we need
@@ -15,7 +15,7 @@ interface DiceCanvasProps {
 
 // Define available dice types
 type DiceType = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20';
-type DiceInstance = DiceD4 | DiceD6 | DiceD8 | DiceD20;
+type DiceInstance = DiceD4 | DiceD6 | DiceD8 | DiceD12 | DiceD20;
 
 // Dice configuration
 const DICE_CONFIG = {
@@ -61,8 +61,8 @@ const DICE_CONFIG = {
         min: 1,
         max: 12,
         color: '#feca57',
-        isAvailable: false,
-        create: () => null // Not implemented yet
+        isAvailable: true,
+        create: () => new DiceD12({ size: 1 })
     },
     d20: {
         name: 'D20 (Icosahedron)',
@@ -219,6 +219,110 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
             d8Geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
 
             return d8Geometry;
+        } else if (diceType === 'd12') {
+            // Create custom D12 dodecahedron geometry that matches our physics vertices exactly
+            const d12Geometry = new THREE.BufferGeometry();
+
+            // Golden ratio for dodecahedron calculations
+            const PHI = (1 + Math.sqrt(5)) / 2; // ≈ 1.618033988749895
+            const INVPHI = 1 / PHI; // ≈ 0.618033988749895
+
+            // D12 dodecahedron vertices (from corrected D12Geometry.ts - original threejs-dice layout)
+            const dodecahedronVertices = [
+                // Original threejs-dice D12 vertices
+                [0, INVPHI, PHI],        // 0
+                [0, INVPHI, -PHI],       // 1
+                [0, -INVPHI, PHI],       // 2
+                [0, -INVPHI, -PHI],      // 3
+                [PHI, 0, INVPHI],        // 4
+                [PHI, 0, -INVPHI],       // 5
+                [-PHI, 0, INVPHI],       // 6
+                [-PHI, 0, -INVPHI],      // 7
+                [INVPHI, PHI, 0],        // 8
+                [INVPHI, -PHI, 0],       // 9
+                [-INVPHI, PHI, 0],       // 10
+                [-INVPHI, -PHI, 0],      // 11
+                [1, 1, 1],               // 12
+                [1, 1, -1],              // 13
+                [1, -1, 1],              // 14
+                [1, -1, -1],             // 15
+                [-1, 1, 1],              // 16
+                [-1, 1, -1],             // 17
+                [-1, -1, 1],             // 18
+                [-1, -1, -1],            // 19
+            ];
+
+            // D12 faces (12 pentagonal faces) - exact layout from original threejs-dice
+            const dodecahedronFaces = [
+                [2, 14, 4, 12, 0],       // Face 0 (value 1)
+                [15, 9, 11, 19, 3],      // Face 1 (value 2)
+                [16, 10, 17, 7, 6],      // Face 2 (value 3)
+                [6, 7, 19, 11, 18],      // Face 3 (value 4)
+                [6, 18, 2, 0, 16],       // Face 4 (value 5)
+                [18, 11, 9, 14, 2],      // Face 5 (value 6)
+                [1, 17, 10, 8, 13],      // Face 6 (value 7)
+                [1, 13, 5, 15, 3],       // Face 7 (value 8)
+                [13, 8, 12, 4, 5],       // Face 8 (value 9)
+                [5, 4, 14, 9, 15],       // Face 9 (value 10)
+                [0, 12, 8, 10, 16],      // Face 10 (value 11)
+                [3, 19, 7, 17, 1],       // Face 11 (value 12)
+            ];
+
+            // Triangulate pentagonal faces (each pentagon becomes 3 triangles)
+            const triangulatedFaces = [];
+            for (const face of dodecahedronFaces) {
+                // Pentagon with vertices [v0, v1, v2, v3, v4]
+                // Triangulate as: [v0,v1,v2], [v0,v2,v3], [v0,v3,v4]
+                triangulatedFaces.push([face[0], face[1], face[2]]);
+                triangulatedFaces.push([face[0], face[2], face[3]]);
+                triangulatedFaces.push([face[0], face[3], face[4]]);
+            }
+
+            // Build vertices array for triangulated dodecahedron
+            const vertices = new Float32Array(triangulatedFaces.length * 9); // 36 triangles * 3 vertices * 3 coords
+            for (let faceIndex = 0; faceIndex < triangulatedFaces.length; faceIndex++) {
+                const face = triangulatedFaces[faceIndex];
+                for (let vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
+                    const vertex = dodecahedronVertices[face[vertexIndex]];
+                    const arrayIndex = faceIndex * 9 + vertexIndex * 3;
+                    // Apply size scaling and geometry scale factor (0.9 for D12)
+                    vertices[arrayIndex] = vertex[0] * size * 0.9;     // X
+                    vertices[arrayIndex + 1] = vertex[1] * size * 0.9; // Y
+                    vertices[arrayIndex + 2] = vertex[2] * size * 0.9; // Z
+                }
+            }
+
+            // Calculate normals for each triangle
+            const normals = new Float32Array(vertices.length);
+            for (let i = 0; i < vertices.length; i += 9) {
+                const v1 = new THREE.Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
+                const v2 = new THREE.Vector3(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
+                const v3 = new THREE.Vector3(vertices[i + 6], vertices[i + 7], vertices[i + 8]);
+
+                const normal = new THREE.Vector3()
+                    .crossVectors(v2.clone().sub(v1), v3.clone().sub(v1))
+                    .normalize();
+
+                // Apply the same normal to all three vertices of this triangle
+                normals[i] = normal.x; normals[i + 1] = normal.y; normals[i + 2] = normal.z;
+                normals[i + 3] = normal.x; normals[i + 4] = normal.y; normals[i + 5] = normal.z;
+                normals[i + 6] = normal.x; normals[i + 7] = normal.y; normals[i + 8] = normal.z;
+            }
+
+            // Basic UV coordinates for texture mapping (36 triangular faces from 12 pentagons)
+            const uvs = new Float32Array(triangulatedFaces.length * 6); // 36 triangles * 3 vertices * 2 coords
+            for (let i = 0; i < triangulatedFaces.length; i++) {
+                const baseIndex = i * 6;
+                uvs[baseIndex] = 0; uvs[baseIndex + 1] = 0;      // Vertex 1
+                uvs[baseIndex + 2] = 1; uvs[baseIndex + 3] = 0;  // Vertex 2  
+                uvs[baseIndex + 4] = 0.5; uvs[baseIndex + 5] = 1; // Vertex 3
+            }
+
+            d12Geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+            d12Geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+            d12Geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+
+            return d12Geometry;
         } else if (diceType === 'd20') {
             // Create custom D20 icosahedron geometry that matches our physics vertices exactly
             const d20Geometry = new THREE.BufferGeometry();
@@ -351,6 +455,22 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
             </mesh>
         );
     } else if (dice.diceType === 'd8' && geometry) {
+        return (
+            <mesh
+                key={`dice-${dice.diceType}`}
+                ref={meshRef}
+                geometry={geometry}
+                castShadow
+                receiveShadow
+            >
+                <meshStandardMaterial
+                    color={diceConfig.color}
+                    roughness={0.3}
+                    metalness={0.1}
+                />
+            </mesh>
+        );
+    } else if (dice.diceType === 'd12' && geometry) {
         return (
             <mesh
                 key={`dice-${dice.diceType}`}
@@ -515,7 +635,9 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                 const newDice = config.create();
                 if (newDice) {
                     // Position the dice well above the ground (ground is now at Y=-1)
-                    const startPosition = new THREE.Vector3(0, 3, 0);
+                    // D12 needs extra height due to larger scale factor (0.9 vs 0.6 for D20)
+                    const startHeight = selectedDiceType === 'd12' ? 4 : 3;
+                    const startPosition = new THREE.Vector3(0, startHeight, 0);
                     newDice.setPosition(startPosition);
                     setDice(newDice);
                     setCurrentValue(null);
@@ -526,7 +648,8 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                         bodyPosition: newDice.body.position,
                         size: newDice.options.size,
                         mass: newDice.body.mass,
-                        shape: newDice.body.shapes[0].type
+                        shape: newDice.body.shapes[0].type,
+                        startHeight
                     });
                 }
             } catch (error) {
@@ -586,8 +709,9 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const resetDice = useCallback(() => {
         if (!dice) return;
 
-        // Reset position and clear velocities (ground is now at Y=-1, so start at Y=3)
-        dice.setPosition(new THREE.Vector3(0, 3, 0));
+        // Reset position and clear velocities (ground is now at Y=-1, so start at Y=3 or Y=4 for D12)
+        const startHeight = selectedDiceType === 'd12' ? 4 : 3;
+        dice.setPosition(new THREE.Vector3(0, startHeight, 0));
         dice.body.velocity.set(0, 0, 0);
         dice.body.angularVelocity.set(0, 0, 0);
         dice.body.wakeUp();
