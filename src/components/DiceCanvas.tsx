@@ -278,39 +278,45 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                     // Convert to velocity (units per second)
                     throwVelocity = positionDelta.multiplyScalar(1000 / timeSpan);
 
-                    // Scale the throwing force
-                    const throwMultiplier = 2.0;
+                    // Reduce throwing force for more controlled behavior
+                    const throwMultiplier = 1.0; // Reduced from 2.0
                     throwVelocity.multiplyScalar(throwMultiplier);
 
-                    // Add some upward force if moving horizontally
+                    // Add much less upward force to reduce the "jink" effect
                     const horizontalSpeed = Math.sqrt(throwVelocity.x * throwVelocity.x + throwVelocity.z * throwVelocity.z);
-                    if (horizontalSpeed > 1) {
-                        throwVelocity.y += Math.min(horizontalSpeed * 0.3, 8); // Cap upward force
+                    if (horizontalSpeed > 2) { // Only add upward force for faster horizontal movement
+                        throwVelocity.y += Math.min(horizontalSpeed * 0.15, 4); // Reduced from 0.3 and capped at 4
                     }
                 }
             }
 
-            // If no significant movement, just let it drop
+            // If no significant movement, just let it drop gently
             if (throwVelocity.length() < 0.5) {
-                throwVelocity.set(0, -2, 0); // Small downward velocity
+                throwVelocity.set(0, -1, 0); // Gentler downward velocity
+            }
+
+            // Cap maximum throwing velocity to prevent dice from flying too far
+            const maxThrowSpeed = 12; // Reasonable maximum
+            if (throwVelocity.length() > maxThrowSpeed) {
+                throwVelocity.normalize().multiplyScalar(maxThrowSpeed);
             }
 
             // Apply the calculated velocity
             dice.body.velocity.set(throwVelocity.x, throwVelocity.y, throwVelocity.z);
 
-            // Add rotational velocity based on throw direction and speed
+            // Add rotational velocity based on throw direction and speed (reduced intensity)
             const throwSpeed = throwVelocity.length();
-            const rotationIntensity = Math.min(throwSpeed * 0.5, 15); // Cap rotation speed
+            const rotationIntensity = Math.min(throwSpeed * 0.3, 10); // Reduced from 0.5 and capped at 10
 
             dice.body.angularVelocity.set(
-                (Math.random() - 0.5) * rotationIntensity + throwVelocity.z * 0.1,
+                (Math.random() - 0.5) * rotationIntensity + throwVelocity.z * 0.05, // Reduced influence
                 (Math.random() - 0.5) * rotationIntensity,
-                (Math.random() - 0.5) * rotationIntensity - throwVelocity.x * 0.1
+                (Math.random() - 0.5) * rotationIntensity - throwVelocity.x * 0.05  // Reduced influence
             );
 
             dice.body.wakeUp();
 
-            console.log('🎲 Dice thrown with momentum-based physics:', {
+            console.log('🎲 Dice thrown with controlled physics:', {
                 throwVelocity: throwVelocity.toArray(),
                 throwSpeed: throwSpeed,
                 rotationIntensity: rotationIntensity
@@ -1168,9 +1174,26 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
             try {
                 if (!DiceManager.isInitialized()) {
                     DiceManager.setWorld();
+
+                    // Add air resistance/dampening to make dice behavior more controlled
+                    const world = DiceManager.getWorld();
+                    if (world) {
+                        // Set global dampening to simulate air resistance
+                        world.defaultContactMaterial.friction = 0.4; // Increase friction
+                        world.defaultContactMaterial.restitution = 0.3; // Reduce bounciness
+
+                        // Add linear and angular dampening to all bodies
+                        world.addEventListener('addBody', (event: any) => {
+                            const body = event.body;
+                            if (body) {
+                                body.linearDamping = 0.1;  // Air resistance for movement
+                                body.angularDamping = 0.1; // Air resistance for rotation
+                            }
+                        });
+                    }
                 }
                 setIsInitialized(true);
-                console.log('🎲 Physics world initialized');
+                console.log('🎲 Physics world initialized with dampening');
             } catch (error) {
                 console.error('❌ Failed to initialize physics:', error);
             }
@@ -1257,6 +1280,10 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
 
             // Add to physics world
             DiceManager.addBody(newDice.body);
+
+            // Apply dampening for controlled behavior
+            newDice.body.linearDamping = 0.1;  // Air resistance for movement
+            newDice.body.angularDamping = 0.1; // Air resistance for rotation
 
             // Add to dice array
             setDice(prevDice => [...prevDice, newDice]);
