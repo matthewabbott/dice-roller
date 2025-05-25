@@ -165,7 +165,13 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
 
     if (isDiceD4 && geometry) {
         return (
-            <mesh ref={meshRef} geometry={geometry} castShadow receiveShadow>
+            <mesh
+                key={`dice-${dice.diceType}`}
+                ref={meshRef}
+                geometry={geometry}
+                castShadow
+                receiveShadow
+            >
                 <meshStandardMaterial
                     color="#ff6b6b"
                     roughness={0.3}
@@ -176,7 +182,12 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
     } else {
         // Simple box geometry for D6 (this works fine)
         return (
-            <mesh ref={meshRef} castShadow receiveShadow>
+            <mesh
+                key={`dice-${dice.diceType}`}
+                ref={meshRef}
+                castShadow
+                receiveShadow
+            >
                 <boxGeometry args={[1, 1, 1]} />
                 <meshStandardMaterial
                     color="#4ecdc4"
