@@ -285,10 +285,10 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 for (let vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
                     const vertex = dodecahedronVertices[face[vertexIndex]];
                     const arrayIndex = faceIndex * 9 + vertexIndex * 3;
-                    // Apply size scaling and geometry scale factor (0.9 for D12)
-                    vertices[arrayIndex] = vertex[0] * size * 0.9;     // X
-                    vertices[arrayIndex + 1] = vertex[1] * size * 0.9; // Y
-                    vertices[arrayIndex + 2] = vertex[2] * size * 0.9; // Z
+                    // Apply size scaling and geometry scale factor (0.75 for D12 - smaller than original 0.9)
+                    vertices[arrayIndex] = vertex[0] * size * 0.75;     // X
+                    vertices[arrayIndex + 1] = vertex[1] * size * 0.75; // Y
+                    vertices[arrayIndex + 2] = vertex[2] * size * 0.75; // Z
                 }
             }
 
