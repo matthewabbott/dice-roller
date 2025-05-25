@@ -7,20 +7,20 @@ import { useServer } from 'graphql-ws/use/ws';
 import { PRESET_COLORS } from './src/constants/colors';
 import { RollProcessor } from './src/services/RollProcessor';
 import { DiceResultManager } from './src/services/DiceResultManager';
+import { canvasStateManager } from './src/services/CanvasStateManager';
+import { typeDefs } from './src/graphql/schema';
 
-// TODO: more sophisticated storage
+// Updated interfaces to match Phase 3 schema
 interface Roll {
-    id: string;
-    user: string;
     expression: string;
-    interpretedExpression: string;
-    result: number;
-    rolls: number[];
+    results: number[];
+    total: number;
     canvasData?: CanvasData;
 }
 
 interface CanvasData {
-    diceRolls: DiceRoll[];
+    dice: DiceRoll[];
+    events: CanvasEvent[];
 }
 
 interface DiceRoll {
@@ -29,7 +29,7 @@ interface DiceRoll {
     position?: Position;
     isVirtual: boolean;
     virtualRolls?: number[];
-    result: number;
+    result?: number;
 }
 
 interface Position {
@@ -39,12 +39,28 @@ interface Position {
 }
 
 interface CanvasEvent {
+    id: string;
     type: string;
     diceId: string;
     userId: string;
-    sessionId: string;
-    data: string;
     timestamp: string;
+    data?: CanvasEventData;
+}
+
+interface CanvasEventData {
+    position?: Position;
+    velocity?: Velocity;
+    result?: number;
+    diceType?: string;
+    isVirtual?: boolean;
+    virtualRolls?: number[];
+    highlightColor?: string;
+}
+
+interface Velocity {
+    x: number;
+    y: number;
+    z: number;
 }
 
 interface Activity {
@@ -80,93 +96,6 @@ const rollProcessor = new RollProcessor();
 const diceResultManager = new DiceResultManager();
 
 const pubsub = createPubSub();
-
-const typeDefs = /* GraphQL */ `
-  type Roll {
-    id: ID!
-    user: String!
-    expression: String!
-    interpretedExpression: String!
-    result: Int!
-    rolls: [Int!]!
-    # Canvas integration fields
-    canvasData: CanvasData
-  }
-
-  type CanvasData {
-    diceRolls: [DiceRoll!]!
-  }
-
-  type DiceRoll {
-    canvasId: String!
-    diceType: String!
-    position: Position
-    isVirtual: Boolean!
-    virtualRolls: [Int!]
-    result: Int!
-  }
-
-  type Position {
-    x: Float!
-    y: Float!
-    z: Float!
-  }
-
-  type CanvasEvent {
-    type: String!
-    diceId: String!
-    userId: String!
-    sessionId: String!
-    data: String # JSON string for flexible event data
-    timestamp: String!
-  }
-
-  type Activity {
-    id: ID!
-    type: String!
-    timestamp: String!
-    user: String
-    message: String
-    roll: Roll
-  }
-
-  type User {
-    sessionId: ID!
-    username: String!
-    color: String
-    isActive: Boolean!
-  }
-
-  type RegisterUsernameResponse {
-    success: Boolean!
-    username: String
-    message: String
-  }
-
-  type SetUserColorResponse {
-    success: Boolean!
-    color: String
-    message: String
-  }
-
-  type Query {
-    activities: [Activity!]!
-    activeUsers: [User!]!
-  }
-
-  type Mutation {
-    rollDice(user: String!, expression: String!): Roll!
-    registerUsername(username: String!): RegisterUsernameResponse!
-    setUserColor(color: String!): SetUserColorResponse!
-    sendChatMessage(message: String!): Activity!
-  }
-
-  type Subscription {
-    activityAdded: Activity!
-    userListChanged: [User!]!
-    canvasEventsUpdated: CanvasEvent!
-  }
-`;
 
 function sanitizeUsername(username: string): string {
     let sanitizedUser = username.trim();
