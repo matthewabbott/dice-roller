@@ -78,9 +78,15 @@ const DICE_CONFIG = {
 // Enhanced Physics Dice Component that renders actual dice geometry
 const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
     const meshRef = useRef<THREE.Mesh>(null);
+    const cameraRef = useRef<THREE.Camera | null>(null);
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
     // Update mesh position/rotation from physics body every frame
-    useFrame(() => {
+    useFrame((state) => {
+        // Store camera and canvas references for use in event handlers
+        cameraRef.current = state.camera;
+        canvasRef.current = state.gl.domElement;
+
         if (meshRef.current && dice) {
             // Sync with physics body
             dice.updateMesh();
@@ -91,11 +97,12 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
         }
     });
 
-    // Click and drag throwing system
+    // Click and drag throwing system with mouse following
     const [isDragging, setIsDragging] = useState(false);
-    const [dragStart, setDragStart] = useState<{ x: number; y: number; time: number } | null>(null);
+    const [dragStart, setDragStart] = useState<{ x: number; y: number; time: number; worldPos: THREE.Vector3 } | null>(null);
     const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
     const [isHovered, setIsHovered] = useState(false);
+    const [originalPosition, setOriginalPosition] = useState<THREE.Vector3 | null>(null);
 
     const handlePointerDown = useCallback((event: any) => {
         // Only handle dice throwing if Shift key is held down
@@ -104,85 +111,140 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
         }
 
         event.stopPropagation();
+
+        // Store original position for physics restoration
+        const currentPos = new THREE.Vector3(
+            dice.body.position.x,
+            dice.body.position.y,
+            dice.body.position.z
+        );
+        setOriginalPosition(currentPos);
+
+        // Get world position of the dice when drag starts
+        const worldPos = new THREE.Vector3();
+        if (meshRef.current) {
+            meshRef.current.getWorldPosition(worldPos);
+        }
+
         setIsDragging(true);
         setDragStart({
             x: event.clientX,
             y: event.clientY,
-            time: Date.now()
+            time: Date.now(),
+            worldPos: worldPos
         });
         setDragCurrent({ x: event.clientX, y: event.clientY });
+
+        // Make dice kinematic (not affected by physics) during drag
+        dice.body.type = CANNON.Body.KINEMATIC;
+        dice.body.velocity.set(0, 0, 0);
+        dice.body.angularVelocity.set(0, 0, 0);
 
         // Capture pointer for consistent drag behavior
         if (event.target.setPointerCapture) {
             event.target.setPointerCapture(event.pointerId);
         }
-    }, []);
+    }, [dice]);
 
     const handlePointerMove = useCallback((event: any) => {
-        if (isDragging && dragStart) {
+        if (isDragging && dragStart && meshRef.current && cameraRef.current && canvasRef.current) {
             setDragCurrent({ x: event.clientX, y: event.clientY });
+
+            // Get canvas and camera from stored refs
+            const camera = cameraRef.current;
+            const canvas = canvasRef.current;
+            const rect = canvas.getBoundingClientRect();
+
+            // Calculate mouse movement in screen space
+            const deltaX = event.clientX - dragStart.x;
+            const deltaY = event.clientY - dragStart.y;
+
+            // Convert to normalized device coordinates (-1 to 1)
+            const normalizedX = (deltaX / rect.width) * 2;
+            const normalizedY = -(deltaY / rect.height) * 2;
+
+            // Get camera vectors for world space conversion
+            const cameraDirection = new THREE.Vector3();
+            camera.getWorldDirection(cameraDirection);
+
+            // Create right and up vectors relative to camera
+            const right = new THREE.Vector3();
+            const up = new THREE.Vector3(0, 1, 0);
+            right.crossVectors(up, cameraDirection).normalize();
+            up.crossVectors(cameraDirection, right).normalize();
+
+            // Scale movement based on distance from camera to dice
+            const distance = camera.position.distanceTo(dragStart.worldPos);
+            const movementScale = distance * 0.2; // Increased sensitivity
+
+            // Calculate new position relative to starting position
+            const newPosition = dragStart.worldPos.clone();
+            newPosition.add(right.multiplyScalar(normalizedX * movementScale));
+            newPosition.add(up.multiplyScalar(normalizedY * movementScale));
+
+            // Keep dice above the table and within reasonable bounds
+            newPosition.y = Math.max(newPosition.y, 0.5);
+            newPosition.x = Math.max(-6, Math.min(6, newPosition.x)); // Table bounds
+            newPosition.z = Math.max(-6, Math.min(6, newPosition.z)); // Table bounds
+
+            // Update physics body position smoothly
+            dice.body.position.set(newPosition.x, newPosition.y, newPosition.z);
+
+            // Add slight rotation during drag for visual feedback
+            const rotationIntensity = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
+            if (rotationIntensity > 0.01) {
+                const rotationAxis = new CANNON.Vec3(normalizedY, 0, normalizedX).unit();
+                const rotationSpeed = rotationIntensity * 0.05;
+                dice.body.quaternion.setFromAxisAngle(rotationAxis, rotationSpeed);
+            }
         }
-    }, [isDragging, dragStart]);
+    }, [isDragging, dragStart, dice]);
 
     const handlePointerUp = useCallback((event: any) => {
         if (isDragging && dragStart && dragCurrent && dice.body) {
+            // Restore physics body to dynamic
+            dice.body.type = CANNON.Body.DYNAMIC;
+
             const deltaX = dragCurrent.x - dragStart.x;
             const deltaY = dragCurrent.y - dragStart.y;
             const deltaTime = Date.now() - dragStart.time;
 
             // Calculate throw force based on drag distance and speed
             const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-            const speed = distance / Math.max(deltaTime, 50); // Prevent division by very small numbers
+            const speed = distance / Math.max(deltaTime, 50);
 
-            // Convert screen coordinates to world coordinates
-            const forceMultiplier = 0.02; // Adjust this to tune throwing sensitivity
-            const maxForce = 15; // Cap maximum force
+            // Enhanced throwing physics
+            const forceMultiplier = 0.04;
+            const maxForce = 25;
 
             const forceX = Math.max(-maxForce, Math.min(maxForce, deltaX * forceMultiplier));
-            const forceZ = Math.max(-maxForce, Math.min(maxForce, deltaY * forceMultiplier)); // Y screen -> Z world
-            const forceY = Math.max(2, Math.min(8, speed * 2)); // Always throw upward, scale with speed
+            const forceZ = Math.max(-maxForce, Math.min(maxForce, deltaY * forceMultiplier));
+            const forceY = Math.max(4, Math.min(12, speed * 4)); // More upward force
 
             // Apply throwing force
             dice.body.velocity.set(forceX, forceY, forceZ);
 
             // Add rotational velocity based on throw direction
-            const rotationMultiplier = 0.3;
+            const rotationMultiplier = 0.5;
             dice.body.angularVelocity.set(
-                (Math.random() - 0.5) * 20 + deltaY * rotationMultiplier,
-                (Math.random() - 0.5) * 20,
-                (Math.random() - 0.5) * 20 + deltaX * rotationMultiplier
+                (Math.random() - 0.5) * 30 + deltaY * rotationMultiplier,
+                (Math.random() - 0.5) * 30,
+                (Math.random() - 0.5) * 30 + deltaX * rotationMultiplier
             );
 
             dice.body.wakeUp();
 
-            // Create throw data for potential multiplayer broadcasting
-            const throwData = {
-                diceType: dice.diceType,
-                force: { x: forceX, y: forceY, z: forceZ },
-                angularVelocity: {
-                    x: dice.body.angularVelocity.x,
-                    y: dice.body.angularVelocity.y,
-                    z: dice.body.angularVelocity.z
-                },
-                position: {
-                    x: dice.body.position.x,
-                    y: dice.body.position.y,
-                    z: dice.body.position.z
-                },
-                timestamp: Date.now(),
+            console.log('🎲 Dice thrown with mouse following:', {
                 dragDistance: distance,
+                throwForce: { x: forceX, y: forceY, z: forceZ },
                 dragTime: deltaTime
-            };
-
-            console.log('🎲 Dice thrown via Shift+drag:', throwData);
-
-            // TODO: This throwData can be sent to GraphQL for multiplayer broadcasting
-            // Example: broadcastDiceThrow(throwData)
+            });
         }
 
         setIsDragging(false);
         setDragStart(null);
         setDragCurrent(null);
+        setOriginalPosition(null);
 
         // Release pointer capture
         if (event.target.releasePointerCapture) {
@@ -196,7 +258,15 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
 
     const handlePointerLeave = useCallback(() => {
         setIsHovered(false);
-    }, []);
+        // If dragging is interrupted by leaving the mesh, clean up
+        if (isDragging && dice.body) {
+            dice.body.type = CANNON.Body.DYNAMIC;
+            setIsDragging(false);
+            setDragStart(null);
+            setDragCurrent(null);
+            setOriginalPosition(null);
+        }
+    }, [isDragging, dice]);
 
     // Always call useMemo to avoid hooks order violations
     const geometry = React.useMemo(() => {
@@ -1011,6 +1081,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const [rollResult, setRollResult] = useState<number | null>(null);
     const [rollHistory, setRollHistory] = useState<{ type: DiceType; value: number; timestamp: number }[]>([]);
     const [isInitialized, setIsInitialized] = useState(false);
+    const [isCameraLocked, setIsCameraLocked] = useState(false);
 
     // Initialize physics world
     useEffect(() => {
@@ -1037,6 +1108,19 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
             });
         };
     }, []);
+
+    // Update OrbitControls when camera lock state changes
+    useEffect(() => {
+        if (controlsRef.current) {
+            controlsRef.current.enabled = !isCameraLocked;
+        }
+    }, [isCameraLocked]);
+
+    // Toggle camera lock
+    const toggleCameraLock = useCallback(() => {
+        setIsCameraLocked(prev => !prev);
+        console.log(`📷 Camera ${!isCameraLocked ? 'locked' : 'unlocked'}`);
+    }, [isCameraLocked]);
 
     // Spawn a new dice of the selected type
     const spawnDice = useCallback(async (diceType: DiceType = selectedDiceType) => {
@@ -1214,7 +1298,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                 gl={{ antialias: true, alpha: false }}
                 shadows
             >
-                <OrbitControls ref={controlsRef} />
+                <OrbitControls ref={controlsRef} enabled={!isCameraLocked} />
 
                 {/* Improved lighting setup */}
                 <ambientLight intensity={0.4} />
@@ -1260,6 +1344,14 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                     {isRolling ? '🎲 Rolling...' : `🎲 Roll All Dice`}
                 </button>
                 <button
+                    onClick={toggleCameraLock}
+                    className={`${isCameraLocked ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'} text-white rounded font-semibold ${isFullScreen ? 'px-3 py-2' : 'text-xs px-2 py-1'
+                        }`}
+                    title={isCameraLocked ? "Unlock camera (enable rotation/pan)" : "Lock camera (disable rotation/pan)"}
+                >
+                    {isCameraLocked ? '🔒 Camera Locked' : '🔓 Camera Free'}
+                </button>
+                <button
                     onClick={clearAllDice}
                     className={`bg-yellow-600 hover:bg-yellow-500 text-white rounded ${isFullScreen ? 'px-3 py-2' : 'text-xs px-2 py-1 opacity-70 hover:opacity-100'
                         }`}
@@ -1297,9 +1389,10 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                 <div className="mt-4 p-3 bg-blue-900 bg-opacity-50 rounded text-sm">
                     <div className="font-medium mb-1">💡 Controls:</div>
                     <ul className="text-xs space-y-1 text-blue-200">
+                        <li>• <strong>🔒 Lock Camera</strong> to click dice without moving the view</li>
                         <li>• <strong>Shift + Click & Drag</strong> any dice to throw it</li>
-                        <li>• <strong>Left Click & Drag</strong> to rotate camera view</li>
-                        <li>• <strong>Right Click & Drag</strong> to pan camera</li>
+                        <li>• <strong>Left Click & Drag</strong> to rotate camera view (when unlocked)</li>
+                        <li>• <strong>Right Click & Drag</strong> to pan camera (when unlocked)</li>
                         <li>• <strong>Mouse Wheel</strong> to zoom in/out</li>
                         <li>• Use "Roll All" for controlled results</li>
                         <li>• Use "🚀" for physics-based throwing</li>
@@ -1436,14 +1529,42 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                     </button>
                 </div>
 
+                {/* Camera Controls */}
+                <div className="mt-4 pt-4 border-t border-gray-700">
+                    <div className="text-sm font-medium mb-2">Camera Controls:</div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={toggleCameraLock}
+                            className={`flex-1 ${isCameraLocked ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'} text-white font-semibold py-2 px-3 rounded transition-colors`}
+                            title={isCameraLocked ? "Unlock camera (enable rotation/pan)" : "Lock camera (disable rotation/pan)"}
+                        >
+                            {isCameraLocked ? '🔒 Camera Locked' : '🔓 Camera Free'}
+                        </button>
+                        <button
+                            onClick={resetCamera}
+                            className="bg-gray-700 hover:bg-gray-600 text-white py-2 px-3 rounded transition-colors"
+                            title="Reset camera view"
+                        >
+                            📷 Reset View
+                        </button>
+                    </div>
+                    <div className="text-xs text-gray-400 mt-2">
+                        {isCameraLocked ?
+                            "Camera is locked. Click dice freely without moving the camera." :
+                            "Camera is free. Use mouse to rotate/pan view."
+                        }
+                    </div>
+                </div>
+
                 {/* Multi-dice Instructions */}
                 {dice.length > 0 && (
                     <div className="mt-4 p-3 bg-blue-900 bg-opacity-50 rounded text-sm">
                         <div className="font-medium mb-1">💡 Controls:</div>
                         <ul className="text-xs space-y-1 text-blue-200">
+                            <li>• <strong>🔒 Lock Camera</strong> to click dice without moving the view</li>
                             <li>• <strong>Shift + Click & Drag</strong> any dice to throw it</li>
-                            <li>• <strong>Left Click & Drag</strong> to rotate camera view</li>
-                            <li>• <strong>Right Click & Drag</strong> to pan camera</li>
+                            <li>• <strong>Left Click & Drag</strong> to rotate camera view (when unlocked)</li>
+                            <li>• <strong>Right Click & Drag</strong> to pan camera (when unlocked)</li>
                             <li>• <strong>Mouse Wheel</strong> to zoom in/out</li>
                             <li>• Use "Roll All" for controlled results</li>
                             <li>• Use "🚀" for physics-based throwing</li>
@@ -1481,4 +1602,4 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     );
 };
 
-export default DiceCanvas; 
+export default DiceCanvas;
