@@ -5,6 +5,8 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/use/ws';
 import { PRESET_COLORS } from './src/constants/colors';
+import { RollProcessor } from './src/services/RollProcessor';
+import { DiceResultManager } from './src/services/DiceResultManager';
 
 // TODO: more sophisticated storage
 interface Roll {
@@ -14,6 +16,35 @@ interface Roll {
     interpretedExpression: string;
     result: number;
     rolls: number[];
+    canvasData?: CanvasData;
+}
+
+interface CanvasData {
+    diceRolls: DiceRoll[];
+}
+
+interface DiceRoll {
+    canvasId: string;
+    diceType: string;
+    position?: Position;
+    isVirtual: boolean;
+    virtualRolls?: number[];
+    result: number;
+}
+
+interface Position {
+    x: number;
+    y: number;
+    z: number;
+}
+
+interface CanvasEvent {
+    type: string;
+    diceId: string;
+    userId: string;
+    sessionId: string;
+    data: string;
+    timestamp: string;
 }
 
 interface Activity {
@@ -40,6 +71,13 @@ const usernameToSession = new Map<string, string>();
 const sessionToColor = new Map<string, string>();
 
 const activities: Activity[] = [];
+const canvasEvents: CanvasEvent[] = [];
+
+// Initialize RollProcessor
+const rollProcessor = new RollProcessor();
+
+// Initialize DiceResultManager
+const diceResultManager = new DiceResultManager();
 
 const pubsub = createPubSub();
 
@@ -51,6 +89,36 @@ const typeDefs = /* GraphQL */ `
     interpretedExpression: String!
     result: Int!
     rolls: [Int!]!
+    # Canvas integration fields
+    canvasData: CanvasData
+  }
+
+  type CanvasData {
+    diceRolls: [DiceRoll!]!
+  }
+
+  type DiceRoll {
+    canvasId: String!
+    diceType: String!
+    position: Position
+    isVirtual: Boolean!
+    virtualRolls: [Int!]
+    result: Int!
+  }
+
+  type Position {
+    x: Float!
+    y: Float!
+    z: Float!
+  }
+
+  type CanvasEvent {
+    type: String!
+    diceId: String!
+    userId: String!
+    sessionId: String!
+    data: String # JSON string for flexible event data
+    timestamp: String!
   }
 
   type Activity {
@@ -96,6 +164,7 @@ const typeDefs = /* GraphQL */ `
   type Subscription {
     activityAdded: Activity!
     userListChanged: [User!]!
+    canvasEventsUpdated: CanvasEvent!
   }
 `;
 
@@ -216,53 +285,6 @@ function removeUsernameSafely(username: string, sessionId: string): boolean {
     }
 }
 
-// Basic XdY dice parser
-function parseAndRoll(expression: string): { result: number; rolls: number[]; interpretedExpression: string } {
-    // Regex: capture number of dice (optional), 'd', and die type (ex: 10 = ten-sided die)
-    // Allows for, eg, "d6" (read as 1d6) or stuff like "3d77"
-    const match = expression.toLowerCase().match(/^(?:(\d+))?d(\d+)$/);
-
-    if (!match) {
-        // TODO: more sophisticated error handling for various invalid formats
-        console.error(`Invalid dice expression format: ${expression}. Expected format like "XdY" or "dY".`);
-        return { result: 0, rolls: [], interpretedExpression: "invalid" };
-    }
-
-    // match[1]: numDice (optional), match[2]: dieType
-    let numDice = match[1] ? parseInt(match[1], 10) : 1; // Default to 1 if not specified
-    let dieType = parseInt(match[2], 10);
-
-    const MAX_DICE = 10001; // Surely you don't need to roll more than 10000 dice...
-
-    if (numDice > MAX_DICE) {
-        console.warn(`User attempted to roll ${numDice}d${dieType}. Capping at ${MAX_DICE} dice.`);
-        numDice = MAX_DICE;
-    }
-
-    if (numDice <= 0) { // You have to roll at least one die. This makes you. (e.g. "0d6" becomes "1d6")
-        console.warn(`User attempted to roll ${numDice} dice. Defaulting to 1 die.`);
-        numDice = 1;
-    }
-
-    // dice can't have less than one side
-    if (dieType < 1) {
-        console.warn(`Invalid die type: ${dieType}. Defaulting to d1.`);
-        dieType = 1;
-    }
-
-    const interpretedExpressionString = `${numDice}d${dieType}`;
-    const rolledResults: number[] = [];
-    let totalResult = 0;
-
-    for (let i = 0; i < numDice; i++) {
-        const roll = Math.floor(Math.random() * dieType) + 1;
-        rolledResults.push(roll);
-        totalResult += roll;
-    }
-
-    return { result: totalResult, rolls: rolledResults, interpretedExpression: interpretedExpressionString };
-}
-
 const resolvers = {
     Query: {
         activities: () => activities,
@@ -272,21 +294,61 @@ const resolvers = {
         rollDice: (_: any, { user, expression }: { user: string; expression: string }, context: UserContext) => {
             let sanitizedUser = sanitizeUsername(user);
 
-            const { result, rolls: rolledResults, interpretedExpression } = parseAndRoll(expression);
+            // Use RollProcessor instead of parseAndRoll
+            const processedRoll = rollProcessor.processRoll(expression);
 
             const newRoll: Roll = {
                 id: uuidv4(),
                 user: sanitizedUser,
                 expression,
-                interpretedExpression,
-                result,
-                rolls: rolledResults,
+                interpretedExpression: processedRoll.interpretedExpression,
+                result: processedRoll.result,
+                rolls: processedRoll.rolls,
+                canvasData: processedRoll.canvasData,
             };
 
             const rollActivity = createRollActivity(newRoll);
             publishActivity(rollActivity);
 
-            console.log(`Rolled dice: ${expression} (interpreted as ${interpretedExpression}) for user ${sanitizedUser}. Result: ${result}`);
+            // Publish canvas events for each dice
+            if (processedRoll.canvasData && processedRoll.canvasData.diceRolls.length > 0) {
+                processedRoll.canvasData.diceRolls.forEach(diceRoll => {
+                    // Register dice with result manager
+                    diceResultManager.registerDiceRoll(
+                        diceRoll.canvasId,
+                        rollActivity.id,
+                        newRoll.id,
+                        sanitizedUser,
+                        context.sessionId,
+                        diceRoll.diceType,
+                        diceRoll.isVirtual,
+                        diceRoll.result,
+                        diceRoll.position
+                    );
+
+                    const canvasEvent: CanvasEvent = {
+                        type: 'DICE_SPAWN',
+                        diceId: diceRoll.canvasId,
+                        userId: sanitizedUser,
+                        sessionId: context.sessionId,
+                        data: JSON.stringify({
+                            diceType: diceRoll.diceType,
+                            position: diceRoll.position,
+                            isVirtual: diceRoll.isVirtual,
+                            virtualRolls: diceRoll.virtualRolls,
+                            result: diceRoll.result,
+                            rollId: newRoll.id,
+                            activityId: rollActivity.id
+                        }),
+                        timestamp: new Date().toISOString()
+                    };
+
+                    canvasEvents.push(canvasEvent);
+                    pubsub.publish('CANVAS_EVENTS_UPDATED', canvasEvent);
+                });
+            }
+
+            console.log(`Rolled dice: ${expression} (interpreted as ${processedRoll.interpretedExpression}) for user ${sanitizedUser}. Result: ${processedRoll.result}. Canvas dice: ${processedRoll.canvasData?.diceRolls.length || 0}`);
 
             return newRoll;
         },
@@ -440,6 +502,10 @@ const resolvers = {
         },
         userListChanged: {
             subscribe: () => pubsub.subscribe('USER_LIST_CHANGED'),
+            resolve: (payload: any) => payload,
+        },
+        canvasEventsUpdated: {
+            subscribe: () => pubsub.subscribe('CANVAS_EVENTS_UPDATED'),
             resolve: (payload: any) => payload,
         },
     },
