@@ -3,7 +3,7 @@ import { Canvas, extend, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { DICE_COLORS } from '../constants/colors';
-import { DiceManager, DiceD6, DiceD4, DiceD8, PhysicsUtils } from '../physics';
+import { DiceManager, DiceD6, DiceD4, DiceD8, DiceD20, PhysicsUtils } from '../physics';
 import * as CANNON from 'cannon-es';
 
 // Extend R3F with the geometry we need
@@ -15,7 +15,7 @@ interface DiceCanvasProps {
 
 // Define available dice types
 type DiceType = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20';
-type DiceInstance = DiceD4 | DiceD6 | DiceD8;
+type DiceInstance = DiceD4 | DiceD6 | DiceD8 | DiceD20;
 
 // Dice configuration
 const DICE_CONFIG = {
@@ -70,8 +70,8 @@ const DICE_CONFIG = {
         min: 1,
         max: 20,
         color: '#ff9ff3',
-        isAvailable: false,
-        create: () => null // Not implemented yet
+        isAvailable: true,
+        create: () => new DiceD20({ size: 1 })
     }
 };
 
@@ -219,6 +219,110 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
             d8Geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
 
             return d8Geometry;
+        } else if (diceType === 'd20') {
+            // Create custom D20 icosahedron geometry that matches our physics vertices exactly
+            const d20Geometry = new THREE.BufferGeometry();
+
+            // Golden ratio for icosahedron calculations
+            const PHI = (1 + Math.sqrt(5)) / 2; // ≈ 1.618033988749895
+
+            // D20 icosahedron vertices (from corrected D20Geometry.ts)
+            const icosahedronVertices = [
+                // Golden rectangles method for icosahedron vertices
+                // First golden rectangle in XY plane
+                [-1, PHI, 0],     // 0
+                [1, PHI, 0],      // 1
+                [-1, -PHI, 0],    // 2
+                [1, -PHI, 0],     // 3
+
+                // Second golden rectangle in YZ plane  
+                [0, -1, PHI],     // 4
+                [0, 1, PHI],      // 5
+                [0, -1, -PHI],    // 6
+                [0, 1, -PHI],     // 7
+
+                // Third golden rectangle in XZ plane
+                [PHI, 0, -1],     // 8
+                [PHI, 0, 1],      // 9
+                [-PHI, 0, -1],    // 10
+                [-PHI, 0, 1],     // 11
+            ];
+
+            // D20 faces (20 triangular faces) - corrected winding order (CCW from outside)
+            const icosahedronFaces = [
+                // Top cap faces (around vertex with highest Y coordinate)
+                [0, 11, 5],   // Face 0
+                [0, 5, 1],    // Face 1  
+                [0, 1, 7],    // Face 2
+                [0, 7, 10],   // Face 3
+                [0, 10, 11],  // Face 4
+
+                // Upper band faces
+                [1, 5, 9],    // Face 5
+                [5, 11, 4],   // Face 6
+                [11, 10, 2],  // Face 7
+                [10, 7, 6],   // Face 8
+                [7, 1, 8],    // Face 9
+
+                // Lower band faces  
+                [3, 9, 4],    // Face 10
+                [3, 4, 2],    // Face 11
+                [3, 2, 6],    // Face 12
+                [3, 6, 8],    // Face 13
+                [3, 8, 9],    // Face 14
+
+                // Bottom cap faces (around vertex with lowest Y coordinate)
+                [4, 9, 5],    // Face 15
+                [2, 4, 11],   // Face 16
+                [6, 2, 10],   // Face 17
+                [8, 6, 7],    // Face 18
+                [9, 8, 1],    // Face 19
+            ];
+
+            // Build vertices array for triangulated icosahedron
+            const vertices = new Float32Array(icosahedronFaces.length * 9); // 20 faces * 3 vertices * 3 coords
+            for (let faceIndex = 0; faceIndex < icosahedronFaces.length; faceIndex++) {
+                const face = icosahedronFaces[faceIndex];
+                for (let vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
+                    const vertex = icosahedronVertices[face[vertexIndex]];
+                    const arrayIndex = faceIndex * 9 + vertexIndex * 3;
+                    vertices[arrayIndex] = vertex[0] * size;     // X
+                    vertices[arrayIndex + 1] = vertex[1] * size; // Y
+                    vertices[arrayIndex + 2] = vertex[2] * size; // Z
+                }
+            }
+
+            // Calculate normals for each triangle
+            const normals = new Float32Array(vertices.length);
+            for (let i = 0; i < vertices.length; i += 9) {
+                const v1 = new THREE.Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
+                const v2 = new THREE.Vector3(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
+                const v3 = new THREE.Vector3(vertices[i + 6], vertices[i + 7], vertices[i + 8]);
+
+                const normal = new THREE.Vector3()
+                    .crossVectors(v2.clone().sub(v1), v3.clone().sub(v1))
+                    .normalize();
+
+                // Apply the same normal to all three vertices of this triangle
+                normals[i] = normal.x; normals[i + 1] = normal.y; normals[i + 2] = normal.z;
+                normals[i + 3] = normal.x; normals[i + 4] = normal.y; normals[i + 5] = normal.z;
+                normals[i + 6] = normal.x; normals[i + 7] = normal.y; normals[i + 8] = normal.z;
+            }
+
+            // Basic UV coordinates for texture mapping (20 triangular faces)
+            const uvs = new Float32Array(icosahedronFaces.length * 6); // 20 faces * 3 vertices * 2 coords
+            for (let i = 0; i < icosahedronFaces.length; i++) {
+                const baseIndex = i * 6;
+                uvs[baseIndex] = 0; uvs[baseIndex + 1] = 0;      // Vertex 1
+                uvs[baseIndex + 2] = 1; uvs[baseIndex + 3] = 0;  // Vertex 2  
+                uvs[baseIndex + 4] = 0.5; uvs[baseIndex + 5] = 1; // Vertex 3
+            }
+
+            d20Geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+            d20Geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+            d20Geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+
+            return d20Geometry;
         } else {
             // For D6 and other dice, return null to use built-in geometry
             return null;
@@ -246,6 +350,22 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
             </mesh>
         );
     } else if (dice.diceType === 'd8' && geometry) {
+        return (
+            <mesh
+                key={`dice-${dice.diceType}`}
+                ref={meshRef}
+                geometry={geometry}
+                castShadow
+                receiveShadow
+            >
+                <meshStandardMaterial
+                    color={diceConfig.color}
+                    roughness={0.3}
+                    metalness={0.1}
+                />
+            </mesh>
+        );
+    } else if (dice.diceType === 'd20' && geometry) {
         return (
             <mesh
                 key={`dice-${dice.diceType}`}
@@ -349,7 +469,7 @@ const PhysicsSimulation: React.FC<{ dice: DiceInstance | null }> = ({ dice: _dic
 const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const controlsRef = useRef<any>(null);
     const [isFullScreen, setIsFullScreen] = useState(false);
-    const [selectedDiceType, setSelectedDiceType] = useState<DiceType>('d8');
+    const [selectedDiceType, setSelectedDiceType] = useState<DiceType>('d20');
     const [dice, setDice] = useState<DiceInstance | null>(null);
     const [isRolling, setIsRolling] = useState(false);
     const [currentValue, setCurrentValue] = useState<number | null>(null);
