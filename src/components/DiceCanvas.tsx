@@ -91,6 +91,99 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
         }
     });
 
+    // Click and drag throwing system
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState<{ x: number; y: number; time: number } | null>(null);
+    const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
+
+    const handlePointerDown = useCallback((event: any) => {
+        event.stopPropagation();
+        setIsDragging(true);
+        setDragStart({
+            x: event.clientX,
+            y: event.clientY,
+            time: Date.now()
+        });
+        setDragCurrent({ x: event.clientX, y: event.clientY });
+
+        // Capture pointer for consistent drag behavior
+        if (event.target.setPointerCapture) {
+            event.target.setPointerCapture(event.pointerId);
+        }
+    }, []);
+
+    const handlePointerMove = useCallback((event: any) => {
+        if (isDragging && dragStart) {
+            setDragCurrent({ x: event.clientX, y: event.clientY });
+        }
+    }, [isDragging, dragStart]);
+
+    const handlePointerUp = useCallback((event: any) => {
+        if (isDragging && dragStart && dragCurrent && dice.body) {
+            const deltaX = dragCurrent.x - dragStart.x;
+            const deltaY = dragCurrent.y - dragStart.y;
+            const deltaTime = Date.now() - dragStart.time;
+
+            // Calculate throw force based on drag distance and speed
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            const speed = distance / Math.max(deltaTime, 50); // Prevent division by very small numbers
+
+            // Convert screen coordinates to world coordinates
+            const forceMultiplier = 0.02; // Adjust this to tune throwing sensitivity
+            const maxForce = 15; // Cap maximum force
+
+            const forceX = Math.max(-maxForce, Math.min(maxForce, deltaX * forceMultiplier));
+            const forceZ = Math.max(-maxForce, Math.min(maxForce, deltaY * forceMultiplier)); // Y screen -> Z world
+            const forceY = Math.max(2, Math.min(8, speed * 2)); // Always throw upward, scale with speed
+
+            // Apply throwing force
+            dice.body.velocity.set(forceX, forceY, forceZ);
+
+            // Add rotational velocity based on throw direction
+            const rotationMultiplier = 0.3;
+            dice.body.angularVelocity.set(
+                (Math.random() - 0.5) * 20 + deltaY * rotationMultiplier,
+                (Math.random() - 0.5) * 20,
+                (Math.random() - 0.5) * 20 + deltaX * rotationMultiplier
+            );
+
+            dice.body.wakeUp();
+
+            // Create throw data for potential multiplayer broadcasting
+            const throwData = {
+                diceType: dice.diceType,
+                force: { x: forceX, y: forceY, z: forceZ },
+                angularVelocity: {
+                    x: dice.body.angularVelocity.x,
+                    y: dice.body.angularVelocity.y,
+                    z: dice.body.angularVelocity.z
+                },
+                position: {
+                    x: dice.body.position.x,
+                    y: dice.body.position.y,
+                    z: dice.body.position.z
+                },
+                timestamp: Date.now(),
+                dragDistance: distance,
+                dragTime: deltaTime
+            };
+
+            console.log('🎲 Dice thrown via drag:', throwData);
+
+            // TODO: This throwData can be sent to GraphQL for multiplayer broadcasting
+            // Example: broadcastDiceThrow(throwData)
+        }
+
+        setIsDragging(false);
+        setDragStart(null);
+        setDragCurrent(null);
+
+        // Release pointer capture
+        if (event.target.releasePointerCapture) {
+            event.target.releasePointerCapture(event.pointerId);
+        }
+    }, [isDragging, dragStart, dragCurrent, dice]);
+
     // Always call useMemo to avoid hooks order violations
     const geometry = React.useMemo(() => {
         const diceType = dice.diceType;
@@ -591,6 +684,9 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 geometry={geometry}
                 castShadow
                 receiveShadow
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
             >
                 <meshStandardMaterial
                     color={diceConfig.color}
@@ -607,6 +703,9 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 geometry={geometry}
                 castShadow
                 receiveShadow
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
             >
                 <meshStandardMaterial
                     color={diceConfig.color}
@@ -623,6 +722,9 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 geometry={geometry}
                 castShadow
                 receiveShadow
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
             >
                 <meshStandardMaterial
                     color={diceConfig.color}
@@ -639,6 +741,9 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 geometry={geometry}
                 castShadow
                 receiveShadow
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
             >
                 <meshStandardMaterial
                     color={diceConfig.color}
@@ -655,6 +760,9 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 geometry={geometry}
                 castShadow
                 receiveShadow
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
             >
                 <meshStandardMaterial
                     color={diceConfig.color}
@@ -671,6 +779,9 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 ref={meshRef}
                 castShadow
                 receiveShadow
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
             >
                 <boxGeometry args={[1, 1, 1]} />
                 <meshStandardMaterial
@@ -688,6 +799,9 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 ref={meshRef}
                 castShadow
                 receiveShadow
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
             >
                 <boxGeometry args={[1, 1, 1]} />
                 <meshStandardMaterial
@@ -717,22 +831,120 @@ const PhysicsGround: React.FC = () => {
 
         DiceManager.addBody(groundBody);
 
-        console.log('🎲 Ground plane created at Y:', groundBody.position.y);
+        // Create invisible walls to contain dice
+        const wallHeight = 2;
+        const wallThickness = 0.5;
+        const tableSize = 8;
+
+        const walls = [
+            // North wall
+            { pos: [0, wallHeight / 2 - 1, -tableSize / 2], size: [tableSize, wallHeight, wallThickness] },
+            // South wall  
+            { pos: [0, wallHeight / 2 - 1, tableSize / 2], size: [tableSize, wallHeight, wallThickness] },
+            // East wall
+            { pos: [tableSize / 2, wallHeight / 2 - 1, 0], size: [wallThickness, wallHeight, tableSize] },
+            // West wall
+            { pos: [-tableSize / 2, wallHeight / 2 - 1, 0], size: [wallThickness, wallHeight, tableSize] },
+        ];
+
+        const wallBodies: CANNON.Body[] = [];
+        walls.forEach((wall, index) => {
+            const wallShape = new CANNON.Box(new CANNON.Vec3(wall.size[0] / 2, wall.size[1] / 2, wall.size[2] / 2));
+            const wallBody = new CANNON.Body({ mass: 0 });
+            wallBody.addShape(wallShape);
+            wallBody.position.set(wall.pos[0], wall.pos[1], wall.pos[2]);
+
+            if (DiceManager.getMaterials()) {
+                wallBody.material = DiceManager.getMaterials()!.floor;
+            }
+
+            DiceManager.addBody(wallBody);
+            wallBodies.push(wallBody);
+        });
+
+        console.log('🎲 Enhanced sandbox created:', {
+            ground: 'Y: -1',
+            walls: wallBodies.length,
+            tableSize
+        });
 
         return () => {
             DiceManager.removeBody(groundBody);
+            wallBodies.forEach(wall => DiceManager.removeBody(wall));
         };
     }, []);
 
     return (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]} receiveShadow>
-            <planeGeometry args={[10, 10]} />
-            <meshStandardMaterial
-                color={DICE_COLORS.TABLE_DARK}
-                roughness={0.8}
-                metalness={0.0}
-            />
-        </mesh>
+        <group>
+            {/* Tiled Floor */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]} receiveShadow>
+                <planeGeometry args={[8, 8]} />
+                <meshStandardMaterial
+                    color={DICE_COLORS.TABLE_DARK}
+                    roughness={0.8}
+                    metalness={0.0}
+                >
+                    {/* Add a subtle grid texture */}
+                    <primitive
+                        object={(() => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = 512;
+                            canvas.height = 512;
+                            const ctx = canvas.getContext('2d')!;
+
+                            // Dark background
+                            ctx.fillStyle = '#2a2a2a';
+                            ctx.fillRect(0, 0, 512, 512);
+
+                            // Grid lines
+                            ctx.strokeStyle = '#404040';
+                            ctx.lineWidth = 2;
+                            const gridSize = 64; // 8x8 grid
+
+                            for (let i = 0; i <= 512; i += gridSize) {
+                                ctx.beginPath();
+                                ctx.moveTo(i, 0);
+                                ctx.lineTo(i, 512);
+                                ctx.stroke();
+
+                                ctx.beginPath();
+                                ctx.moveTo(0, i);
+                                ctx.lineTo(512, i);
+                                ctx.stroke();
+                            }
+
+                            const texture = new THREE.CanvasTexture(canvas);
+                            texture.wrapS = THREE.RepeatWrapping;
+                            texture.wrapT = THREE.RepeatWrapping;
+                            texture.repeat.set(1, 1);
+                            return texture;
+                        })()}
+                        attach="map"
+                    />
+                </meshStandardMaterial>
+            </mesh>
+
+            {/* Visible Wall Borders (low height for visual reference) */}
+            {[
+                // North border
+                { pos: [0, -0.9, -4] as [number, number, number], size: [8, 0.2, 0.1] as [number, number, number] },
+                // South border
+                { pos: [0, -0.9, 4] as [number, number, number], size: [8, 0.2, 0.1] as [number, number, number] },
+                // East border
+                { pos: [4, -0.9, 0] as [number, number, number], size: [0.1, 0.2, 8] as [number, number, number] },
+                // West border
+                { pos: [-4, -0.9, 0] as [number, number, number], size: [0.1, 0.2, 8] as [number, number, number] },
+            ].map((border, index) => (
+                <mesh key={index} position={border.pos} receiveShadow>
+                    <boxGeometry args={border.size} />
+                    <meshStandardMaterial
+                        color="#555555"
+                        roughness={0.7}
+                        metalness={0.1}
+                    />
+                </mesh>
+            ))}
+        </group>
     );
 };
 
@@ -752,136 +964,195 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const controlsRef = useRef<any>(null);
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [selectedDiceType, setSelectedDiceType] = useState<DiceType>('d20');
-    const [dice, setDice] = useState<DiceInstance | null>(null);
+    const [dice, setDice] = useState<DiceInstance[]>([]);
     const [isRolling, setIsRolling] = useState(false);
-    const [currentValue, setCurrentValue] = useState<number | null>(null);
+    const [rollResult, setRollResult] = useState<number | null>(null);
     const [rollHistory, setRollHistory] = useState<{ type: DiceType; value: number; timestamp: number }[]>([]);
-    const [isPhysicsInitialized, setIsPhysicsInitialized] = useState(false);
+    const [isInitialized, setIsInitialized] = useState(false);
 
     // Initialize physics world
     useEffect(() => {
-        if (!DiceManager.isInitialized()) {
+        const initPhysics = async () => {
             try {
-                DiceManager.setWorld();
-                setIsPhysicsInitialized(true);
-                console.log('🎲 Physics world initialized for DiceCanvas');
+                if (!DiceManager.isInitialized()) {
+                    DiceManager.setWorld();
+                }
+                setIsInitialized(true);
+                console.log('🎲 Physics world initialized');
             } catch (error) {
-                console.error('🎲 Failed to initialize physics world:', error);
+                console.error('❌ Failed to initialize physics:', error);
             }
-        } else {
-            setIsPhysicsInitialized(true);
-        }
+        };
+
+        initPhysics();
 
         return () => {
             // Cleanup when component unmounts
-            if (dice) {
-                dice.dispose();
-            }
-        };
-    }, []); // Empty dependency array for initialization only
-
-    // Create dice when type changes (only after physics is initialized)
-    useEffect(() => {
-        if (!isPhysicsInitialized) return;
-
-        // Clean up existing dice
-        if (dice) {
-            dice.dispose();
-        }
-
-        // Create new dice of selected type
-        const config = DICE_CONFIG[selectedDiceType];
-        if (config.isAvailable && config.create) {
-            try {
-                const newDice = config.create();
-                if (newDice) {
-                    // Position the dice well above the ground (ground is now at Y=-1)
-                    // D12 needs extra height due to larger scale factor (0.9 vs 0.6 for D20)
-                    const startHeight = selectedDiceType === 'd12' ? 4 : 3;
-                    const startPosition = new THREE.Vector3(0, startHeight, 0);
-                    newDice.setPosition(startPosition);
-                    setDice(newDice);
-                    setCurrentValue(null);
-
-                    console.log(`🎲 ${selectedDiceType.toUpperCase()} dice created and positioned:`, {
-                        type: selectedDiceType,
-                        position: newDice.getPosition(),
-                        bodyPosition: newDice.body.position,
-                        size: newDice.options.size,
-                        mass: newDice.body.mass,
-                        shape: newDice.body.shapes[0].type,
-                        startHeight
-                    });
+            dice.forEach(die => {
+                if (die.body) {
+                    DiceManager.removeBody(die.body);
                 }
-            } catch (error) {
-                console.error(`🎲 Failed to create ${selectedDiceType} dice:`, error);
-                setDice(null);
-            }
-        } else {
-            setDice(null);
-            console.log(`🎲 ${selectedDiceType.toUpperCase()} not implemented yet`);
-        }
-    }, [selectedDiceType, isPhysicsInitialized]); // Depend on both selectedDiceType and physics initialization
-
-    // Cleanup effect for when dice changes
-    useEffect(() => {
-        return () => {
-            // Cleanup current dice when it changes or component unmounts
-            if (dice) {
-                dice.dispose();
-            }
+            });
         };
-    }, [dice]);
+    }, []);
 
-    const rollDice = useCallback(async () => {
-        if (!dice || isRolling) return;
-
-        setIsRolling(true);
-        setCurrentValue(null);
+    // Spawn a new dice of the selected type
+    const spawnDice = useCallback(async (diceType: DiceType = selectedDiceType) => {
+        if (!isInitialized) return;
 
         try {
-            console.log(`🎲 Rolling ${selectedDiceType.toUpperCase()}...`);
+            let newDice: DiceInstance;
+            const options = { size: 1 };
 
-            // Throw the dice with physics
-            dice.throwDice(1.2); // Medium force
+            // Create dice based on type
+            switch (diceType) {
+                case 'd4':
+                    newDice = new DiceD4(options);
+                    break;
+                case 'd6':
+                    newDice = new DiceD6(options);
+                    break;
+                case 'd8':
+                    newDice = new DiceD8(options);
+                    break;
+                case 'd10':
+                    newDice = new DiceD10(options);
+                    break;
+                case 'd12':
+                    newDice = new DiceD12(options);
+                    break;
+                case 'd20':
+                    newDice = new DiceD20(options);
+                    break;
+                default:
+                    newDice = new DiceD6(options);
+            }
 
-            // Wait for the dice to settle and get the result
-            const config = DICE_CONFIG[selectedDiceType];
-            const targetValue = Math.floor(Math.random() * config.max) + config.min;
-            const result = await DiceManager.rollSingle(dice, targetValue, 10000);
+            // Position dice above table with some randomization to prevent stacking
+            const existingDiceCount = dice.length;
+            const spacing = 1.5;
+            const gridSize = Math.ceil(Math.sqrt(existingDiceCount + 1));
+            const row = Math.floor(existingDiceCount / gridSize);
+            const col = existingDiceCount % gridSize;
 
-            setCurrentValue(result.value);
+            const offsetX = (col - gridSize / 2) * spacing + (Math.random() - 0.5) * 0.5;
+            const offsetZ = (row - gridSize / 2) * spacing + (Math.random() - 0.5) * 0.5;
 
-            // Add to history
-            setRollHistory(prev => [
-                { type: selectedDiceType, value: result.value, timestamp: Date.now() },
-                ...prev.slice(0, 4) // Keep last 5 rolls
-            ]);
+            // Higher starting position for larger dice
+            const startY = diceType === 'd12' ? 4 : 3;
 
-            console.log(`🎲 ${selectedDiceType.toUpperCase()} settled on: ${result.value}`);
+            newDice.body.position.set(offsetX, startY, offsetZ);
+            newDice.body.quaternion.set(
+                Math.random() * 0.5,
+                Math.random() * 0.5,
+                Math.random() * 0.5,
+                Math.random() * 0.5
+            );
+            newDice.body.quaternion.normalize();
+
+            // Add to physics world
+            DiceManager.addBody(newDice.body);
+
+            // Add to dice array
+            setDice(prevDice => [...prevDice, newDice]);
+
+            console.log(`🎲 Spawned ${diceType} at position:`, {
+                x: offsetX,
+                y: startY,
+                z: offsetZ,
+                totalDice: existingDiceCount + 1
+            });
 
         } catch (error) {
-            console.error(`🎲 Error rolling ${selectedDiceType}:`, error);
+            console.error(`❌ Failed to spawn ${diceType}:`, error);
+        }
+    }, [isInitialized, selectedDiceType, dice.length]);
+
+    // Clear all dice from the scene
+    const clearAllDice = useCallback(() => {
+        dice.forEach(die => {
+            DiceManager.removeBody(die.body);
+        });
+        setDice([]);
+        setRollResult(null);
+        console.log('🎲 Cleared all dice');
+    }, [dice]);
+
+    // Roll all dice simultaneously
+    const rollAllDice = useCallback(async () => {
+        if (dice.length === 0 || isRolling) return;
+
+        setIsRolling(true);
+        setRollResult(null);
+
+        try {
+            // Apply random forces to all dice
+            dice.forEach((die, index) => {
+                const force = 8 + Math.random() * 4; // Random force between 8-12
+                const angle = (index / dice.length) * Math.PI * 2 + Math.random() * 0.5; // Spread dice in circle
+
+                die.body.velocity.set(
+                    Math.cos(angle) * force,
+                    8 + Math.random() * 4, // Upward force
+                    Math.sin(angle) * force
+                );
+
+                die.body.angularVelocity.set(
+                    (Math.random() - 0.5) * 20,
+                    (Math.random() - 0.5) * 20,
+                    (Math.random() - 0.5) * 20
+                );
+
+                die.body.wakeUp();
+            });
+
+            // Wait for all dice to settle and get their values
+            const diceValuePairs = dice.map(die => ({ dice: die, value: 1 })); // Initial values
+            const results = await DiceManager.prepareValues(diceValuePairs);
+
+            // Calculate total result
+            const totalResult = results.reduce((sum, result) => sum + result.value, 0);
+            setRollResult(totalResult);
+
+            console.log('🎲 Multi-dice roll results:', {
+                individual: results.map(r => r.value),
+                total: totalResult,
+                diceCount: dice.length
+            });
+
+        } catch (error) {
+            console.error('❌ Failed to roll dice:', error);
         } finally {
             setIsRolling(false);
         }
-    }, [dice, isRolling, selectedDiceType]);
+    }, [dice, isRolling]);
 
-    const resetDice = useCallback(() => {
-        if (!dice) return;
+    // Throw all dice with physics (alternative to rollAllDice)
+    const throwAllDice = useCallback(() => {
+        if (dice.length === 0) return;
 
-        // Reset position and clear velocities (ground is now at Y=-1, so start at Y=3 or Y=4 for D12)
-        const startHeight = selectedDiceType === 'd12' ? 4 : 3;
-        dice.setPosition(new THREE.Vector3(0, startHeight, 0));
-        dice.body.velocity.set(0, 0, 0);
-        dice.body.angularVelocity.set(0, 0, 0);
-        dice.body.wakeUp();
+        dice.forEach((die, index) => {
+            // Create varied throwing patterns
+            const throwAngle = (index / dice.length) * Math.PI * 2;
+            const throwForce = 6 + Math.random() * 6;
 
-        setCurrentValue(null);
-        setIsRolling(false);
+            die.body.velocity.set(
+                Math.cos(throwAngle) * throwForce,
+                5 + Math.random() * 3,
+                Math.sin(throwAngle) * throwForce
+            );
 
-        console.log(`🎲 ${selectedDiceType.toUpperCase()} reset to position:`, dice.getPosition());
-    }, [dice, selectedDiceType]);
+            die.body.angularVelocity.set(
+                (Math.random() - 0.5) * 15,
+                (Math.random() - 0.5) * 15,
+                (Math.random() - 0.5) * 15
+            );
+
+            die.body.wakeUp();
+        });
+
+        console.log(`🎲 Threw ${dice.length} dice with physics`);
+    }, [dice]);
 
     const resetCamera = () => {
         if (controlsRef.current) {
@@ -924,33 +1195,35 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                 <PhysicsGround />
 
                 {/* Physics Dice */}
-                {dice && <PhysicsDice dice={dice} />}
+                {dice.map((die, index) => (
+                    <PhysicsDice key={`dice-${index}`} dice={die} />
+                ))}
 
                 {/* Physics Simulation */}
-                <PhysicsSimulation dice={dice} />
+                <PhysicsSimulation dice={dice.length > 0 ? dice[0] : null} />
             </Canvas>
 
             {/* Canvas Controls */}
             <div className={`absolute ${isFullScreen ? 'top-4 right-4' : 'top-2 right-2'} flex gap-2`}>
                 <div className={`bg-gray-800 px-3 py-2 rounded text-white font-mono ${isFullScreen ? 'text-base' : 'text-xs'}`}>
-                    {isRolling ? 'Rolling...' : currentValue ? `${selectedDiceType.toUpperCase()}: ${currentValue}` : 'Ready to roll'}
+                    {isRolling ? 'Rolling...' : rollResult ? `Total: ${rollResult}` : 'Ready to roll'}
                 </div>
                 <button
-                    onClick={rollDice}
-                    disabled={isRolling || !dice}
+                    onClick={rollAllDice}
+                    disabled={isRolling || dice.length === 0}
                     className={`bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 text-white rounded font-semibold ${isFullScreen ? 'px-4 py-2' : 'text-xs px-2 py-1'
                         }`}
-                    title="Roll the dice"
+                    title="Roll all dice"
                 >
-                    {isRolling ? '🎲 Rolling...' : `🎲 Roll ${selectedDiceType.toUpperCase()}`}
+                    {isRolling ? '🎲 Rolling...' : `🎲 Roll All Dice`}
                 </button>
                 <button
-                    onClick={resetDice}
+                    onClick={clearAllDice}
                     className={`bg-yellow-600 hover:bg-yellow-500 text-white rounded ${isFullScreen ? 'px-3 py-2' : 'text-xs px-2 py-1 opacity-70 hover:opacity-100'
                         }`}
-                    title="Reset dice position"
+                    title="Clear all dice"
                 >
-                    🔄 Reset
+                    🗑 Clear All
                 </button>
                 <button
                     onClick={resetCamera}
@@ -987,7 +1260,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                 {canvasContent}
 
                 {/* Physics Loading Overlay */}
-                {!isPhysicsInitialized && (
+                {!isInitialized && (
                     <div className="absolute inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center rounded-lg">
                         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 text-center">
                             <div className="animate-spin text-3xl mb-2">🎲</div>
@@ -997,87 +1270,119 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                 )}
             </div>
 
-            {/* Dice Selection Panel */}
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                    Select Dice Type
-                </h3>
+            {/* Dice Controls Panel */}
+            <div className="bg-gray-900 text-white p-4 rounded-lg shadow-lg">
+                <h3 className="text-lg font-semibold mb-3">Dice Controls</h3>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-                    {Object.entries(DICE_CONFIG).map(([type, config]) => {
-                        const isAvailable = config.isAvailable && isPhysicsInitialized;
-                        const isSelected = selectedDiceType === type;
-
-                        return (
-                            <button
-                                key={type}
-                                onClick={() => setSelectedDiceType(type as DiceType)}
-                                disabled={!isAvailable}
-                                className={`p-3 rounded-lg border-2 transition-all ${isSelected
-                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                    : isAvailable
-                                        ? 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                                        : 'border-gray-100 dark:border-gray-700 opacity-50'
-                                    } ${!isAvailable ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                            >
-                                <div className="text-center">
-                                    <div className="text-2xl mb-1">{config.emoji}</div>
-                                    <div className={`font-semibold ${isSelected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
-                                        {type.toUpperCase()}
-                                    </div>
-                                    <div className={`text-xs ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                                        {config.min}-{config.max}
-                                    </div>
-                                    {!config.isAvailable && (
-                                        <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                                            Coming Soon
-                                        </div>
-                                    )}
-                                    {config.isAvailable && !isPhysicsInitialized && (
-                                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            Loading...
-                                        </div>
-                                    )}
-                                </div>
-                            </button>
-                        );
-                    })}
+                {/* Dice Type Selector */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium mb-2">Dice Type:</label>
+                    <select
+                        value={selectedDiceType}
+                        onChange={(e) => setSelectedDiceType(e.target.value as DiceType)}
+                        className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                    >
+                        <option value="d4">D4 (Tetrahedron)</option>
+                        <option value="d6">D6 (Cube)</option>
+                        <option value="d8">D8 (Octahedron)</option>
+                        <option value="d10">D10 (Pentagonal Trapezohedron)</option>
+                        <option value="d12">D12 (Dodecahedron)</option>
+                        <option value="d20">D20 (Icosahedron)</option>
+                    </select>
                 </div>
 
-                {/* Roll Actions */}
+                {/* Dice Count Display */}
+                <div className="mb-4 p-3 bg-gray-800 rounded">
+                    <div className="text-sm text-gray-300">Dice on Table:</div>
+                    <div className="text-xl font-bold">{dice.length}</div>
+                    {rollResult && (
+                        <div className="text-sm text-green-400 mt-1">
+                            Last Total: {rollResult}
+                        </div>
+                    )}
+                </div>
+
+                {/* Spawn Controls */}
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                    <button
+                        onClick={() => spawnDice(selectedDiceType)}
+                        disabled={!isInitialized}
+                        className="bg-green-600 hover:bg-green-500 disabled:bg-gray-600 text-white font-semibold py-2 px-3 rounded transition-colors"
+                        title={`Spawn a ${selectedDiceType.toUpperCase()}`}
+                    >
+                        + Add {selectedDiceType.toUpperCase()}
+                    </button>
+
+                    <button
+                        onClick={clearAllDice}
+                        disabled={dice.length === 0}
+                        className="bg-red-600 hover:bg-red-500 disabled:bg-gray-600 text-white font-semibold py-2 px-3 rounded transition-colors"
+                        title="Remove all dice"
+                    >
+                        🗑 Clear All
+                    </button>
+                </div>
+
+                {/* Quick Spawn Buttons */}
+                <div className="mb-4">
+                    <div className="text-sm font-medium mb-2">Quick Spawn:</div>
+                    <div className="grid grid-cols-3 gap-1">
+                        {(['d4', 'd6', 'd8', 'd10', 'd12', 'd20'] as DiceType[]).map(diceType => (
+                            <button
+                                key={diceType}
+                                onClick={() => spawnDice(diceType)}
+                                disabled={!isInitialized}
+                                className="bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 text-white text-xs py-1 px-2 rounded transition-colors"
+                                title={`Spawn ${diceType.toUpperCase()}`}
+                            >
+                                {diceType.toUpperCase()}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Action Buttons */}
                 <div className="flex gap-3">
                     <button
-                        onClick={rollDice}
-                        disabled={isRolling || !dice || !isPhysicsInitialized}
+                        onClick={rollAllDice}
+                        disabled={isRolling || dice.length === 0}
                         className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
                     >
-                        {!isPhysicsInitialized ? (
+                        {isRolling ? (
                             <>
                                 <span className="animate-spin mr-2">🎲</span>
-                                Initializing Physics...
-                            </>
-                        ) : isRolling ? (
-                            <>
-                                <span className="animate-spin mr-2">🎲</span>
-                                Rolling {selectedDiceType.toUpperCase()}...
+                                Rolling All Dice...
                             </>
                         ) : (
                             <>
-                                🎲 Roll {selectedDiceType.toUpperCase()}
-                                {currentValue && ` (Last: ${currentValue})`}
+                                🎲 Roll All Dice
+                                {rollResult && ` (Total: ${rollResult})`}
                             </>
                         )}
                     </button>
 
                     <button
-                        onClick={resetDice}
-                        disabled={!dice || !isPhysicsInitialized}
-                        className="bg-gray-600 hover:bg-gray-500 disabled:bg-gray-300 text-white px-4 py-3 rounded-lg transition-colors"
-                        title="Reset dice position"
+                        onClick={throwAllDice}
+                        disabled={dice.length === 0}
+                        className="bg-purple-600 hover:bg-purple-500 disabled:bg-gray-600 text-white px-4 py-3 rounded-lg transition-colors"
+                        title="Throw all dice with physics"
                     >
-                        🔄
+                        🚀
                     </button>
                 </div>
+
+                {/* Multi-dice Instructions */}
+                {dice.length > 0 && (
+                    <div className="mt-4 p-3 bg-blue-900 bg-opacity-50 rounded text-sm">
+                        <div className="font-medium mb-1">💡 Multi-Dice Tips:</div>
+                        <ul className="text-xs space-y-1 text-blue-200">
+                            <li>• Click and drag any dice to throw it</li>
+                            <li>• Use "Roll All" for controlled results</li>
+                            <li>• Use "🚀" for physics-based throwing</li>
+                            <li>• Dice will collide and interact naturally</li>
+                        </ul>
+                    </div>
+                )}
             </div>
 
             {/* Roll History */}
