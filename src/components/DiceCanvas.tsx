@@ -194,10 +194,9 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
             const newTargetPosition = dragStart.worldPos.clone();
             newTargetPosition.add(worldMovement);
 
-            // Keep target above the table and within reasonable bounds
+            // Keep target above the table but remove restrictive bounds during dragging
             newTargetPosition.y = Math.max(newTargetPosition.y, 0.5);
-            newTargetPosition.x = Math.max(-6, Math.min(6, newTargetPosition.x));
-            newTargetPosition.z = Math.max(-6, Math.min(6, newTargetPosition.z));
+            // Remove the X and Z constraints to allow free dragging
 
             setTargetPosition(newTargetPosition);
 
@@ -1028,10 +1027,10 @@ const PhysicsGround: React.FC = () => {
 
         DiceManager.addBody(groundBody);
 
-        // Create invisible walls to contain dice
-        const wallHeight = 2;
-        const wallThickness = 0.5;
-        const tableSize = 8;
+        // Create much larger invisible walls to contain dice
+        const wallHeight = 20; // Much taller walls
+        const wallThickness = 1;
+        const tableSize = 80; // 10x larger sandbox (was 8)
 
         const walls = [
             // North wall
@@ -1059,10 +1058,11 @@ const PhysicsGround: React.FC = () => {
             wallBodies.push(wallBody);
         });
 
-        console.log('🎲 Enhanced sandbox created:', {
+        console.log('🎲 Enhanced large sandbox created:', {
             ground: 'Y: -1',
             walls: wallBodies.length,
-            tableSize
+            tableSize,
+            wallHeight
         });
 
         return () => {
@@ -1071,73 +1071,140 @@ const PhysicsGround: React.FC = () => {
         };
     }, []);
 
+    // Create a high-quality grid texture
+    const gridTexture = React.useMemo(() => {
+        // Create a texture that tiles perfectly - 320x320 for 5x5 grid squares
+        const canvas = document.createElement('canvas');
+        canvas.width = 320; // 5 grid squares * 64px each
+        canvas.height = 320;
+        const ctx = canvas.getContext('2d')!;
+
+        // Dark cyberspace background
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillRect(0, 0, 320, 320);
+
+        const gridSize = 64; // Each grid square is 64px
+        const majorGridSpacing = gridSize * 5; // Major grid every 5 squares (320px)
+
+        // Keep smoothing enabled for better line quality
+        ctx.imageSmoothingEnabled = true;
+
+        // First, draw the thin gray lines (regular grid)
+        ctx.strokeStyle = '#cccccc';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.4;
+
+        // Draw vertical gray lines (every 64px, but not at the edges to avoid doubling)
+        for (let i = gridSize; i < 320; i += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, 320);
+            ctx.stroke();
+        }
+
+        // Draw horizontal gray lines (every 64px, but not at the edges to avoid doubling)
+        for (let i = gridSize; i < 320; i += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(0, i);
+            ctx.lineTo(320, i);
+            ctx.stroke();
+        }
+
+        // Now draw the major grid lines (thicker, brighter, at the edges and center)
+        ctx.strokeStyle = '#cc3333'; // Darker red for major grid lines
+        ctx.lineWidth = 4; // Thicker lines
+        ctx.globalAlpha = 0.7; // Slightly translucent
+
+        // Draw major vertical grid lines (at 0 and 320, which will tile seamlessly)
+        for (let i = 0; i <= 320; i += majorGridSpacing) {
+            // Draw glow effect first (wider, more transparent)
+            ctx.strokeStyle = '#cc3333';
+            ctx.lineWidth = 8;
+            ctx.globalAlpha = 0.2;
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, 320);
+            ctx.stroke();
+
+            // Draw main line (narrower, more opaque)
+            ctx.strokeStyle = '#dd4444';
+            ctx.lineWidth = 4;
+            ctx.globalAlpha = 0.7;
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, 320);
+            ctx.stroke();
+        }
+
+        // Draw major horizontal grid lines (at 0 and 320, which will tile seamlessly)
+        for (let i = 0; i <= 320; i += majorGridSpacing) {
+            // Draw glow effect first (wider, more transparent)
+            ctx.strokeStyle = '#cc3333';
+            ctx.lineWidth = 8;
+            ctx.globalAlpha = 0.2;
+            ctx.beginPath();
+            ctx.moveTo(0, i);
+            ctx.lineTo(320, i);
+            ctx.stroke();
+
+            // Draw main line (narrower, more opaque)
+            ctx.strokeStyle = '#dd4444';
+            ctx.lineWidth = 4;
+            ctx.globalAlpha = 0.7;
+            ctx.beginPath();
+            ctx.moveTo(0, i);
+            ctx.lineTo(320, i);
+            ctx.stroke();
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+
+        // Use linear filtering for smooth appearance
+        texture.magFilter = THREE.LinearFilter;
+        texture.minFilter = THREE.LinearFilter;
+
+        // Repeat the 320x320 texture to cover the 80x80 plane (80/16 = 5 repeats)
+        texture.repeat.set(5, 5);
+
+        return texture;
+    }, []);
+
     return (
         <group>
-            {/* Tiled Floor */}
+            {/* Large Cyberspace Mesh Floor */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]} receiveShadow>
-                <planeGeometry args={[8, 8]} />
+                <planeGeometry args={[80, 80]} />
                 <meshStandardMaterial
-                    color={DICE_COLORS.TABLE_DARK}
-                    roughness={0.8}
+                    map={gridTexture}
+                    color="#ffffff" // Bright white to enhance the grid lines
+                    roughness={0.7}
                     metalness={0.0}
-                >
-                    {/* Add a subtle grid texture */}
-                    <primitive
-                        object={(() => {
-                            const canvas = document.createElement('canvas');
-                            canvas.width = 512;
-                            canvas.height = 512;
-                            const ctx = canvas.getContext('2d')!;
-
-                            // Dark background
-                            ctx.fillStyle = '#2a2a2a';
-                            ctx.fillRect(0, 0, 512, 512);
-
-                            // Grid lines
-                            ctx.strokeStyle = '#404040';
-                            ctx.lineWidth = 2;
-                            const gridSize = 64; // 8x8 grid
-
-                            for (let i = 0; i <= 512; i += gridSize) {
-                                ctx.beginPath();
-                                ctx.moveTo(i, 0);
-                                ctx.lineTo(i, 512);
-                                ctx.stroke();
-
-                                ctx.beginPath();
-                                ctx.moveTo(0, i);
-                                ctx.lineTo(512, i);
-                                ctx.stroke();
-                            }
-
-                            const texture = new THREE.CanvasTexture(canvas);
-                            texture.wrapS = THREE.RepeatWrapping;
-                            texture.wrapT = THREE.RepeatWrapping;
-                            texture.repeat.set(1, 1);
-                            return texture;
-                        })()}
-                        attach="map"
-                    />
-                </meshStandardMaterial>
+                    transparent={false} // Remove transparency for brighter appearance
+                    emissive="#111111" // Slight glow effect
+                />
             </mesh>
 
-            {/* Visible Wall Borders (low height for visual reference) */}
+            {/* Visible Wall Borders (cyberspace style) */}
             {[
                 // North border
-                { pos: [0, -0.9, -4] as [number, number, number], size: [8, 0.2, 0.1] as [number, number, number] },
+                { pos: [0, 0, -40] as [number, number, number], size: [80, 4, 1] as [number, number, number] },
                 // South border
-                { pos: [0, -0.9, 4] as [number, number, number], size: [8, 0.2, 0.1] as [number, number, number] },
+                { pos: [0, 0, 40] as [number, number, number], size: [80, 4, 1] as [number, number, number] },
                 // East border
-                { pos: [4, -0.9, 0] as [number, number, number], size: [0.1, 0.2, 8] as [number, number, number] },
+                { pos: [40, 0, 0] as [number, number, number], size: [1, 4, 80] as [number, number, number] },
                 // West border
-                { pos: [-4, -0.9, 0] as [number, number, number], size: [0.1, 0.2, 8] as [number, number, number] },
+                { pos: [-40, 0, 0] as [number, number, number], size: [1, 4, 80] as [number, number, number] },
             ].map((border, index) => (
-                <mesh key={index} position={border.pos} receiveShadow>
+                <mesh key={index} position={border.pos} receiveShadow castShadow>
                     <boxGeometry args={border.size} />
                     <meshStandardMaterial
-                        color="#555555"
-                        roughness={0.7}
-                        metalness={0.1}
+                        color="#444444"
+                        roughness={0.8}
+                        metalness={0.2}
+                        transparent={true}
+                        opacity={0.8}
                     />
                 </mesh>
             ))}
@@ -1406,19 +1473,19 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
             >
                 <OrbitControls ref={controlsRef} enabled={!isCameraLocked} />
 
-                {/* Improved lighting setup */}
+                {/* Improved lighting setup with larger shadow area */}
                 <ambientLight intensity={0.4} />
                 <directionalLight
                     position={[5, 10, 5]}
                     intensity={1.2}
                     castShadow
-                    shadow-mapSize-width={2048}
-                    shadow-mapSize-height={2048}
-                    shadow-camera-far={50}
-                    shadow-camera-left={-10}
-                    shadow-camera-right={10}
-                    shadow-camera-top={10}
-                    shadow-camera-bottom={-10}
+                    shadow-mapSize-width={4096}
+                    shadow-mapSize-height={4096}
+                    shadow-camera-far={100}
+                    shadow-camera-left={-50}
+                    shadow-camera-right={50}
+                    shadow-camera-top={50}
+                    shadow-camera-bottom={-50}
                 />
                 <directionalLight position={[-5, 5, -5]} intensity={0.3} />
                 <pointLight position={[0, 5, 0]} intensity={0.5} />

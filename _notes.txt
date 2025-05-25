@@ -17,6 +17,12 @@ TODOs:
 - fix anonymous user registry, or at least codify current behavior as intentional
 - initialized user color sometimes is different from ui listed color (might be a session persistence thing?)
 
+Minor snag, grid texture tiling boundary issue
+- Orgiginal texture was 1024x1024 with 64px grid squares repeated 10 times
+- but textures were overlapping, 
+- so the right edge (and major grid line) of one texture would be one grid square past the left edge of the next
+- fix: actually make the textures tileable (320px by 320px, tiling 5x into 1600px coverage)
+  - Draw major gridlines ON edges. 
 
 Minor snag, physics body sleeping issue
 - Dice would freeze when they come to a full stop
