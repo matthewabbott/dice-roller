@@ -341,4 +341,30 @@ subscription canvasEventsUpdated {
 - ✅ Intuitive cross-system navigation and highlighting
 - ✅ Stable real-time synchronization with minimal lag
 
-This integration will transform your TTRPG dice roller from a collection of separate tools into a cohesive, collaborative experience that brings the tactile joy of physical dice rolling into the digital multiplayer space. 
+## **Original Conceit (Rambling rough outline)**
+"""
+The conceit of this webapp is to be a chat lobby with dice rolling, where people can see on a fancy 3d grid what dice you've rolled.
+That means, however, that all these dice movements *if possible* need to be broadcast to EVERYONE in the room via the graphql server.
+
+Alternatively, if that is not possible, everyone should see the rolls and dice spawning in the dice canvas, but any subsequent chaos or playing around with the dice done by them is all client-side.
+
+Right now I have two disparate systems. I have the dice canvas, whose behavior is basically all client side. And I have the chat room (activity feed) and chat rolling functionality. Furthermore, the rolls and chat functionality are separated, but both essentially go in the chat.
+
+I would like to do a massive FUSION of these two functionalities.
+As for the dice rolling buttons. RIght now I have chat buttons and buttons for the canvas.
+I would like the buttons to produce an activity log AND influence the canvas, and I would like to replace the roll text input with a chat `/roll` functionality (eg, `/roll 2d6`). This functionality should ALSO influence the canvas and THAT should always get broadcast to all other users.
+
+Lastly, roll buttons expose the standard ttrpg dice (d4, d6, d10, d12, d20), but I still want to allow rolling of nonstandard dice, and maybe on the canvas they just roll a d6 or cluster of d6s and then pop up the wacky number.
+Something similar to this should happen if, eg, someone rolls 1000d20. Rather than spawning that many dice, it should just spawn ONE d20 die, that pops up the wacky result.
+(And if I could have everything I wanted, highlighting a die result in-canvas would:
+- highlight the relevant chat result (and vice versa highlighting the chat result would highlight the die
+- only show the result number
+- but on-click, expand to show the expanded results of each individual roll
+)
+(And meanwhile on the chat side:
+- clicking the chat box would jump your view in the canvas to the relevant die
+- the chat would only show the result number
+- but on-hover, would show the expanded results of each individual roll
+)
+"""
+
