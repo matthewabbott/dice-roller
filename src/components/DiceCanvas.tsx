@@ -103,6 +103,9 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
     const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
     const [isHovered, setIsHovered] = useState(false);
     const [originalPosition, setOriginalPosition] = useState<THREE.Vector3 | null>(null);
+    const [targetPosition, setTargetPosition] = useState<THREE.Vector3 | null>(null);
+    const [velocity, setVelocity] = useState<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
+    const [positionHistory, setPositionHistory] = useState<Array<{ pos: THREE.Vector3; time: number }>>([]);
 
     const handlePointerDown = useCallback((event: any) => {
         // Only handle dice throwing if Shift key is held down
@@ -134,6 +137,9 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
             worldPos: worldPos
         });
         setDragCurrent({ x: event.clientX, y: event.clientY });
+        setTargetPosition(worldPos.clone());
+        setVelocity(new THREE.Vector3(0, 0, 0));
+        setPositionHistory([{ pos: worldPos.clone(), time: Date.now() }]);
 
         // Make dice kinematic (not affected by physics) during drag
         dice.body.type = CANNON.Body.KINEMATIC;
@@ -167,88 +173,147 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
             const cameraDirection = new THREE.Vector3();
             camera.getWorldDirection(cameraDirection);
 
-            // Calculate right vector (camera's local X axis)
+            // Calculate right vector (camera's local X axis) - FIXED: reversed for correct direction
             const right = new THREE.Vector3();
-            right.crossVectors(camera.up, cameraDirection).normalize();
+            right.crossVectors(cameraDirection, camera.up).normalize(); // Swapped order to fix left/right
 
             // Calculate up vector (camera's local Y axis)
             const up = new THREE.Vector3();
-            up.crossVectors(cameraDirection, right).normalize();
+            up.crossVectors(right, cameraDirection).normalize();
 
             // Scale movement based on distance from camera for natural feel
             const distanceFromCamera = camera.position.distanceTo(dragStart.worldPos);
-            const movementScale = distanceFromCamera * 0.5; // Much larger scale factor
+            const movementScale = distanceFromCamera * 0.5;
 
-            // Calculate movement in world space using camera's right and up vectors
+            // Calculate target position in world space using camera's right and up vectors
             const worldMovement = new THREE.Vector3();
             worldMovement.addScaledVector(right, normalizedDeltaX * movementScale);
             worldMovement.addScaledVector(up, normalizedDeltaY * movementScale);
 
-            // Calculate new position by adding movement to the original position
-            const newPosition = dragStart.worldPos.clone();
-            newPosition.add(worldMovement);
+            // Calculate new target position
+            const newTargetPosition = dragStart.worldPos.clone();
+            newTargetPosition.add(worldMovement);
 
-            // Keep dice above the table and within reasonable bounds
-            newPosition.y = Math.max(newPosition.y, 0.5);
-            newPosition.x = Math.max(-6, Math.min(6, newPosition.x)); // Table bounds
-            newPosition.z = Math.max(-6, Math.min(6, newPosition.z)); // Table bounds
+            // Keep target above the table and within reasonable bounds
+            newTargetPosition.y = Math.max(newTargetPosition.y, 0.5);
+            newTargetPosition.x = Math.max(-6, Math.min(6, newTargetPosition.x));
+            newTargetPosition.z = Math.max(-6, Math.min(6, newTargetPosition.z));
+
+            setTargetPosition(newTargetPosition);
+
+            // Update position history for velocity calculation
+            const currentTime = Date.now();
+            setPositionHistory(prev => {
+                const newHistory = [...prev, { pos: newTargetPosition.clone(), time: currentTime }];
+                // Keep only last 10 positions (for velocity calculation)
+                return newHistory.slice(-10);
+            });
+        }
+    }, [isDragging, dragStart, dice]);
+
+    // Update dice position with lag/momentum during drag
+    useFrame(() => {
+        if (isDragging && targetPosition && dice.body) {
+            const currentPos = new THREE.Vector3(
+                dice.body.position.x,
+                dice.body.position.y,
+                dice.body.position.z
+            );
+
+            // Calculate lag - dice follows target with some delay (like a heavy object)
+            const lagFactor = 0.15; // Lower = more lag, higher = more responsive
+            const newPos = currentPos.clone();
+            newPos.lerp(targetPosition, lagFactor);
+
+            // Calculate velocity for momentum
+            const newVelocity = new THREE.Vector3();
+            newVelocity.subVectors(newPos, currentPos);
+            newVelocity.multiplyScalar(60); // Convert to per-second velocity
+            setVelocity(newVelocity);
 
             // Update physics body position
-            dice.body.position.set(newPosition.x, newPosition.y, newPosition.z);
+            dice.body.position.set(newPos.x, newPos.y, newPos.z);
 
-            // Add slight rotation during drag for visual feedback
-            const movementMagnitude = worldMovement.length();
-            if (movementMagnitude > 0.01) {
-                // Create rotation based on movement direction in camera space
+            // Add rotation based on movement velocity for realistic feel
+            const movementSpeed = newVelocity.length();
+            if (movementSpeed > 0.1) {
                 const rotationAxis = new CANNON.Vec3(
-                    normalizedDeltaY,  // Up/down mouse movement affects X rotation
-                    0,                 // No Y rotation for now
-                    -normalizedDeltaX  // Left/right mouse movement affects Z rotation
+                    newVelocity.z,   // Z velocity affects X rotation
+                    0,               // No Y rotation during drag
+                    -newVelocity.x   // X velocity affects Z rotation
                 ).unit();
-                const rotationSpeed = movementMagnitude * 0.1;
+                const rotationSpeed = movementSpeed * 0.02;
                 dice.body.quaternion.setFromAxisAngle(rotationAxis, rotationSpeed);
             }
         }
-    }, [isDragging, dragStart, dice]);
+
+        // Normal physics sync when not dragging
+        if (!isDragging && meshRef.current && dice) {
+            dice.updateMesh();
+            meshRef.current.position.copy(dice.object.position);
+            meshRef.current.quaternion.copy(dice.object.quaternion);
+        }
+    });
 
     const handlePointerUp = useCallback((event: any) => {
         if (isDragging && dragStart && dragCurrent && dice.body) {
             // Restore physics body to dynamic
             dice.body.type = CANNON.Body.DYNAMIC;
 
-            const deltaX = dragCurrent.x - dragStart.x;
-            const deltaY = dragCurrent.y - dragStart.y;
-            const deltaTime = Date.now() - dragStart.time;
+            // Calculate throwing velocity based on recent movement history
+            let throwVelocity = new THREE.Vector3(0, 0, 0);
 
-            // Calculate throw force based on drag distance and speed
-            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-            const speed = distance / Math.max(deltaTime, 50);
+            if (positionHistory.length >= 2) {
+                // Use position history to calculate average velocity over last few frames
+                const recentHistory = positionHistory.slice(-5); // Last 5 positions
+                const timeSpan = recentHistory[recentHistory.length - 1].time - recentHistory[0].time;
 
-            // Enhanced throwing physics
-            const forceMultiplier = 0.04;
-            const maxForce = 25;
+                if (timeSpan > 0) {
+                    const positionDelta = new THREE.Vector3();
+                    positionDelta.subVectors(
+                        recentHistory[recentHistory.length - 1].pos,
+                        recentHistory[0].pos
+                    );
 
-            const forceX = Math.max(-maxForce, Math.min(maxForce, deltaX * forceMultiplier));
-            const forceZ = Math.max(-maxForce, Math.min(maxForce, deltaY * forceMultiplier));
-            const forceY = Math.max(4, Math.min(12, speed * 4)); // More upward force
+                    // Convert to velocity (units per second)
+                    throwVelocity = positionDelta.multiplyScalar(1000 / timeSpan);
 
-            // Apply throwing force
-            dice.body.velocity.set(forceX, forceY, forceZ);
+                    // Scale the throwing force
+                    const throwMultiplier = 2.0;
+                    throwVelocity.multiplyScalar(throwMultiplier);
 
-            // Add rotational velocity based on throw direction
-            const rotationMultiplier = 0.5;
+                    // Add some upward force if moving horizontally
+                    const horizontalSpeed = Math.sqrt(throwVelocity.x * throwVelocity.x + throwVelocity.z * throwVelocity.z);
+                    if (horizontalSpeed > 1) {
+                        throwVelocity.y += Math.min(horizontalSpeed * 0.3, 8); // Cap upward force
+                    }
+                }
+            }
+
+            // If no significant movement, just let it drop
+            if (throwVelocity.length() < 0.5) {
+                throwVelocity.set(0, -2, 0); // Small downward velocity
+            }
+
+            // Apply the calculated velocity
+            dice.body.velocity.set(throwVelocity.x, throwVelocity.y, throwVelocity.z);
+
+            // Add rotational velocity based on throw direction and speed
+            const throwSpeed = throwVelocity.length();
+            const rotationIntensity = Math.min(throwSpeed * 0.5, 15); // Cap rotation speed
+
             dice.body.angularVelocity.set(
-                (Math.random() - 0.5) * 30 + deltaY * rotationMultiplier,
-                (Math.random() - 0.5) * 30,
-                (Math.random() - 0.5) * 30 + deltaX * rotationMultiplier
+                (Math.random() - 0.5) * rotationIntensity + throwVelocity.z * 0.1,
+                (Math.random() - 0.5) * rotationIntensity,
+                (Math.random() - 0.5) * rotationIntensity - throwVelocity.x * 0.1
             );
 
             dice.body.wakeUp();
 
-            console.log('🎲 Dice thrown with mouse following:', {
-                dragDistance: distance,
-                throwForce: { x: forceX, y: forceY, z: forceZ },
-                dragTime: deltaTime
+            console.log('🎲 Dice thrown with momentum-based physics:', {
+                throwVelocity: throwVelocity.toArray(),
+                throwSpeed: throwSpeed,
+                rotationIntensity: rotationIntensity
             });
         }
 
@@ -256,12 +321,15 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
         setDragStart(null);
         setDragCurrent(null);
         setOriginalPosition(null);
+        setTargetPosition(null);
+        setVelocity(new THREE.Vector3(0, 0, 0));
+        setPositionHistory([]);
 
         // Release pointer capture
         if (event.target.releasePointerCapture) {
             event.target.releasePointerCapture(event.pointerId);
         }
-    }, [isDragging, dragStart, dragCurrent, dice]);
+    }, [isDragging, dragStart, dragCurrent, dice, positionHistory]);
 
     const handlePointerEnter = useCallback(() => {
         setIsHovered(true);
