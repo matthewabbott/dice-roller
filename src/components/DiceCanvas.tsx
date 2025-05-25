@@ -3,7 +3,7 @@ import { Canvas, extend, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { DICE_COLORS } from '../constants/colors';
-import { DiceManager, DiceD6, DiceD4, PhysicsUtils } from '../physics';
+import { DiceManager, DiceD6, DiceD4, DiceD8, PhysicsUtils } from '../physics';
 import * as CANNON from 'cannon-es';
 
 // Extend R3F with the geometry we need
@@ -15,7 +15,7 @@ interface DiceCanvasProps {
 
 // Define available dice types
 type DiceType = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20';
-type DiceInstance = DiceD4 | DiceD6;
+type DiceInstance = DiceD4 | DiceD6 | DiceD8;
 
 // Dice configuration
 const DICE_CONFIG = {
@@ -43,8 +43,8 @@ const DICE_CONFIG = {
         min: 1,
         max: 8,
         color: '#45b7d1',
-        isAvailable: false,
-        create: () => null // Not implemented yet
+        isAvailable: true,
+        create: () => new DiceD8({ size: 1 })
     },
     d10: {
         name: 'D10 (Pentagonal)',
@@ -93,14 +93,13 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
 
     // Always call useMemo to avoid hooks order violations
     const geometry = React.useMemo(() => {
-        const isDiceD4 = dice.diceType === 'd4';
+        const diceType = dice.diceType;
+        const size = dice.options.size;
 
-        if (isDiceD4) {
+        if (diceType === 'd4') {
             // Create custom D4 geometry that matches our physics vertices exactly
             const d4Geometry = new THREE.BufferGeometry();
 
-            // Use the exact same vertices as our physics body (scaled by dice size)
-            const size = dice.options.size;
             const vertices = new Float32Array([
                 // Face 1: [0, 1, 2] - base triangle
                 -0.5 * size, 0 * size, -0.289 * size,  // vertex 0
@@ -142,7 +141,6 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
 
             // Basic UV coordinates for texture mapping
             const uvs = new Float32Array([
-                // Repeat this pattern for each face
                 0, 0, 1, 0, 0.5, 1,  // Face 1
                 0, 0, 1, 0, 0.5, 1,  // Face 2
                 0, 0, 1, 0, 0.5, 1,  // Face 3
@@ -154,16 +152,84 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
             d4Geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
 
             return d4Geometry;
+        } else if (diceType === 'd8') {
+            // Create custom D8 octahedron geometry that matches our physics vertices exactly
+            const d8Geometry = new THREE.BufferGeometry();
+
+            // D8 octahedron vertices (from D8Geometry.ts)
+            const octahedronVertices = [
+                [0, 1, 0],     // 0: top vertex
+                [1, 0, 0],     // 1: positive X
+                [0, 0, 1],     // 2: positive Z
+                [-1, 0, 0],    // 3: negative X
+                [0, 0, -1],    // 4: negative Z
+                [0, -1, 0],    // 5: bottom vertex
+            ];
+
+            // D8 faces (8 triangular faces) - corrected winding order (CCW from outside)
+            const octahedronFaces = [
+                [0, 2, 1], [0, 3, 2], [0, 4, 3], [0, 1, 4], // Upper pyramid - fixed winding
+                [5, 1, 2], [5, 2, 3], [5, 3, 4], [5, 4, 1], // Lower pyramid - fixed winding
+            ];
+
+            // Build vertices array for triangulated octahedron
+            const vertices = new Float32Array(octahedronFaces.length * 9); // 8 faces * 3 vertices * 3 coords
+            for (let faceIndex = 0; faceIndex < octahedronFaces.length; faceIndex++) {
+                const face = octahedronFaces[faceIndex];
+                for (let vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
+                    const vertex = octahedronVertices[face[vertexIndex]];
+                    const arrayIndex = faceIndex * 9 + vertexIndex * 3;
+                    vertices[arrayIndex] = vertex[0] * size;     // X
+                    vertices[arrayIndex + 1] = vertex[1] * size; // Y
+                    vertices[arrayIndex + 2] = vertex[2] * size; // Z
+                }
+            }
+
+            // Calculate normals for each triangle
+            const normals = new Float32Array(vertices.length);
+            for (let i = 0; i < vertices.length; i += 9) {
+                const v1 = new THREE.Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
+                const v2 = new THREE.Vector3(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
+                const v3 = new THREE.Vector3(vertices[i + 6], vertices[i + 7], vertices[i + 8]);
+
+                const normal = new THREE.Vector3()
+                    .crossVectors(v2.clone().sub(v1), v3.clone().sub(v1))
+                    .normalize();
+
+                // Apply the same normal to all three vertices of this triangle
+                normals[i] = normal.x; normals[i + 1] = normal.y; normals[i + 2] = normal.z;
+                normals[i + 3] = normal.x; normals[i + 4] = normal.y; normals[i + 5] = normal.z;
+                normals[i + 6] = normal.x; normals[i + 7] = normal.y; normals[i + 8] = normal.z;
+            }
+
+            // Basic UV coordinates for texture mapping (8 triangular faces)
+            const uvs = new Float32Array([
+                0, 0, 1, 0, 0.5, 1,  // Face 0
+                0, 0, 1, 0, 0.5, 1,  // Face 1
+                0, 0, 1, 0, 0.5, 1,  // Face 2
+                0, 0, 1, 0, 0.5, 1,  // Face 3
+                0, 0, 1, 0, 0.5, 1,  // Face 4
+                0, 0, 1, 0, 0.5, 1,  // Face 5
+                0, 0, 1, 0, 0.5, 1,  // Face 6
+                0, 0, 1, 0, 0.5, 1,  // Face 7
+            ]);
+
+            d8Geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+            d8Geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+            d8Geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+
+            return d8Geometry;
         } else {
             // For D6 and other dice, return null to use built-in geometry
             return null;
         }
     }, [dice.diceType, dice.options.size]);
 
-    // Render based on dice type
-    const isDiceD4 = dice.diceType === 'd4';
+    // Get dice configuration for colors
+    const diceConfig = DICE_CONFIG[dice.diceType as DiceType];
 
-    if (isDiceD4 && geometry) {
+    // Render based on dice type
+    if (dice.diceType === 'd4' && geometry) {
         return (
             <mesh
                 key={`dice-${dice.diceType}`}
@@ -173,13 +239,29 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 receiveShadow
             >
                 <meshStandardMaterial
-                    color="#ff6b6b"
+                    color={diceConfig.color}
                     roughness={0.3}
                     metalness={0.1}
                 />
             </mesh>
         );
-    } else {
+    } else if (dice.diceType === 'd8' && geometry) {
+        return (
+            <mesh
+                key={`dice-${dice.diceType}`}
+                ref={meshRef}
+                geometry={geometry}
+                castShadow
+                receiveShadow
+            >
+                <meshStandardMaterial
+                    color={diceConfig.color}
+                    roughness={0.3}
+                    metalness={0.1}
+                />
+            </mesh>
+        );
+    } else if (dice.diceType === 'd6') {
         // Simple box geometry for D6 (this works fine)
         return (
             <mesh
@@ -190,7 +272,24 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
             >
                 <boxGeometry args={[1, 1, 1]} />
                 <meshStandardMaterial
-                    color="#4ecdc4"
+                    color={diceConfig.color}
+                    roughness={0.3}
+                    metalness={0.1}
+                />
+            </mesh>
+        );
+    } else {
+        // Fallback for other dice types
+        return (
+            <mesh
+                key={`dice-${dice.diceType}`}
+                ref={meshRef}
+                castShadow
+                receiveShadow
+            >
+                <boxGeometry args={[1, 1, 1]} />
+                <meshStandardMaterial
+                    color="#888888"
                     roughness={0.3}
                     metalness={0.1}
                 />
@@ -250,7 +349,7 @@ const PhysicsSimulation: React.FC<{ dice: DiceInstance | null }> = ({ dice: _dic
 const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const controlsRef = useRef<any>(null);
     const [isFullScreen, setIsFullScreen] = useState(false);
-    const [selectedDiceType, setSelectedDiceType] = useState<DiceType>('d6');
+    const [selectedDiceType, setSelectedDiceType] = useState<DiceType>('d8');
     const [dice, setDice] = useState<DiceInstance | null>(null);
     const [isRolling, setIsRolling] = useState(false);
     const [currentValue, setCurrentValue] = useState<number | null>(null);
