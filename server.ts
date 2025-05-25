@@ -97,6 +97,12 @@ const diceResultManager = new DiceResultManager();
 
 const pubsub = createPubSub();
 
+// Setup CanvasStateManager subscription to broadcast events via GraphQL
+canvasStateManager.subscribe((canvasEvent) => {
+    pubsub.publish('CANVAS_EVENTS_UPDATED', canvasEvent);
+    console.log(`Published canvas event: ${canvasEvent.type} for dice ${canvasEvent.diceId} by user ${canvasEvent.userId}`);
+});
+
 function sanitizeUsername(username: string): string {
     let sanitizedUser = username.trim();
     if (sanitizedUser === '') {
@@ -153,12 +159,12 @@ function publishUserListUpdate() {
     console.log('Published user list update:', activeUsers.map(u => u.username));
 }
 
-function createRollActivity(roll: Roll): Activity {
+function createRollActivity(roll: Roll, user: string): Activity {
     return {
         id: uuidv4(),
         type: 'ROLL',
         timestamp: new Date().toISOString(),
-        user: roll.user,
+        user: user,
         roll: roll
     };
 }
@@ -223,61 +229,58 @@ const resolvers = {
         rollDice: (_: any, { user, expression }: { user: string; expression: string }, context: UserContext) => {
             let sanitizedUser = sanitizeUsername(user);
 
-            // Use RollProcessor instead of parseAndRoll
+            // Use RollProcessor to process the roll
             const processedRoll = rollProcessor.processRoll(expression);
 
-            const newRoll: Roll = {
-                id: uuidv4(),
-                user: sanitizedUser,
-                expression,
-                interpretedExpression: processedRoll.interpretedExpression,
-                result: processedRoll.result,
-                rolls: processedRoll.rolls,
-                canvasData: processedRoll.canvasData,
-            };
-
-            const rollActivity = createRollActivity(newRoll);
-            publishActivity(rollActivity);
-
-            // Publish canvas events for each dice
+            // Create canvas events for each dice using CanvasStateManager
+            const canvasEvents: CanvasEvent[] = [];
             if (processedRoll.canvasData && processedRoll.canvasData.diceRolls.length > 0) {
-                processedRoll.canvasData.diceRolls.forEach(diceRoll => {
+                processedRoll.canvasData.diceRolls.forEach((diceRoll: any) => {
                     // Register dice with result manager
                     diceResultManager.registerDiceRoll(
                         diceRoll.canvasId,
-                        rollActivity.id,
-                        newRoll.id,
+                        uuidv4(), // activity ID will be set later
+                        uuidv4(), // roll ID placeholder
                         sanitizedUser,
                         context.sessionId,
                         diceRoll.diceType,
                         diceRoll.isVirtual,
-                        diceRoll.result,
+                        diceRoll.result || 0,
                         diceRoll.position
                     );
 
-                    const canvasEvent: CanvasEvent = {
-                        type: 'DICE_SPAWN',
-                        diceId: diceRoll.canvasId,
-                        userId: sanitizedUser,
-                        sessionId: context.sessionId,
-                        data: JSON.stringify({
+                    // Use CanvasStateManager to spawn dice
+                    const canvasEvent = canvasStateManager.spawnDice(
+                        'default-room', // TODO: implement proper room management
+                        sanitizedUser,
+                        {
+                            diceId: diceRoll.canvasId,
                             diceType: diceRoll.diceType,
-                            position: diceRoll.position,
+                            position: diceRoll.position || { x: 0, y: 0, z: 0 },
                             isVirtual: diceRoll.isVirtual,
-                            virtualRolls: diceRoll.virtualRolls,
-                            result: diceRoll.result,
-                            rollId: newRoll.id,
-                            activityId: rollActivity.id
-                        }),
-                        timestamp: new Date().toISOString()
-                    };
+                            virtualRolls: diceRoll.virtualRolls
+                        }
+                    );
 
                     canvasEvents.push(canvasEvent);
-                    pubsub.publish('CANVAS_EVENTS_UPDATED', canvasEvent);
                 });
             }
 
-            console.log(`Rolled dice: ${expression} (interpreted as ${processedRoll.interpretedExpression}) for user ${sanitizedUser}. Result: ${processedRoll.result}. Canvas dice: ${processedRoll.canvasData?.diceRolls.length || 0}`);
+            // Create the new roll object matching the schema
+            const newRoll: Roll = {
+                expression,
+                results: processedRoll.rolls,
+                total: processedRoll.result,
+                canvasData: {
+                    dice: processedRoll.canvasData?.diceRolls || [],
+                    events: canvasEvents
+                }
+            };
+
+            const rollActivity = createRollActivity(newRoll, sanitizedUser);
+            publishActivity(rollActivity);
+
+            console.log(`Rolled dice: ${expression} for user ${sanitizedUser}. Result: ${processedRoll.result}. Canvas dice: ${processedRoll.canvasData?.diceRolls.length || 0}`);
 
             return newRoll;
         },

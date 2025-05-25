@@ -13,12 +13,47 @@ export const REGISTER_USERNAME_MUTATION = gql`
 export const ROLL_DICE_MUTATION = gql`
   mutation RollDice($user: String!, $expression: String!) {
     rollDice(user: $user, expression: $expression) {
-      id
-      user
       expression
-      interpretedExpression
-      result
-      rolls
+      results
+      total
+      canvasData {
+        dice {
+          canvasId
+          diceType
+          position {
+            x
+            y
+            z
+          }
+          isVirtual
+          virtualRolls
+          result
+        }
+        events {
+          id
+          type
+          diceId
+          userId
+          timestamp
+          data {
+            position {
+              x
+              y
+              z
+            }
+            velocity {
+              x
+              y
+              z
+            }
+            result
+            diceType
+            isVirtual
+            virtualRolls
+            highlightColor
+          }
+        }
+      }
     }
   }
 `;
@@ -55,12 +90,30 @@ export const GET_ACTIVITIES_QUERY = gql`
       user
       message
       roll {
-        id
-        user
         expression
-        interpretedExpression
-        result
-        rolls
+        results
+        total
+        canvasData {
+          dice {
+            canvasId
+            diceType
+            position {
+              x
+              y
+              z
+            }
+            isVirtual
+            virtualRolls
+            result
+          }
+          events {
+            id
+            type
+            diceId
+            userId
+            timestamp
+          }
+        }
       }
     }
   }
@@ -75,12 +128,30 @@ export const ACTIVITY_ADDED_SUBSCRIPTION = gql`
       user
       message
       roll {
-        id
-        user
         expression
-        interpretedExpression
-        result
-        rolls
+        results
+        total
+        canvasData {
+          dice {
+            canvasId
+            diceType
+            position {
+              x
+              y
+              z
+            }
+            isVirtual
+            virtualRolls
+            result
+          }
+          events {
+            id
+            type
+            diceId
+            userId
+            timestamp
+          }
+        }
       }
     }
   }
@@ -104,6 +175,36 @@ export const USER_LIST_CHANGED_SUBSCRIPTION = gql`
       username
       color
       isActive
+    }
+  }
+`;
+
+// Canvas synchronization operations for Phase 3
+export const CANVAS_EVENTS_SUBSCRIPTION = gql`
+  subscription CanvasEventsUpdated {
+    canvasEventsUpdated {
+      id
+      type
+      diceId
+      userId
+      timestamp
+      data {
+        position {
+          x
+          y
+          z
+        }
+        velocity {
+          x
+          y
+          z
+        }
+        result
+        diceType
+        isVirtual
+        virtualRolls
+        highlightColor
+      }
     }
   }
 `;

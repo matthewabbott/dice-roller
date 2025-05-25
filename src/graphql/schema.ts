@@ -8,6 +8,7 @@ export const typeDefs = `#graphql
     sendChatMessage(message: String!): Activity!
     rollDice(user: String!, expression: String!): Roll!
     registerUsername(username: String!): UsernameRegistrationResult!
+    setUserColor(color: String!): SetUserColorResult!
   }
 
   type Subscription {
@@ -96,6 +97,12 @@ export const typeDefs = `#graphql
   type UsernameRegistrationResult {
     success: Boolean!
     username: String!
+    message: String!
+  }
+
+  type SetUserColorResult {
+    success: Boolean!
+    color: String
     message: String!
   }
 `; 
