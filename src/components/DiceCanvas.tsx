@@ -155,46 +155,57 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
             const canvas = canvasRef.current;
             const rect = canvas.getBoundingClientRect();
 
-            // Calculate mouse movement in screen space
+            // Calculate mouse movement in pixels
             const deltaX = event.clientX - dragStart.x;
             const deltaY = event.clientY - dragStart.y;
 
-            // Convert to normalized device coordinates (-1 to 1)
-            const normalizedX = (deltaX / rect.width) * 2;
-            const normalizedY = -(deltaY / rect.height) * 2;
+            // Convert pixel movement to normalized movement (-1 to 1 range)
+            const normalizedDeltaX = (deltaX / rect.width) * 2;
+            const normalizedDeltaY = -(deltaY / rect.height) * 2; // Negative because screen Y is inverted
 
-            // Get camera vectors for world space conversion
+            // Get camera's right and up vectors (these define the camera's view plane)
             const cameraDirection = new THREE.Vector3();
             camera.getWorldDirection(cameraDirection);
 
-            // Create right and up vectors relative to camera
+            // Calculate right vector (camera's local X axis)
             const right = new THREE.Vector3();
-            const up = new THREE.Vector3(0, 1, 0);
-            right.crossVectors(up, cameraDirection).normalize();
+            right.crossVectors(camera.up, cameraDirection).normalize();
+
+            // Calculate up vector (camera's local Y axis)
+            const up = new THREE.Vector3();
             up.crossVectors(cameraDirection, right).normalize();
 
-            // Scale movement based on distance from camera to dice
-            const distance = camera.position.distanceTo(dragStart.worldPos);
-            const movementScale = distance * 0.2; // Increased sensitivity
+            // Scale movement based on distance from camera for natural feel
+            const distanceFromCamera = camera.position.distanceTo(dragStart.worldPos);
+            const movementScale = distanceFromCamera * 0.5; // Much larger scale factor
 
-            // Calculate new position relative to starting position
+            // Calculate movement in world space using camera's right and up vectors
+            const worldMovement = new THREE.Vector3();
+            worldMovement.addScaledVector(right, normalizedDeltaX * movementScale);
+            worldMovement.addScaledVector(up, normalizedDeltaY * movementScale);
+
+            // Calculate new position by adding movement to the original position
             const newPosition = dragStart.worldPos.clone();
-            newPosition.add(right.multiplyScalar(normalizedX * movementScale));
-            newPosition.add(up.multiplyScalar(normalizedY * movementScale));
+            newPosition.add(worldMovement);
 
             // Keep dice above the table and within reasonable bounds
             newPosition.y = Math.max(newPosition.y, 0.5);
             newPosition.x = Math.max(-6, Math.min(6, newPosition.x)); // Table bounds
             newPosition.z = Math.max(-6, Math.min(6, newPosition.z)); // Table bounds
 
-            // Update physics body position smoothly
+            // Update physics body position
             dice.body.position.set(newPosition.x, newPosition.y, newPosition.z);
 
             // Add slight rotation during drag for visual feedback
-            const rotationIntensity = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
-            if (rotationIntensity > 0.01) {
-                const rotationAxis = new CANNON.Vec3(normalizedY, 0, normalizedX).unit();
-                const rotationSpeed = rotationIntensity * 0.05;
+            const movementMagnitude = worldMovement.length();
+            if (movementMagnitude > 0.01) {
+                // Create rotation based on movement direction in camera space
+                const rotationAxis = new CANNON.Vec3(
+                    normalizedDeltaY,  // Up/down mouse movement affects X rotation
+                    0,                 // No Y rotation for now
+                    -normalizedDeltaX  // Left/right mouse movement affects Z rotation
+                ).unit();
+                const rotationSpeed = movementMagnitude * 0.1;
                 dice.body.quaternion.setFromAxisAngle(rotationAxis, rotationSpeed);
             }
         }
