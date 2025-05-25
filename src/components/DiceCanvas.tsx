@@ -95,8 +95,14 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState<{ x: number; y: number; time: number } | null>(null);
     const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
+    const [isHovered, setIsHovered] = useState(false);
 
     const handlePointerDown = useCallback((event: any) => {
+        // Only handle dice throwing if Shift key is held down
+        if (!event.shiftKey) {
+            return; // Let camera controls handle normal clicks
+        }
+
         event.stopPropagation();
         setIsDragging(true);
         setDragStart({
@@ -168,7 +174,7 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 dragTime: deltaTime
             };
 
-            console.log('🎲 Dice thrown via drag:', throwData);
+            console.log('🎲 Dice thrown via Shift+drag:', throwData);
 
             // TODO: This throwData can be sent to GraphQL for multiplayer broadcasting
             // Example: broadcastDiceThrow(throwData)
@@ -183,6 +189,14 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
             event.target.releasePointerCapture(event.pointerId);
         }
     }, [isDragging, dragStart, dragCurrent, dice]);
+
+    const handlePointerEnter = useCallback(() => {
+        setIsHovered(true);
+    }, []);
+
+    const handlePointerLeave = useCallback(() => {
+        setIsHovered(false);
+    }, []);
 
     // Always call useMemo to avoid hooks order violations
     const geometry = React.useMemo(() => {
@@ -687,11 +701,15 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
+                onPointerEnter={handlePointerEnter}
+                onPointerLeave={handlePointerLeave}
             >
                 <meshStandardMaterial
                     color={diceConfig.color}
-                    roughness={0.3}
-                    metalness={0.1}
+                    roughness={isHovered ? 0.1 : 0.3}
+                    metalness={isHovered ? 0.3 : 0.1}
+                    emissive={isHovered ? diceConfig.color : '#000000'}
+                    emissiveIntensity={isHovered ? 0.1 : 0}
                 />
             </mesh>
         );
@@ -706,11 +724,15 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
+                onPointerEnter={handlePointerEnter}
+                onPointerLeave={handlePointerLeave}
             >
                 <meshStandardMaterial
                     color={diceConfig.color}
-                    roughness={0.3}
-                    metalness={0.1}
+                    roughness={isHovered ? 0.1 : 0.3}
+                    metalness={isHovered ? 0.3 : 0.1}
+                    emissive={isHovered ? diceConfig.color : '#000000'}
+                    emissiveIntensity={isHovered ? 0.1 : 0}
                 />
             </mesh>
         );
@@ -725,11 +747,15 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
+                onPointerEnter={handlePointerEnter}
+                onPointerLeave={handlePointerLeave}
             >
                 <meshStandardMaterial
                     color={diceConfig.color}
-                    roughness={0.3}
-                    metalness={0.1}
+                    roughness={isHovered ? 0.1 : 0.3}
+                    metalness={isHovered ? 0.3 : 0.1}
+                    emissive={isHovered ? diceConfig.color : '#000000'}
+                    emissiveIntensity={isHovered ? 0.1 : 0}
                 />
             </mesh>
         );
@@ -744,11 +770,15 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
+                onPointerEnter={handlePointerEnter}
+                onPointerLeave={handlePointerLeave}
             >
                 <meshStandardMaterial
                     color={diceConfig.color}
-                    roughness={0.3}
-                    metalness={0.1}
+                    roughness={isHovered ? 0.1 : 0.3}
+                    metalness={isHovered ? 0.3 : 0.1}
+                    emissive={isHovered ? diceConfig.color : '#000000'}
+                    emissiveIntensity={isHovered ? 0.1 : 0}
                 />
             </mesh>
         );
@@ -763,11 +793,15 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
+                onPointerEnter={handlePointerEnter}
+                onPointerLeave={handlePointerLeave}
             >
                 <meshStandardMaterial
                     color={diceConfig.color}
-                    roughness={0.3}
-                    metalness={0.1}
+                    roughness={isHovered ? 0.1 : 0.3}
+                    metalness={isHovered ? 0.3 : 0.1}
+                    emissive={isHovered ? diceConfig.color : '#000000'}
+                    emissiveIntensity={isHovered ? 0.1 : 0}
                 />
             </mesh>
         );
@@ -782,12 +816,16 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
+                onPointerEnter={handlePointerEnter}
+                onPointerLeave={handlePointerLeave}
             >
                 <boxGeometry args={[1, 1, 1]} />
                 <meshStandardMaterial
                     color={diceConfig.color}
-                    roughness={0.3}
-                    metalness={0.1}
+                    roughness={isHovered ? 0.1 : 0.3}
+                    metalness={isHovered ? 0.3 : 0.1}
+                    emissive={isHovered ? diceConfig.color : '#000000'}
+                    emissiveIntensity={isHovered ? 0.1 : 0}
                 />
             </mesh>
         );
@@ -802,12 +840,16 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
+                onPointerEnter={handlePointerEnter}
+                onPointerLeave={handlePointerLeave}
             >
                 <boxGeometry args={[1, 1, 1]} />
                 <meshStandardMaterial
                     color="#888888"
-                    roughness={0.3}
-                    metalness={0.1}
+                    roughness={isHovered ? 0.1 : 0.3}
+                    metalness={isHovered ? 0.3 : 0.1}
+                    emissive={isHovered ? '#888888' : '#000000'}
+                    emissiveIntensity={isHovered ? 0.1 : 0}
                 />
             </mesh>
         );
@@ -1242,6 +1284,29 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                     {isFullScreen ? '✕ Exit Full Screen' : '⛶'}
                 </button>
             </div>
+
+            {/* Dice Interaction Tooltip */}
+            {dice.some(die => die.body) && (
+                <div className={`absolute ${isFullScreen ? 'bottom-4 left-4' : 'bottom-2 left-2'} bg-black bg-opacity-75 text-white px-3 py-2 rounded text-sm pointer-events-none`}>
+                    💡 <strong>Shift + Click & Drag</strong> dice to throw them
+                </div>
+            )}
+
+            {/* Multi-dice Instructions */}
+            {dice.length > 0 && (
+                <div className="mt-4 p-3 bg-blue-900 bg-opacity-50 rounded text-sm">
+                    <div className="font-medium mb-1">💡 Controls:</div>
+                    <ul className="text-xs space-y-1 text-blue-200">
+                        <li>• <strong>Shift + Click & Drag</strong> any dice to throw it</li>
+                        <li>• <strong>Left Click & Drag</strong> to rotate camera view</li>
+                        <li>• <strong>Right Click & Drag</strong> to pan camera</li>
+                        <li>• <strong>Mouse Wheel</strong> to zoom in/out</li>
+                        <li>• Use "Roll All" for controlled results</li>
+                        <li>• Use "🚀" for physics-based throwing</li>
+                        <li>• Dice will collide and interact naturally</li>
+                    </ul>
+                </div>
+            )}
         </>
     );
 
@@ -1374,9 +1439,12 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                 {/* Multi-dice Instructions */}
                 {dice.length > 0 && (
                     <div className="mt-4 p-3 bg-blue-900 bg-opacity-50 rounded text-sm">
-                        <div className="font-medium mb-1">💡 Multi-Dice Tips:</div>
+                        <div className="font-medium mb-1">💡 Controls:</div>
                         <ul className="text-xs space-y-1 text-blue-200">
-                            <li>• Click and drag any dice to throw it</li>
+                            <li>• <strong>Shift + Click & Drag</strong> any dice to throw it</li>
+                            <li>• <strong>Left Click & Drag</strong> to rotate camera view</li>
+                            <li>• <strong>Right Click & Drag</strong> to pan camera</li>
+                            <li>• <strong>Mouse Wheel</strong> to zoom in/out</li>
                             <li>• Use "Roll All" for controlled results</li>
                             <li>• Use "🚀" for physics-based throwing</li>
                             <li>• Dice will collide and interact naturally</li>
