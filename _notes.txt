@@ -2,13 +2,17 @@ TODOs:
 - Need threejs-dice source code for geometry context
   - TODO: credit to https://github.com/byWulf/threejs-dice. Package doesn't work for current ver three.js, but I used his vertex definitions and dicemanager structure.
 - currently I have to click a button to roll, and I'd like to be able to pick up and drag the die,
-- dice with more sides are very hard to construct
 - will also have to broadcast all this info to everyone on the web-page so THEY can see the dice rolling too
 - and REALLY I'd like for multiple people to be rolling dice at the same time, having their dice bounce off eachother and stuff
+- also wanna move the dice canvas front and center
+  - replace roll chatbar with a /roll chat-bar command and canvas-associated dice buttons
+  - roll commands should automatically influence the canvas
+  - nonstandard dice roll as d6, perhaps? 
+    - same code should also handle rolling too many dice (which will roll as a single die that produces a big result)
 
 
 
-
+- fix seams in the d10 faces
 - have color change system message show TO and FROM colors
 - fix anonymous user registry, or at least codify current behavior as intentional
 - initialized user color sometimes is different from ui listed color (might be a session persistence thing?)

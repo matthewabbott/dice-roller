@@ -269,6 +269,7 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
 
             // Triangulate mixed face types (kite-shaped and triangular)
             const triangulatedFaces = [];
+            const faceGroups = []; // Track which original face each triangle belongs to
             for (let i = 0; i < d10Faces.length; i++) {
                 const face = d10Faces[i];
 
@@ -276,10 +277,42 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                     // Kite-shaped face: triangulate as [v0,v1,v2] and [v0,v2,v3]
                     triangulatedFaces.push([face[0], face[1], face[2]]);
                     triangulatedFaces.push([face[0], face[2], face[3]]);
+                    faceGroups.push(i); // Both triangles belong to the same kite face
+                    faceGroups.push(i);
                 } else if (face.length === 3) {
                     // Triangular face: use as-is
                     triangulatedFaces.push([face[0], face[1], face[2]]);
+                    faceGroups.push(i);
                 }
+            }
+
+            // Pre-calculate face normals for each original face (to smooth kite faces)
+            const faceNormals = [];
+            for (let i = 0; i < d10Faces.length; i++) {
+                const face = d10Faces[i];
+
+                // Calculate normal using first 3 vertices of the face
+                const v1 = new THREE.Vector3(
+                    d10Vertices[face[0]][0] * size * 0.9,
+                    d10Vertices[face[0]][1] * size * 0.9,
+                    d10Vertices[face[0]][2] * size * 0.9
+                );
+                const v2 = new THREE.Vector3(
+                    d10Vertices[face[1]][0] * size * 0.9,
+                    d10Vertices[face[1]][1] * size * 0.9,
+                    d10Vertices[face[1]][2] * size * 0.9
+                );
+                const v3 = new THREE.Vector3(
+                    d10Vertices[face[2]][0] * size * 0.9,
+                    d10Vertices[face[2]][1] * size * 0.9,
+                    d10Vertices[face[2]][2] * size * 0.9
+                );
+
+                const normal = new THREE.Vector3()
+                    .crossVectors(v2.clone().sub(v1), v3.clone().sub(v1))
+                    .normalize();
+
+                faceNormals.push(normal);
             }
 
             // Build vertices array for triangulated D10
@@ -296,21 +329,25 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 }
             }
 
-            // Calculate normals for each triangle
+            // Calculate normals using the pre-calculated face normals (this smooths kite faces)
             const normals = new Float32Array(vertices.length);
-            for (let i = 0; i < vertices.length; i += 9) {
-                const v1 = new THREE.Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
-                const v2 = new THREE.Vector3(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
-                const v3 = new THREE.Vector3(vertices[i + 6], vertices[i + 7], vertices[i + 8]);
+            for (let i = 0; i < triangulatedFaces.length; i++) {
+                const originalFaceIndex = faceGroups[i];
+                const faceNormal = faceNormals[originalFaceIndex];
 
-                const normal = new THREE.Vector3()
-                    .crossVectors(v2.clone().sub(v1), v3.clone().sub(v1))
-                    .normalize();
+                const normalOffset = i * 9;
 
-                // Apply the same normal to all three vertices of this triangle
-                normals[i] = normal.x; normals[i + 1] = normal.y; normals[i + 2] = normal.z;
-                normals[i + 3] = normal.x; normals[i + 4] = normal.y; normals[i + 5] = normal.z;
-                normals[i + 6] = normal.x; normals[i + 7] = normal.y; normals[i + 8] = normal.z;
+                // Apply the same face normal to all three vertices of this triangle
+                // This ensures kite faces appear smooth (both triangles share the same normal)
+                normals[normalOffset] = faceNormal.x;
+                normals[normalOffset + 1] = faceNormal.y;
+                normals[normalOffset + 2] = faceNormal.z;
+                normals[normalOffset + 3] = faceNormal.x;
+                normals[normalOffset + 4] = faceNormal.y;
+                normals[normalOffset + 5] = faceNormal.z;
+                normals[normalOffset + 6] = faceNormal.x;
+                normals[normalOffset + 7] = faceNormal.y;
+                normals[normalOffset + 8] = faceNormal.z;
             }
 
             // Basic UV coordinates for texture mapping
