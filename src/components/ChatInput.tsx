@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { useMutation, useQuery } from '@apollo/client';
 import { SEND_CHAT_MESSAGE_MUTATION, ROLL_DICE_MUTATION, GET_ACTIVE_USERS_QUERY } from '../graphql/operations';
 import { ChatCommandParser } from '../services/ChatCommandParser';
@@ -11,7 +11,11 @@ interface User {
     isActive: boolean;
 }
 
-const ChatInput: React.FC = () => {
+export interface ChatInputRef {
+    populateCommand: (command: string) => void;
+}
+
+const ChatInput = forwardRef<ChatInputRef>((props, ref) => {
     const [message, setMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [commandPreview, setCommandPreview] = useState<string | null>(null);
@@ -23,6 +27,15 @@ const ChatInput: React.FC = () => {
     const { data: usersData } = useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY);
     const currentUser = usersData?.activeUsers.find(user => user.sessionId === currentSessionId);
     const currentUsername = currentUser?.username || 'Anonymous';
+
+    // Expose methods to parent components
+    useImperativeHandle(ref, () => ({
+        populateCommand: (command: string) => {
+            setMessage(command);
+            // Trigger command parsing for the new message
+            handleMessageChange({ target: { value: command } } as React.ChangeEvent<HTMLInputElement>);
+        }
+    }));
 
     const [sendChatMessage, { loading: chatLoading, error: chatError }] = useMutation(SEND_CHAT_MESSAGE_MUTATION, {
         onCompleted: () => {
@@ -214,6 +227,8 @@ const ChatInput: React.FC = () => {
             </form>
         </div>
     );
-};
+});
+
+ChatInput.displayName = 'ChatInput';
 
 export default ChatInput; 

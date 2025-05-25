@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useSubscription } from '@apollo/client';
-import { ROLL_DICE_MUTATION, REGISTER_USERNAME_MUTATION, GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
+import { REGISTER_USERNAME_MUTATION, GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
 import ColorPicker from './ColorPicker';
 import { PRESET_COLORS } from '../constants/colors';
 import { getSessionId } from '../utils/sessionId';
@@ -12,8 +12,11 @@ interface User {
     isActive: boolean;
 }
 
-const DiceRoller: React.FC = () => {
-    const [expression, setExpression] = useState('');
+interface DiceRollerProps {
+    onQuickRoll?: (command: string) => void;
+}
+
+const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll }) => {
     const [username, setUsername] = useState('Anonymous');
     const [pendingUsername, setPendingUsername] = useState('');
     const [isUsernameRegistered, setIsUsernameRegistered] = useState(true); // Anonymous is always registered
@@ -52,23 +55,13 @@ const DiceRoller: React.FC = () => {
         }
     });
 
-    const [rollDice, { data, loading, error }] = useMutation(ROLL_DICE_MUTATION, {
-        onCompleted: (data) => {
-            console.log('Roll mutation completed:', data);
-            setExpression('');
-        },
-        onError: (apolloError) => {
-            console.error('Roll mutation error:', apolloError);
-        }
-    });
-
-    const [registerUsername, { loading: registerLoading, error: registerError }] = useMutation(REGISTER_USERNAME_MUTATION, {
+    const [registerUsername, { loading: registerLoading }] = useMutation(REGISTER_USERNAME_MUTATION, {
         onCompleted: (data) => {
             console.log('Username registration completed:', data);
-            const { success, username: registeredName, message } = data.registerUsername;
+            const { success, username: registeredUsername, message } = data.registerUsername;
 
             if (success) {
-                setUsername(registeredName || 'Anonymous');
+                setUsername(registeredUsername);
                 setIsUsernameRegistered(true);
                 setRegistrationStatus('success');
             } else {
@@ -87,19 +80,22 @@ const DiceRoller: React.FC = () => {
     });
 
     useEffect(() => {
-        if (pendingUsername && pendingUsername !== 'Anonymous' && pendingUsername !== username) {
+        if (usernameDebounceTimer.current) {
+            clearTimeout(usernameDebounceTimer.current);
+        }
+
+        if (pendingUsername && pendingUsername !== username && pendingUsername !== 'Anonymous') {
+            usernameDebounceTimer.current = setTimeout(() => {
+                attemptUsernameRegistration(pendingUsername);
+            }, 1000);
+        }
+
+        return () => {
             if (usernameDebounceTimer.current) {
                 clearTimeout(usernameDebounceTimer.current);
             }
-
-            setRegistrationStatus('loading');
-            setRegistrationMessage('Checking username availability...');
-
-            usernameDebounceTimer.current = setTimeout(() => {
-                attemptUsernameRegistration(pendingUsername);
-            }, 800); // 800ms debounce
-        }
-    }, [pendingUsername]);
+        };
+    }, [pendingUsername, username]);
 
     const attemptUsernameRegistration = (usernameToRegister: string) => {
         if (!usernameToRegister || usernameToRegister === '') {
@@ -111,10 +107,6 @@ const DiceRoller: React.FC = () => {
                 username: usernameToRegister
             }
         });
-    };
-
-    const handleExpressionChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setExpression(event.target.value);
     };
 
     const handleUsernameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,24 +137,10 @@ const DiceRoller: React.FC = () => {
     };
 
     const handleDieButtonClick = (dieType: number) => {
-        setExpression(`1d${dieType}`);
-    };
-
-    const handleRollClick = () => {
-        if (!expression) return;
-
-        if (!isUsernameRegistered && username !== 'Anonymous') {
-            setRegistrationMessage('Please choose a valid username before rolling dice.');
-            return;
+        const command = `/roll 1d${dieType}`;
+        if (onQuickRoll) {
+            onQuickRoll(command);
         }
-
-
-        rollDice({
-            variables: {
-                user: username,
-                expression,
-            },
-        });
     };
 
     const getRegistrationStatusColor = () => {
@@ -178,7 +156,7 @@ const DiceRoller: React.FC = () => {
 
     return (
         <div className="card">
-            <h2 className="text-xl font-semibold text-brand-text mb-3">Roll Dice</h2>
+            <h2 className="text-xl font-semibold text-brand-text mb-3">User Settings</h2>
 
             {/* Username Input */}
             <div className="mb-3">
@@ -205,42 +183,29 @@ const DiceRoller: React.FC = () => {
             </div>
 
             {/* Color Picker */}
-            <div className="mb-3">
+            <div className="mb-4">
                 <ColorPicker currentColor={userColor} onColorChange={setUserColor} />
             </div>
 
-            {/* Dice Buttons */}
-            <div className="flex space-x-2 mb-3">
-                {commonDice.map((die) => (
-                    <button
-                        key={die}
-                        className="btn-secondary px-3 py-1"
-                        onClick={() => handleDieButtonClick(die)}
-                    >
-                        d{die}
-                    </button>
-                ))}
+            {/* Quick Roll Buttons */}
+            <div className="border-t border-brand-surface pt-3">
+                <h3 className="text-sm font-medium text-brand-text-muted mb-2">Quick Roll Dice</h3>
+                <div className="grid grid-cols-3 gap-2">
+                    {commonDice.map((die) => (
+                        <button
+                            key={die}
+                            className="btn-secondary px-3 py-2 text-sm"
+                            onClick={() => handleDieButtonClick(die)}
+                            title={`Roll 1d${die} - populates chat with /roll 1d${die}`}
+                        >
+                            🎲 d{die}
+                        </button>
+                    ))}
+                </div>
+                <p className="text-xs text-brand-text-muted mt-2">
+                    💡 These buttons populate the chat input with <code>/roll</code> commands
+                </p>
             </div>
-
-            {/* Expression Input and Roll Button */}
-            <div className="flex space-x-2">
-                <input
-                    type="text"
-                    className="input-field flex-grow"
-                    placeholder="e.g., 2d6+3"
-                    value={expression}
-                    onChange={handleExpressionChange}
-                />
-                <button
-                    className="btn-primary px-4 py-2"
-                    onClick={handleRollClick}
-                    disabled={loading || (!isUsernameRegistered && username !== 'Anonymous')}
-                >
-                    {loading ? 'Rolling...' : 'Roll'}
-                </button>
-            </div>
-            {loading && <p className="text-sm text-brand-text-muted mt-2">Rolling...</p>}
-            {error && <p className="text-sm text-brand-primary mt-2">Error rolling dice: {error.message}</p>}
         </div>
     );
 };
