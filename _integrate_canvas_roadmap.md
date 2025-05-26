@@ -42,7 +42,7 @@
 **Solution**: Make canvas respect `isVirtual` flag from `RollProcessor`
 
 **Files to modify:**
-```typescript
+  ```typescript
 // src/components/DiceCanvas.tsx - Add virtual dice rendering
 {diceState.dice.map((die, index) => 
   die.isVirtual ? (

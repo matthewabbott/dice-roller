@@ -138,8 +138,8 @@ const PhysicsDice: React.FC<{ dice: DiceInstance; canvasId?: string }> = ({ dice
         console.warn(`Unknown dice type: "${dice.diceType}" (normalized: "${normalizedDiceType}"). Available types:`, Object.keys(DICE_CONFIG));
     }
 
-    // Determine dice color based on highlighting state - with fallback for unknown dice types
-    const diceColor = isHighlighted ? '#ffff00' : (diceConfig?.color || '#888888');
+    // Use the original dice color - highlighting is now handled by AnimatedMaterial
+    const diceColor = diceConfig?.color || '#888888';
 
     // Enhanced pointer handlers that include highlighting
     const enhancedPointerDown = useCallback((event: any) => {
@@ -154,7 +154,8 @@ const PhysicsDice: React.FC<{ dice: DiceInstance; canvasId?: string }> = ({ dice
                 key={`dice-${dice.diceType}`}
                 size={dice.options.size}
                 color={diceColor}
-                isHovered={interactionState.isHovered || isHighlighted}
+                isHovered={interactionState.isHovered}
+                isHighlighted={isHighlighted}
                 onPointerDown={enhancedPointerDown}
                 onPointerMove={interactionHandlers.handlePointerMove}
                 onPointerUp={interactionHandlers.handlePointerUp}

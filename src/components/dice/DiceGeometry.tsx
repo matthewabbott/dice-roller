@@ -1,10 +1,12 @@
 import React from 'react';
 import * as THREE from 'three';
+import { AnimatedMaterial } from './AnimatedMaterial';
 
 export interface DiceGeometryProps {
     size: number;
     color: string;
     isHovered?: boolean;
+    isHighlighted?: boolean;
     onPointerDown?: (event: any) => void;
     onPointerMove?: (event: any) => void;
     onPointerUp?: (event: any) => void;
@@ -27,6 +29,7 @@ export const DiceGeometry: React.FC<DiceGeometryProps & {
 }> = ({
     color,
     isHovered = false,
+    isHighlighted = false,
     onPointerDown,
     onPointerMove,
     onPointerUp,
@@ -49,12 +52,10 @@ export const DiceGeometry: React.FC<DiceGeometryProps & {
                 onPointerLeave={onPointerLeave}
             >
                 {children || (
-                    <meshStandardMaterial
+                    <AnimatedMaterial
                         color={color}
-                        roughness={isHovered ? 0.1 : 0.3}
-                        metalness={isHovered ? 0.3 : 0.1}
-                        emissive={isHovered ? color : '#000000'}
-                        emissiveIntensity={isHovered ? 0.1 : 0}
+                        isHovered={isHovered}
+                        isHighlighted={isHighlighted}
                     />
                 )}
             </mesh>

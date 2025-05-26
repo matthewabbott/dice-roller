@@ -1,4 +1,5 @@
 import { DiceGeometry } from './DiceGeometry';
+import { AnimatedMaterial } from './AnimatedMaterial';
 import type { DiceGeometryComponent } from './DiceGeometry';
 
 /**
@@ -9,12 +10,10 @@ export const D6Geometry: DiceGeometryComponent = (props) => {
     return (
         <DiceGeometry {...props}>
             <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial
+            <AnimatedMaterial
                 color={props.color}
-                roughness={props.isHovered ? 0.1 : 0.3}
-                metalness={props.isHovered ? 0.3 : 0.1}
-                emissive={props.isHovered ? props.color : '#000000'}
-                emissiveIntensity={props.isHovered ? 0.1 : 0}
+                isHovered={props.isHovered}
+                isHighlighted={props.isHighlighted}
             />
         </DiceGeometry>
     );
