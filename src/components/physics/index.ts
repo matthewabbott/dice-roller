@@ -1,4 +1,4 @@
-export { PhysicsWorld, PhysicsSimulation } from './PhysicsWorld';
+export { PhysicsWorld } from './PhysicsWorld';
 export { PhysicsGround } from './PhysicsGround';
 
 export type { PhysicsWorldProps } from './PhysicsWorld';

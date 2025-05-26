@@ -62,17 +62,3 @@ export const PhysicsWorld: React.FC<PhysicsWorldProps> = ({ onInitialized, child
     return isInitialized ? <>{children}</> : null;
 };
 
-/**
- * PhysicsSimulation Component (Legacy)
- * Simple component that just steps the physics simulation
- * @deprecated Use PhysicsWorld instead
- */
-export const PhysicsSimulation: React.FC = () => {
-    useFrame((_state, delta) => {
-        if (DiceManager.isInitialized()) {
-            DiceManager.step(delta);
-        }
-    });
-
-    return null;
-}; 

@@ -2,12 +2,11 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Canvas, extend, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
-// import { DICE_COLORS } from '../constants/colors'; // Unused for now
-import { DiceManager, DiceD6, DiceD4, DiceD8, DiceD10, DiceD12, DiceD20, PhysicsUtils } from '../physics';
-import * as CANNON from 'cannon-es';
+
+import { DiceManager, DiceD6, DiceD4, DiceD8, DiceD10, DiceD12, DiceD20 } from '../physics';
+
 import { useCanvasSync, type CanvasSyncCallbacks, type RemoteDiceData } from '../services/CanvasSyncManager';
-// import { VirtualDice, VirtualDiceSummary } from './VirtualDice'; // Unused for now
-// import type { DiceRoll } from '../types/canvas'; // Unused for now
+
 import { DICE_GEOMETRIES } from './dice';
 import { PhysicsWorld, PhysicsGround } from './physics';
 import { useDiceInteraction, usePhysicsSync } from '../hooks';
@@ -109,12 +108,6 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
         isDragging: interactionState.isDragging
     });
 
-
-
-
-
-
-
     // Get dice configuration for colors and geometry
     const diceConfig = DICE_CONFIG[dice.diceType as DiceType];
     const GeometryComponent = DICE_GEOMETRIES[dice.diceType as DiceType];
@@ -162,222 +155,6 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
     }
 };
 
-// Ground plane component with physics (Legacy - replaced by physics/PhysicsGround)
-// @ts-ignore - Keeping for reference but not used
-const LegacyPhysicsGround: React.FC = () => {
-    useEffect(() => {
-        // Create physics ground plane
-        const groundShape = PhysicsUtils.createPlaneShape();
-        const groundBody = new CANNON.Body({ mass: 0 });
-        groundBody.addShape(groundShape);
-        groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
-        // Position ground plane lower to ensure dice don't clip through
-        groundBody.position.set(0, -1, 0);
-
-        if (DiceManager.getMaterials()) {
-            groundBody.material = DiceManager.getMaterials()!.floor;
-        }
-
-        DiceManager.addBody(groundBody);
-
-        // Create much larger invisible walls to contain dice
-        const wallHeight = 20; // Much taller walls
-        const wallThickness = 1;
-        const tableSize = 80; // 10x larger sandbox (was 8)
-
-        const walls = [
-            // North wall
-            { pos: [0, wallHeight / 2 - 1, -tableSize / 2], size: [tableSize, wallHeight, wallThickness] },
-            // South wall  
-            { pos: [0, wallHeight / 2 - 1, tableSize / 2], size: [tableSize, wallHeight, wallThickness] },
-            // East wall
-            { pos: [tableSize / 2, wallHeight / 2 - 1, 0], size: [wallThickness, wallHeight, tableSize] },
-            // West wall
-            { pos: [-tableSize / 2, wallHeight / 2 - 1, 0], size: [wallThickness, wallHeight, tableSize] },
-        ];
-
-        const wallBodies: CANNON.Body[] = [];
-        walls.forEach((wall) => {
-            const wallShape = new CANNON.Box(new CANNON.Vec3(wall.size[0] / 2, wall.size[1] / 2, wall.size[2] / 2));
-            const wallBody = new CANNON.Body({ mass: 0 });
-            wallBody.addShape(wallShape);
-            wallBody.position.set(wall.pos[0], wall.pos[1], wall.pos[2]);
-
-            if (DiceManager.getMaterials()) {
-                wallBody.material = DiceManager.getMaterials()!.floor;
-            }
-
-            DiceManager.addBody(wallBody);
-            wallBodies.push(wallBody);
-        });
-
-        console.log('🎲 Enhanced large sandbox created:', {
-            ground: 'Y: -1',
-            walls: wallBodies.length,
-            tableSize,
-            wallHeight
-        });
-
-        return () => {
-            DiceManager.removeBody(groundBody);
-            wallBodies.forEach(wall => DiceManager.removeBody(wall));
-        };
-    }, []);
-
-    // Create a high-quality grid texture
-    const gridTexture = React.useMemo(() => {
-        // Create a texture that tiles perfectly - 320x320 for 5x5 grid squares
-        const canvas = document.createElement('canvas');
-        canvas.width = 320; // 5 grid squares * 64px each
-        canvas.height = 320;
-        const ctx = canvas.getContext('2d')!;
-
-        // Dark cyberspace background
-        ctx.fillStyle = '#0a0a0a';
-        ctx.fillRect(0, 0, 320, 320);
-
-        const gridSize = 64; // Each grid square is 64px
-        const majorGridSpacing = gridSize * 5; // Major grid every 5 squares (320px)
-
-        // Keep smoothing enabled for better line quality
-        ctx.imageSmoothingEnabled = true;
-
-        // First, draw the thin gray lines (regular grid)
-        ctx.strokeStyle = '#cccccc';
-        ctx.lineWidth = 2;
-        ctx.globalAlpha = 0.4;
-
-        // Draw vertical gray lines (every 64px, but not at the edges to avoid doubling)
-        for (let i = gridSize; i < 320; i += gridSize) {
-            ctx.beginPath();
-            ctx.moveTo(i, 0);
-            ctx.lineTo(i, 320);
-            ctx.stroke();
-        }
-
-        // Draw horizontal gray lines (every 64px, but not at the edges to avoid doubling)
-        for (let i = gridSize; i < 320; i += gridSize) {
-            ctx.beginPath();
-            ctx.moveTo(0, i);
-            ctx.lineTo(320, i);
-            ctx.stroke();
-        }
-
-        // Now draw the major grid lines (thicker, brighter, at the edges and center)
-        ctx.strokeStyle = '#cc3333'; // Darker red for major grid lines
-        ctx.lineWidth = 4; // Thicker lines
-        ctx.globalAlpha = 0.7; // Slightly translucent
-
-        // Draw major vertical grid lines (at 0 and 320, which will tile seamlessly)
-        for (let i = 0; i <= 320; i += majorGridSpacing) {
-            // Draw glow effect first (wider, more transparent)
-            ctx.strokeStyle = '#cc3333';
-            ctx.lineWidth = 8;
-            ctx.globalAlpha = 0.2;
-            ctx.beginPath();
-            ctx.moveTo(i, 0);
-            ctx.lineTo(i, 320);
-            ctx.stroke();
-
-            // Draw main line (narrower, more opaque)
-            ctx.strokeStyle = '#dd4444';
-            ctx.lineWidth = 4;
-            ctx.globalAlpha = 0.7;
-            ctx.beginPath();
-            ctx.moveTo(i, 0);
-            ctx.lineTo(i, 320);
-            ctx.stroke();
-        }
-
-        // Draw major horizontal grid lines (at 0 and 320, which will tile seamlessly)
-        for (let i = 0; i <= 320; i += majorGridSpacing) {
-            // Draw glow effect first (wider, more transparent)
-            ctx.strokeStyle = '#cc3333';
-            ctx.lineWidth = 8;
-            ctx.globalAlpha = 0.2;
-            ctx.beginPath();
-            ctx.moveTo(0, i);
-            ctx.lineTo(320, i);
-            ctx.stroke();
-
-            // Draw main line (narrower, more opaque)
-            ctx.strokeStyle = '#dd4444';
-            ctx.lineWidth = 4;
-            ctx.globalAlpha = 0.7;
-            ctx.beginPath();
-            ctx.moveTo(0, i);
-            ctx.lineTo(320, i);
-            ctx.stroke();
-        }
-
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-
-        // Use linear filtering for smooth appearance
-        texture.magFilter = THREE.LinearFilter;
-        texture.minFilter = THREE.LinearFilter;
-
-        // Repeat the 320x320 texture to cover the 80x80 plane (80/16 = 5 repeats)
-        texture.repeat.set(5, 5);
-
-        return texture;
-    }, []);
-
-    return (
-        <group>
-            {/* Large Cyberspace Mesh Floor */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]} receiveShadow>
-                <planeGeometry args={[80, 80]} />
-                <meshStandardMaterial
-                    map={gridTexture}
-                    color="#ffffff" // Bright white to enhance the grid lines
-                    roughness={0.7}
-                    metalness={0.0}
-                    transparent={false} // Remove transparency for brighter appearance
-                    emissive="#111111" // Slight glow effect
-                />
-            </mesh>
-
-            {/* Visible Wall Borders (cyberspace style) */}
-            {[
-                // North border
-                { pos: [0, 0, -40] as [number, number, number], size: [80, 4, 1] as [number, number, number] },
-                // South border
-                { pos: [0, 0, 40] as [number, number, number], size: [80, 4, 1] as [number, number, number] },
-                // East border
-                { pos: [40, 0, 0] as [number, number, number], size: [1, 4, 80] as [number, number, number] },
-                // West border
-                { pos: [-40, 0, 0] as [number, number, number], size: [1, 4, 80] as [number, number, number] },
-            ].map((border, index) => (
-                <mesh key={index} position={border.pos} receiveShadow castShadow>
-                    <boxGeometry args={border.size} />
-                    <meshStandardMaterial
-                        color="#444444"
-                        roughness={0.8}
-                        metalness={0.2}
-                        transparent={true}
-                        opacity={0.8}
-                    />
-                </mesh>
-            ))}
-        </group>
-    );
-};
-
-// Physics simulation component (Legacy - replaced by PhysicsWorld)
-// @ts-ignore - Keeping for reference but not used
-const PhysicsSimulation: React.FC<{ dice: DiceInstance | null }> = ({ dice: _dice }) => {
-    useFrame((_state, delta) => {
-        // Step the physics simulation
-        if (DiceManager.isInitialized()) {
-            DiceManager.step(delta);
-        }
-    });
-
-    return null;
-};
-
 const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const controlsRef = useRef<any>(null);
     const [isFullScreen, setIsFullScreen] = useState(false);
@@ -393,53 +170,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const [remoteDice, setRemoteDice] = useState<Map<string, DiceInstance>>(new Map());
     const [syncStatus, setSyncStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
 
-    // Virtual dice state (Phase 4.4) - Commented out for now
-    // const [virtualDice, setVirtualDice] = useState<DiceRoll[]>([]);
-    // const [expandedVirtualDice, setExpandedVirtualDice] = useState<Set<string>>(new Set());
-    // const [highlightedVirtualDice, setHighlightedVirtualDice] = useState<Set<string>>(new Set());
 
-    // Virtual dice interaction handlers (Phase 4.4) - Commented out for now
-    /*
-    const handleVirtualDiceExpand = useCallback((diceId: string) => {
-        setExpandedVirtualDice(prev => new Set(prev.add(diceId)));
-        console.log(`🎲 Expanded virtual dice: ${diceId}`);
-    }, []);
-
-    const handleVirtualDiceCollapse = useCallback((diceId: string) => {
-        setExpandedVirtualDice(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(diceId);
-            return newSet;
-        });
-        console.log(`🎲 Collapsed virtual dice: ${diceId}`);
-    }, []);
-
-    const handleVirtualDiceHighlight = useCallback((diceId: string) => {
-        setHighlightedVirtualDice(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(diceId)) {
-                newSet.delete(diceId);
-            } else {
-                newSet.add(diceId);
-            }
-            return newSet;
-        });
-        console.log(`🎲 Toggled highlight for virtual dice: ${diceId}`);
-    }, []);
-
-    const handleVirtualDiceReroll = useCallback((diceId: string) => {
-        // TODO: Implement virtual dice rerolling
-        console.log(`🎲 Rerolling virtual dice: ${diceId}`);
-        // This would trigger a new roll with the same parameters
-    }, []);
-
-    const clearVirtualDice = useCallback(() => {
-        setVirtualDice([]);
-        setExpandedVirtualDice(new Set());
-        setHighlightedVirtualDice(new Set());
-        console.log('🎲 Cleared all virtual dice');
-    }, []);
-    */
 
     // Remote dice handling functions for canvas synchronization
     const spawnRemoteDice = useCallback(async (diceData: RemoteDiceData) => {
