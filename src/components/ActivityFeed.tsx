@@ -107,6 +107,9 @@ const ActivityFeed: React.FC = () => {
     const handleActivityClick = (activity: Activity) => {
         if (activity.type === 'ROLL') {
             highlightFromActivity(activity.id, activities);
+        } else if (activity.type === 'CHAT_MESSAGE') {
+            // For chat messages, just toggle the highlight state
+            highlightFromActivity(activity.id, activities);
         }
     };
 
@@ -135,15 +138,18 @@ const ActivityFeed: React.FC = () => {
                     <div className="flex justify-between items-start">
                         <div className="flex-grow">
                             <strong
-                                className="font-medium"
-                                style={{ color: userColor || '#ffffff' }}
+                                className={`font-medium ${isHighlighted ? 'text-black' : ''}`}
+                                style={{
+                                    color: isHighlighted ? 'black' : (userColor || '#ffffff'),
+                                    textShadow: isHighlighted && userColor ? `0 0 2px ${userColor}, 0 0 4px ${userColor}` : 'none'
+                                }}
                             >
                                 {activity.user}:
                             </strong>
-                            <span className="text-brand-text"> Rolled {roll.expression}</span>
-                            <span className="text-brand-text"> ({roll.results.join(', ')}) = {roll.total}</span>
+                            <span className={`${isHighlighted ? 'text-black' : 'text-brand-text'}`}> Rolled {roll.expression}</span>
+                            <span className={`${isHighlighted ? 'text-black' : 'text-brand-text'}`}> ({roll.results.join(', ')}) = {roll.total}</span>
                         </div>
-                        <span className="text-xs text-brand-text-muted ml-2 flex-shrink-0">
+                        <span className={`text-xs ml-2 flex-shrink-0 ${isHighlighted ? 'text-gray-700' : 'text-brand-text-muted'}`}>
                             {formatTimestamp(activity.timestamp)}
                         </span>
                     </div>
@@ -155,18 +161,31 @@ const ActivityFeed: React.FC = () => {
             const userColor = getUserColor(activity.user);
 
             return (
-                <li key={activity.id} className="bg-brand-surface p-2 rounded">
+                <li
+                    key={activity.id}
+                    className={`p-2 rounded cursor-pointer transition-all duration-200 ${isHighlighted
+                        ? 'bg-yellow-200 border-2 border-yellow-400 shadow-lg'
+                        : 'bg-brand-surface hover:bg-brand-background'
+                        }`}
+                    onClick={() => handleActivityClick(activity)}
+                    title="Click to toggle highlight"
+                >
                     <div className="flex justify-between items-start">
                         <div className="flex-grow">
                             <strong
-                                className="font-medium"
-                                style={{ color: userColor || '#ffffff' }}
+                                className={`font-medium ${isHighlighted ? 'text-black' : ''}`}
+                                style={{
+                                    color: isHighlighted ? 'black' : (userColor || '#ffffff'),
+                                    textShadow: isHighlighted && userColor ? `0 0 2px ${userColor}, 0 0 4px ${userColor}` : 'none'
+                                }}
                             >
                                 {activity.user}:
                             </strong>
-                            <span className="text-brand-text ml-1">{activity.message}</span>
+                            <span className={`ml-1 ${isHighlighted ? 'text-black' : 'text-brand-text'}`}>
+                                {activity.message}
+                            </span>
                         </div>
-                        <span className="text-xs text-brand-text-muted ml-2 flex-shrink-0">
+                        <span className={`text-xs ml-2 flex-shrink-0 ${isHighlighted ? 'text-gray-700' : 'text-brand-text-muted'}`}>
                             {formatTimestamp(activity.timestamp)}
                         </span>
                     </div>
