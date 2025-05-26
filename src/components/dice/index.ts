@@ -1,13 +1,17 @@
-// Barrel exports for dice geometry components
-export { DiceGeometry, calculateNormals, generateBasicUVs } from './DiceGeometry';
+// Import all components first
+import { DiceGeometry, calculateNormals, generateBasicUVs } from './DiceGeometry';
+import { D4Geometry } from './D4Geometry';
+import { D6Geometry } from './D6Geometry';
+import { D8Geometry } from './D8Geometry';
+import { D10Geometry } from './D10Geometry';
+import { D12Geometry } from './D12Geometry';
+import { D20Geometry } from './D20Geometry';
+
+// Re-export everything
+export { DiceGeometry, calculateNormals, generateBasicUVs };
 export type { DiceGeometryProps, DiceGeometryComponent } from './DiceGeometry';
 
-export { D4Geometry } from './D4Geometry';
-export { D6Geometry } from './D6Geometry';
-export { D8Geometry } from './D8Geometry';
-export { D10Geometry } from './D10Geometry';
-export { D12Geometry } from './D12Geometry';
-export { D20Geometry } from './D20Geometry';
+export { D4Geometry, D6Geometry, D8Geometry, D10Geometry, D12Geometry, D20Geometry };
 
 // Dice geometry registry for easy lookup
 export const DICE_GEOMETRIES = {
