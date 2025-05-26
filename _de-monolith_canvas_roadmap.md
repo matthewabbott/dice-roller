@@ -169,7 +169,7 @@ src/hooks/controls/
 **Risk**: Medium - logic extraction without changing behavior
 
 #### Commits:
-- **E.1**: Create service infrastructure and directory structure
+- **E.1**: ✅ Create service infrastructure and directory structure
 - **E.2**: Extract dice spawning and physics logic into DiceSpawningService
 - **E.3**: Extract dice rolling and result logic into DiceRollingService
 - **E.4**: Extract canvas event broadcasting into CanvasEventService
