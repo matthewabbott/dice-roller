@@ -1,5 +1,5 @@
-import React from 'react';
-import { DiceGeometry, DiceGeometryProps, DiceGeometryComponent } from './DiceGeometry';
+import { DiceGeometry } from './DiceGeometry';
+import type { DiceGeometryComponent } from './DiceGeometry';
 
 /**
  * D6 Cube Geometry Component

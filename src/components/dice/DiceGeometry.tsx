@@ -25,7 +25,6 @@ export const DiceGeometry: React.FC<DiceGeometryProps & {
     geometry?: THREE.BufferGeometry | null;
     children?: React.ReactNode;
 }> = ({
-    size,
     color,
     isHovered = false,
     onPointerDown,
@@ -40,7 +39,7 @@ export const DiceGeometry: React.FC<DiceGeometryProps & {
         return (
             <mesh
                 ref={meshRef}
-                geometry={geometry}
+                geometry={geometry || undefined}
                 castShadow
                 receiveShadow
                 onPointerDown={onPointerDown}

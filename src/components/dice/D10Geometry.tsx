@@ -1,6 +1,7 @@
 import React from 'react';
 import * as THREE from 'three';
-import { DiceGeometry, DiceGeometryProps, DiceGeometryComponent, generateBasicUVs } from './DiceGeometry';
+import { DiceGeometry, generateBasicUVs } from './DiceGeometry';
+import type { DiceGeometryComponent } from './DiceGeometry';
 
 /**
  * D10 Pentagonal Trapezohedron Geometry Component

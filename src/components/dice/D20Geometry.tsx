@@ -1,7 +1,7 @@
 import React from 'react';
 import * as THREE from 'three';
 import { DiceGeometry, calculateNormals, generateBasicUVs } from './DiceGeometry';
-import type { DiceGeometryProps, DiceGeometryComponent } from './DiceGeometry';
+import type { DiceGeometryComponent } from './DiceGeometry';
 
 /**
  * D20 Icosahedron Geometry Component
