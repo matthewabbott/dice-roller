@@ -8,10 +8,6 @@ import * as CANNON from 'cannon-es';
 import { useCanvasSync, type CanvasSyncCallbacks, type RemoteDiceData } from '../services/CanvasSyncManager';
 import { VirtualDice, VirtualDiceSummary } from './VirtualDice';
 import type { DiceRoll } from '../types/canvas';
-import { VirtualDice, VirtualDiceSummary } from './VirtualDice';
-import type { DiceRoll } from '../types/canvas';
-import { VirtualDice, VirtualDiceSummary } from './VirtualDice';
-import type { DiceRoll } from '../types/canvas';
 
 // Extend R3F with the geometry we need
 extend({ EdgesGeometry: THREE.EdgesGeometry });
