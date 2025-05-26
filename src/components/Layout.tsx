@@ -19,22 +19,37 @@ const Layout: React.FC = () => {
     return (
         <div className="min-h-screen bg-brand-background text-brand-text flex flex-col">
             <Header />
-            <main className="flex-grow container mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Left Column: Dice Roller, Chat Input, and User List */}
-                <div className="flex flex-col space-y-4">
-                    <DiceRoller onQuickRoll={handleQuickRoll} />
-                    <ChatInput ref={chatInputRef} />
-                    <UserList />
+            <main className="flex-grow flex flex-col">
+                {/* Canvas - Primary Focus (70% of viewport height) */}
+                <div className="flex-grow-[7] min-h-0 p-4">
+                    <div className="h-full">
+                        <DiceCanvas />
+                    </div>
                 </div>
 
-                {/* Middle Column: Activity Feed */}
-                <div className="flex flex-col">
-                    <ActivityFeed />
-                </div>
+                {/* Bottom Panel - Chat & Controls (30% of viewport height) */}
+                <div className="flex-grow-[3] min-h-0 border-t border-brand-surface">
+                    <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
+                        {/* Left: Chat/Activity (spans 2 columns on large screens) */}
+                        <div className="lg:col-span-2 flex flex-col space-y-4 min-h-0">
+                            <div className="flex-grow min-h-0">
+                                <ActivityFeed />
+                            </div>
+                            <div className="flex-shrink-0">
+                                <ChatInput ref={chatInputRef} />
+                            </div>
+                        </div>
 
-                {/* Right Column: 3D Dice Canvas */}
-                <div className="card">
-                    <DiceCanvas />
+                        {/* Right: Controls/Users (1 column on large screens) */}
+                        <div className="flex flex-col space-y-4 min-h-0">
+                            <div className="flex-shrink-0">
+                                <UserList />
+                            </div>
+                            <div className="flex-shrink-0">
+                                <DiceRoller onQuickRoll={handleQuickRoll} />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </main>
         </div>

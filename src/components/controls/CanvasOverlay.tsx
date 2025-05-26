@@ -60,41 +60,46 @@ export const CanvasOverlay: React.FC<CanvasOverlayProps> = ({
                 disabled={isRolling || diceCount === 0}
                 className={`bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 text-white rounded font-semibold ${isFullScreen ? 'px-4 py-2' : 'text-xs px-2 py-1'
                     }`}
-                title="Roll all dice"
+                title="Roll all dice - Hotkey: R"
             >
                 {isRolling ? '🎲 Rolling...' : `🎲 Roll All Dice`}
+                {!isFullScreen && !isRolling && <span className="ml-1 opacity-60">(R)</span>}
             </button>
             <button
                 onClick={onToggleCameraLock}
                 className={`${isCameraLocked ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'} text-white rounded font-semibold ${isFullScreen ? 'px-3 py-2' : 'text-xs px-2 py-1'
                     }`}
-                title={isCameraLocked ? "Unlock camera (enable rotation/pan)" : "Lock camera (disable rotation/pan)"}
+                title={isCameraLocked ? "Unlock camera (enable rotation/pan) - Hotkey: Space" : "Lock camera (disable rotation/pan) - Hotkey: Space"}
             >
                 {isCameraLocked ? '🔒 Camera Locked' : '🔓 Camera Free'}
+                {!isFullScreen && <span className="ml-1 opacity-60">(Space)</span>}
             </button>
             <button
                 onClick={onClearAllDice}
                 className={`bg-yellow-600 hover:bg-yellow-500 text-white rounded ${isFullScreen ? 'px-3 py-2' : 'text-xs px-2 py-1 opacity-70 hover:opacity-100'
                     }`}
-                title="Clear all dice"
+                title="Clear all dice - Hotkey: C"
             >
                 🗑 Clear All
+                {!isFullScreen && <span className="ml-1 opacity-60">(C)</span>}
             </button>
             <button
                 onClick={onResetCamera}
                 className={`bg-gray-700 hover:bg-gray-600 text-white rounded ${isFullScreen ? 'px-3 py-2' : 'text-xs px-2 py-1 opacity-70 hover:opacity-100'
                     }`}
-                title="Reset camera view"
+                title="Reset camera view - Hotkey: V"
             >
                 📷 Reset View
+                {!isFullScreen && <span className="ml-1 opacity-60">(V)</span>}
             </button>
             <button
                 onClick={onToggleFullScreen}
                 className={`bg-gray-700 hover:bg-gray-600 text-white rounded ${isFullScreen ? 'px-3 py-2' : 'text-xs px-2 py-1 opacity-70 hover:opacity-100'
                     }`}
-                title={isFullScreen ? "Exit full screen" : "Full screen"}
+                title={isFullScreen ? "Exit full screen - Hotkey: F" : "Full screen - Hotkey: F"}
             >
                 {isFullScreen ? '✕ Exit Full Screen' : '⛶'}
+                {!isFullScreen && <span className="ml-1 opacity-60">(F)</span>}
             </button>
         </div>
     );

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useSubscription } from '@apollo/client';
 import { ACTIVITY_ADDED_SUBSCRIPTION, GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
 import { useHighlighting } from '../hooks/useHighlighting';
+import { CollapsibleSection } from './controls/CollapsibleSection';
 
 interface Roll {
     expression: string;
@@ -220,53 +221,96 @@ const ActivityFeed: React.FC = () => {
     });
 
     return (
-        <div className="card h-96 overflow-y-auto">
-            <div className="mb-3">
-                <h2 className="text-xl font-semibold text-brand-text mb-3">Activity Feed</h2>
-
-                {/* Filter Toggle Buttons */}
-                <div className="flex space-x-2">
-                    <button
-                        className={`px-3 py-1 rounded text-sm transition-colors ${showRolls
-                            ? 'bg-brand-primary text-white'
-                            : 'bg-brand-surface text-brand-text-muted hover:bg-brand-background'
-                            }`}
-                        onClick={() => setShowRolls(!showRolls)}
-                        title="Toggle dice rolls"
-                    >
-                        🎲 Rolls
-                    </button>
-                    <button
-                        className={`px-3 py-1 rounded text-sm transition-colors ${showChatMessages
-                            ? 'bg-brand-primary text-white'
-                            : 'bg-brand-surface text-brand-text-muted hover:bg-brand-background'
-                            }`}
-                        onClick={() => setShowChatMessages(!showChatMessages)}
-                        title="Toggle chat messages"
-                    >
-                        💬 Chat
-                    </button>
-                    <button
-                        className={`px-3 py-1 rounded text-sm transition-colors ${showSystemMessages
-                            ? 'bg-brand-primary text-white'
-                            : 'bg-brand-surface text-brand-text-muted hover:bg-brand-background'
-                            }`}
-                        onClick={() => setShowSystemMessages(!showSystemMessages)}
-                        title="Toggle system messages"
-                    >
-                        ℹ️ System
-                    </button>
+        <div className="space-y-4">
+            {/* Lobby Section */}
+            <CollapsibleSection
+                title="Lobby"
+                icon="👥"
+                tooltip="View active players and session information"
+                defaultCollapsed={false}
+                className="card"
+            >
+                <div className="space-y-3">
+                    <h3 className="text-sm font-medium text-brand-text-muted">Active Players ({users.length})</h3>
+                    <div className="space-y-2">
+                        {users.map((user) => (
+                            <div key={user.sessionId} className="flex items-center gap-2 p-2 bg-brand-surface rounded">
+                                <div
+                                    className="w-3 h-3 rounded-full border border-gray-400"
+                                    style={{ backgroundColor: user.color || '#888888' }}
+                                    title={`${user.username}'s color`}
+                                />
+                                <span className="text-brand-text text-sm">{user.username}</span>
+                                {user.isActive && (
+                                    <span className="text-xs text-green-400 bg-green-900/30 px-2 py-1 rounded">
+                                        Online
+                                    </span>
+                                )}
+                            </div>
+                        ))}
+                        {users.length === 0 && (
+                            <div className="text-center text-brand-text-muted text-sm py-4">
+                                No players connected
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
+            </CollapsibleSection>
 
-            <ul className="space-y-2 text-brand-text-muted">
-                {filteredActivities.map(renderActivity)}
-                {filteredActivities.length === 0 && (
-                    <li className="text-center text-brand-text-muted">
-                        {activities.length === 0 ? 'No activity yet.' : 'No activities match current filters.'}
-                    </li>
-                )}
-            </ul>
+            {/* Activity Feed Section */}
+            <CollapsibleSection
+                title="Activity Feed"
+                icon="📜"
+                tooltip="View dice rolls, chat messages, and system notifications"
+                defaultCollapsed={false}
+                className="card"
+                contentClassName="h-80 overflow-y-auto"
+            >
+                <div className="space-y-3">
+                    {/* Filter Toggle Buttons */}
+                    <div className="flex space-x-2">
+                        <button
+                            className={`px-3 py-1 rounded text-sm transition-colors ${showRolls
+                                ? 'bg-brand-primary text-white'
+                                : 'bg-brand-surface text-brand-text-muted hover:bg-brand-background'
+                                }`}
+                            onClick={() => setShowRolls(!showRolls)}
+                            title="Toggle dice rolls"
+                        >
+                            🎲 Rolls
+                        </button>
+                        <button
+                            className={`px-3 py-1 rounded text-sm transition-colors ${showChatMessages
+                                ? 'bg-brand-primary text-white'
+                                : 'bg-brand-surface text-brand-text-muted hover:bg-brand-background'
+                                }`}
+                            onClick={() => setShowChatMessages(!showChatMessages)}
+                            title="Toggle chat messages"
+                        >
+                            💬 Chat
+                        </button>
+                        <button
+                            className={`px-3 py-1 rounded text-sm transition-colors ${showSystemMessages
+                                ? 'bg-brand-primary text-white'
+                                : 'bg-brand-surface text-brand-text-muted hover:bg-brand-background'
+                                }`}
+                            onClick={() => setShowSystemMessages(!showSystemMessages)}
+                            title="Toggle system messages"
+                        >
+                            ℹ️ System
+                        </button>
+                    </div>
+
+                    <ul className="space-y-2 text-brand-text-muted">
+                        {filteredActivities.map(renderActivity)}
+                        {filteredActivities.length === 0 && (
+                            <li className="text-center text-brand-text-muted">
+                                {activities.length === 0 ? 'No activity yet.' : 'No activities match current filters.'}
+                            </li>
+                        )}
+                    </ul>
+                </div>
+            </CollapsibleSection>
         </div>
     );
 };

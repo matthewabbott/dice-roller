@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useSubscription } from '@apollo/client';
 import { REGISTER_USERNAME_MUTATION, GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
 import ColorPicker from './ColorPicker';
+import { CollapsibleSection } from './controls/CollapsibleSection';
 import { PRESET_COLORS } from '../constants/colors';
 import { getSessionId } from '../utils/sessionId';
 
@@ -26,6 +27,7 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll }) => {
         return PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];
     });
     const [users, setUsers] = useState<User[]>([]);
+    const [isLocalDiceExpanded, setIsLocalDiceExpanded] = useState(false);
 
     const currentSessionId = getSessionId();
     const usernameDebounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -187,24 +189,59 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll }) => {
                 <ColorPicker currentColor={userColor} onColorChange={setUserColor} />
             </div>
 
-            {/* Quick Roll Buttons */}
+            {/* Local Dice Controls - Collapsible Section */}
             <div className="border-t border-brand-surface pt-3">
-                <h3 className="text-sm font-medium text-brand-text-muted mb-2">Quick Roll Dice</h3>
-                <div className="grid grid-cols-3 gap-2">
-                    {commonDice.map((die) => (
-                        <button
-                            key={die}
-                            className="btn-secondary px-3 py-2 text-sm"
-                            onClick={() => handleDieButtonClick(die)}
-                            title={`Roll 1d${die} - populates chat with /roll 1d${die}`}
-                        >
-                            🎲 d{die}
-                        </button>
-                    ))}
-                </div>
-                <p className="text-xs text-brand-text-muted mt-2">
-                    💡 These buttons populate the chat input with <code>/roll</code> commands
-                </p>
+                <button
+                    onClick={() => setIsLocalDiceExpanded(!isLocalDiceExpanded)}
+                    className="w-full flex items-center justify-between p-2 hover:bg-brand-surface rounded transition-colors"
+                    title="Local dice controls for testing and practice"
+                >
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-brand-text-muted">Local Dice Controls</span>
+                        <span className="text-xs bg-orange-900/30 text-orange-300 px-2 py-1 rounded border border-orange-500/30">
+                            Testing Only
+                        </span>
+                    </div>
+                    <span className="text-brand-text-muted">
+                        {isLocalDiceExpanded ? '▼' : '▶'}
+                    </span>
+                </button>
+
+                {isLocalDiceExpanded && (
+                    <div className="mt-3 space-y-3">
+                        {/* Professional Notice */}
+                        <div className="p-3 bg-orange-900/20 rounded border-l-4 border-orange-500">
+                            <div className="flex items-start gap-2">
+                                <span className="text-orange-400 text-sm">ℹ️</span>
+                                <div className="text-xs text-orange-300">
+                                    <strong>Local Testing Mode:</strong> These dice are for testing and practice only.
+                                    They are not shared with other players in the session. Use the chat's <code>/roll</code>
+                                    command to roll dice that everyone can see.
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Quick Roll Buttons */}
+                        <div>
+                            <h3 className="text-sm font-medium text-brand-text-muted mb-2">Quick Roll Dice</h3>
+                            <div className="grid grid-cols-3 gap-2">
+                                {commonDice.map((die) => (
+                                    <button
+                                        key={die}
+                                        className="btn-secondary px-3 py-2 text-sm"
+                                        onClick={() => handleDieButtonClick(die)}
+                                        title={`Roll 1d${die} - populates chat with /roll 1d${die}`}
+                                    >
+                                        🎲 d{die}
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-xs text-brand-text-muted mt-2">
+                                💡 These buttons populate the chat input with <code>/roll</code> commands
+                            </p>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

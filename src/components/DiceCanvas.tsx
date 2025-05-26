@@ -13,6 +13,7 @@ import { DiceControlPanel, CanvasOverlay, InstructionsPanel, RollHistory } from 
 import { useDiceInteraction, usePhysicsSync, useCanvasSync, useDiceControls, useCameraControls } from '../hooks';
 import { useHighlighting } from '../hooks/useHighlighting';
 import { useDiceResultOverlays } from '../hooks/canvas/useDiceResultOverlays';
+import { useGlobalHotkeys, type HotkeyActions } from '../hooks/useGlobalHotkeys';
 import { DiceResultOverlay } from './canvas/DiceResultOverlay';
 
 // Extend R3F with the geometry we need
@@ -340,6 +341,21 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
         removeResultOverlay,
         hasVisibleOverlay
     } = useDiceResultOverlays();
+
+    // Global hotkeys for canvas controls
+    const hotkeyActions: HotkeyActions = {
+        toggleCameraLock: cameraOperations.toggleCameraLock,
+        rollAllDice: diceOperations.rollAllDice,
+        clearAllDice: diceOperations.clearAllDice,
+        toggleFullScreen: cameraOperations.toggleFullScreen,
+        resetCamera: cameraOperations.resetCamera,
+        throwAllDice: diceOperations.throwAllDice
+    };
+
+    const { getHotkeyHints } = useGlobalHotkeys(hotkeyActions, {
+        enabled: true,
+        showHints: true
+    });
 
     // Monitor highlighted dice and show/update overlays
     useEffect(() => {

@@ -205,8 +205,8 @@ const ChatInput = forwardRef<ChatInputRef>((props, ref) => {
 
                 {/* Command Error */}
                 {commandError && (
-                    <div className="text-sm text-brand-primary bg-red-900/20 p-2 rounded border-l-2 border-red-500">
-                        <span className="font-medium">Error:</span> {commandError}
+                    <div className="text-sm text-orange-300 bg-orange-900/20 p-2 rounded border-l-2 border-orange-500">
+                        <span className="font-medium">Warning:</span> {commandError}
                     </div>
                 )}
 
