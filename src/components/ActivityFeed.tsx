@@ -3,12 +3,26 @@ import { useQuery, useSubscription } from '@apollo/client';
 import { ACTIVITY_ADDED_SUBSCRIPTION, GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
 
 interface Roll {
-    id: string;
-    user: string;
     expression: string;
-    interpretedExpression: string;
-    result: number;
-    rolls: number[];
+    results: number[];
+    total: number;
+    canvasData?: {
+        dice: Array<{
+            canvasId: string;
+            diceType: string;
+            position?: { x: number; y: number; z: number };
+            isVirtual: boolean;
+            virtualRolls?: number[];
+            result?: number;
+        }>;
+        events: Array<{
+            id: string;
+            type: string;
+            diceId: string;
+            userId: string;
+            timestamp: string;
+        }>;
+    };
 }
 
 interface Activity {
@@ -83,9 +97,9 @@ const ActivityFeed: React.FC = () => {
         if (activity.type === 'SYSTEM_MESSAGE' && !showSystemMessages) return null;
         if (activity.type === 'CHAT_MESSAGE' && !showChatMessages) return null;
 
-        if (activity.type === 'ROLL' && activity.roll) {
+        if (activity.type === 'ROLL' && activity.roll && activity.user) {
             const roll = activity.roll;
-            const userColor = getUserColor(roll.user);
+            const userColor = getUserColor(activity.user);
 
             return (
                 <li key={activity.id} className="bg-brand-surface p-2 rounded">
@@ -95,16 +109,10 @@ const ActivityFeed: React.FC = () => {
                                 className="font-medium"
                                 style={{ color: userColor || '#ffffff' }}
                             >
-                                {roll.user}:
+                                {activity.user}:
                             </strong>
                             <span className="text-brand-text"> Rolled {roll.expression}</span>
-                            {roll.interpretedExpression && roll.interpretedExpression !== "invalid" && roll.expression !== roll.interpretedExpression && (
-                                <span className="text-brand-text-muted"> (interpreted as {roll.interpretedExpression})</span>
-                            )}
-                            {roll.interpretedExpression === "invalid" && (
-                                <span className="text-brand-error"> (invalid expression)</span>
-                            )}
-                            <span className="text-brand-text"> ({roll.rolls.join(', ')}) = {roll.result}</span>
+                            <span className="text-brand-text"> ({roll.results.join(', ')}) = {roll.total}</span>
                         </div>
                         <span className="text-xs text-brand-text-muted ml-2 flex-shrink-0">
                             {formatTimestamp(activity.timestamp)}
