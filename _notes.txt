@@ -1,6 +1,8 @@
 TODOs:
 - rolling dice in chat now records the roll as anonymous instead of as the registered user
 - possible bug: when dice clip into eachother, they just freeze forever?
+- physics validation 'tests' should probably get ripped out and readjusted
+- hardcoded colors in canvas related stuff
 - credit to https://github.com/byWulf/threejs-dice. Package doesn't work for current ver three.js, but I used his vertex definitions and dicemanager structure.
 
 

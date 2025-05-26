@@ -3,368 +3,317 @@
 ## Overview
 This roadmap details the integration of the 3D dice physics canvas with the chat/activity system to create a unified collaborative TTRPG dice rolling experience. The goal is to merge the disparate client-side dice canvas and server-side chat/rolling systems into a cohesive real-time multiplayer experience.
 
+**Status: Phases 1-4 completed via de-monolith refactoring. Ready for Phase 5 implementation.**
+
 ---
 
-## **Current State Analysis**
+## **Current State Analysis (Post-Refactoring)**
 
-### **Existing Systems**
-- ✅ **3D Dice Canvas**: Client-side physics simulation with all dice types (D4-D20)
+### **✅ Completed Systems**
+- ✅ **3D Dice Canvas**: Refactored into modular components with physics services
 - ✅ **Chat/Activity Feed**: Server-side GraphQL with real-time subscriptions
-- ✅ **Dice Rolling**: Text-based `/roll` commands via GraphQL mutations
+- ✅ **Unified Roll System**: `/roll` commands via GraphQL with canvas integration
 - ✅ **User Management**: Session-based users with colors and usernames
+- ✅ **Real-time Synchronization**: Canvas events broadcast to all users
+- ✅ **Virtual Dice System**: Smart representation for massive/non-standard rolls
+- ✅ **Service Architecture**: Business logic extracted into testable services
 
-### **Current Limitations**
-- 🔄 **Disconnected Systems**: Canvas and chat operate independently
-- 🔄 **No Broadcast**: Dice movements are purely client-side
-- 🔄 **Duplicate Controls**: Separate UI for canvas vs chat rolling
-- 🔄 **No Visual Correlation**: Chat results don't correspond to canvas dice
-- 🔄 **Limited Dice Support**: Canvas only supports standard TTRPG dice
+### **🎯 Ready for Implementation**
+- 🎯 **Cross-System Highlighting**: Canvas ↔ Chat correlation and navigation
+- 🎯 **Enhanced UX Polish**: Cleanup strategies, roll history, performance optimization
+- 🎯 **Advanced Features**: Room management, dice customization, analytics
 
----
-
-## **Phase 1: Foundation - Unified Roll System** 🎯 **HIGH PRIORITY**
-Merge the dice rolling systems and establish the core data flow.
-
-### **Commit 1.1:** Extend GraphQL schema for canvas integration
-- Add `DiceRoll` type with canvas-specific fields:
-  - `canvasId: String!` - Unique identifier for canvas dice
-  - `diceType: String!` - Physical dice type (d4, d6, d8, d10, d12, d20)
-  - `position: Position` - 3D coordinates where dice landed
-  - `isVirtual: Boolean!` - True for non-standard dice (1000d20, etc.)
-  - `virtualRolls: [Int!]` - Individual roll results for virtual dice
-- Add `Position` type: `{ x: Float!, y: Float!, z: Float! }`
-- Extend `rollDice` mutation to return canvas data
-
-### **Commit 1.2:** Create unified roll processing system
-- Create `src/services/RollProcessor.ts`:
-  - Parse dice expressions (2d6, 1000d20, etc.)
-  - Determine physical vs virtual dice representation
-  - Generate canvas instructions for dice spawning
-  - Handle edge cases (massive rolls, non-standard dice)
-- Add roll categorization logic:
-  - **Physical**: Standard dice ≤ 10 dice of supported types
-  - **Virtual**: Non-standard dice, massive quantities, or complex expressions
-
-### **Commit 1.3:** Implement canvas-aware dice mutations
-- Modify `rollDice` GraphQL resolver:
-  - Process rolls through `RollProcessor`
-  - Generate `canvasId` for each physical dice
-  - Store canvas positioning data
-  - Broadcast canvas instructions via subscriptions
-- Add new subscription: `diceCanvasUpdated` for real-time canvas sync
-
-### **Commit 1.4:** Create dice result correlation system
-- Add `DiceResultManager` class:
-  - Map canvas dice IDs to chat activity IDs
-  - Track dice state (rolling, settled, highlighted)
-  - Handle result highlighting and cross-referencing
-- Implement bidirectional linking between canvas and chat
+### **🏗️ Refactored Architecture**
+```
+src/
+├── components/
+│   ├── dice/           # D4-D20 geometry components
+│   ├── physics/        # Physics world and ground components  
+│   ├── sync/           # Remote dice and sync status components
+│   ├── controls/       # UI control panels and buttons
+│   └── VirtualDice.tsx # Virtual dice overlay system
+├── hooks/
+│   ├── controls/       # useDiceControls, useCameraControls
+│   ├── sync/           # useRemoteDice, useCanvasSync
+│   └── physics/        # useDiceInteraction, usePhysicsSync
+├── services/
+│   ├── dice/           # DiceSpawningService, DiceRollingService
+│   ├── canvas/         # CanvasEventService, RemoteDiceService
+│   ├── RollProcessor.ts        # ✅ Unified roll parsing
+│   ├── DiceResultManager.ts   # ✅ Canvas ↔ Chat correlation
+│   ├── ChatCommandParser.ts   # ✅ /roll command parsing
+│   └── CanvasStateManager.ts  # ✅ Server-side state management
+```
 
 ---
 
-## **Phase 2: Chat Integration - Slash Commands** 🎯 **HIGH PRIORITY**
-Replace separate roll inputs with unified chat `/roll` commands.
+## **✅ COMPLETED: Phases 1-4** 
+*Implemented during de-monolith refactoring*
 
-### **Commit 2.1:** Implement chat slash command parser
-- Create `src/services/ChatCommandParser.ts`:
-  - Parse `/roll` commands from chat input
-  - Validate dice expressions
-  - Support aliases: `/r`, `/dice`, `/d`
-  - Handle malformed commands gracefully
-- Add command help system: `/help roll`
+### **Phase 1: Foundation - Unified Roll System** ✅ **COMPLETED**
+- ✅ Extended GraphQL schema with `CanvasData`, `DiceRoll`, `Position` types
+- ✅ Created `RollProcessor` service for unified roll parsing and processing
+- ✅ Implemented canvas-aware `rollDice` mutations with real-time events
+- ✅ Created `DiceResultManager` for canvas ↔ chat correlation
 
-### **Commit 2.2:** Modify chat input component
-- Update `ChatInput.tsx`:
-  - Detect slash commands before sending
-  - Route `/roll` commands to dice mutation instead of chat
-  - Show command preview/validation
-  - Maintain chat history with roll commands
-- Add visual indicators for command mode
+### **Phase 2: Chat Integration - Slash Commands** ✅ **COMPLETED**
+- ✅ Implemented `ChatCommandParser` with `/roll`, `/r`, `/dice`, `/d` commands
+- ✅ Enhanced `ChatInput` with real-time command detection and validation
+- ✅ Unified roll buttons to use chat `/roll` commands
+- ✅ Enhanced activity feed with roll command display
 
-### **Commit 2.3:** Unify roll button functionality
-- Remove duplicate dice buttons from `DiceCanvas.tsx`
-- Update `DiceRoller.tsx` buttons to use chat `/roll` commands
-- Add quick-roll buttons that populate chat input: `/roll 1d20`, etc.
-- Ensure all rolls go through unified chat → GraphQL → canvas flow
+### **Phase 3: Real-time Canvas Synchronization** ✅ **COMPLETED**
+- ✅ Designed canvas synchronization protocol with `CanvasEvent` types
+- ✅ Implemented `CanvasStateManager` for server-side state management
+- ✅ Created `CanvasSyncManager` for client-side event processing
+- ✅ Implemented selective synchronization (result-only vs full physics)
 
-### **Commit 2.4:** Enhanced activity feed integration
-- Update `ActivityFeed.tsx`:
-  - Display roll commands as special activity types
-  - Show dice type icons and results
-  - Add click handlers for canvas navigation
-  - Implement hover tooltips for expanded roll details
+### **Phase 4: Virtual Dice System** ✅ **COMPLETED**
+- ✅ Implemented sophisticated virtual dice detection with 6-tier system
+- ✅ Created `VirtualDice` component system with purple styling
+- ✅ Implemented smart dice clustering strategies
+- ✅ Added virtual dice interaction with expandable details
 
 ---
 
-## **Phase 3: Real-time Canvas Synchronization** 🎯 **HIGH PRIORITY**
-Broadcast dice movements and states to all connected users.
+## **🎯 PHASE 5: Cross-System Highlighting & Navigation** 
+*Ready for immediate implementation*
 
-### **Commit 3.1:** Design canvas synchronization protocol
-- Define canvas event types:
-  - `DICE_SPAWN`: New dice added to canvas
-  - `DICE_THROW`: Dice physics applied
-  - `DICE_SETTLE`: Dice stopped moving with final result
-  - `DICE_HIGHLIGHT`: Dice selected/highlighted
-  - `DICE_REMOVE`: Dice cleared from canvas
-- Create `CanvasEvent` GraphQL type and subscription
+### **Commit 5.1:** Create highlighting service integration
+- **Extend existing `DiceResultManager` service:**
+  - Add highlighting state management methods
+  - Integrate with existing canvas ↔ chat correlation
+  - Add highlight event broadcasting via `CanvasEventService`
+  - Implement highlight persistence during session
 
-### **Commit 3.2:** Implement server-side canvas state management
-- Add `CanvasStateManager` to server:
-  - Track active dice for each room/session
-  - Manage dice lifecycle (spawn → throw → settle → remove)
-  - Handle user disconnections and cleanup
-  - Broadcast state changes to all room participants
+- **Create `HighlightManager` service:**
+  ```typescript
+  class HighlightManager {
+    constructor(
+      private diceResultManager: DiceResultManager,
+      private canvasEventService: CanvasEventService
+    ) {}
+    
+    highlightDiceFromChat(activityId: string): void
+    highlightChatFromDice(diceId: string): void
+    clearHighlights(): void
+  }
+  ```
 
-### **Commit 3.3:** Create canvas synchronization client
-- Add `CanvasSyncManager` to `DiceCanvas.tsx`:
-  - Subscribe to `canvasEventsUpdated` GraphQL subscription
-  - Apply remote dice events to local canvas
-  - Distinguish between local and remote dice
-  - Handle conflict resolution for simultaneous actions
+### **Commit 5.2:** Implement canvas → chat highlighting
+- **Enhance existing dice components:**
+  - Add click handlers to `VirtualDice` and `PhysicsDice` components
+  - Integrate with `HighlightManager` service
+  - Add visual highlighting effects (glow, color change)
+  - Implement hover effects for preview highlighting
 
-### **Commit 3.4:** Implement selective synchronization
-- **Option A: Full Sync**: Broadcast all dice movements and physics
-  - Pros: Perfect synchronization, shared physics playground
-  - Cons: High bandwidth, complex conflict resolution
-- **Option B: Result Sync**: Only broadcast spawn/settle events
-  - Pros: Lower bandwidth, simpler implementation
-  - Cons: Users see different intermediate physics
-- **Recommended**: Start with Option B, upgrade to A if needed
-
----
-
-## **Phase 4: Virtual Dice System** 🎯 **MEDIUM PRIORITY**
-Handle non-standard and massive dice rolls with smart representation.
-
-### **Commit 4.1:** Implement virtual dice detection
-- Extend `RollProcessor` with virtual dice logic:
-  - Detect massive rolls (>10 dice, >100 total)
-  - Identify non-standard dice (d3, d100, d1000, etc.)
-  - Calculate appropriate physical representation
-- Add configuration for virtual dice thresholds
-
-### **Commit 4.2:** Create virtual dice rendering system
-- Add `VirtualDice` component:
-  - Render single physical dice with virtual result overlay
-  - Show "virtual" indicator (different color/effect)
-  - Display summary result prominently
-  - Hide individual roll details by default
-- Integrate with existing `PhysicsDice` component
-
-### **Commit 4.3:** Implement smart dice clustering
-- For massive standard rolls (1000d20):
-  - Spawn single representative dice
-  - Show total result as overlay
-  - Store individual rolls in hidden state
-- For mixed expressions (2d6+1d20+5):
-  - Spawn appropriate physical dice
-  - Show modifier calculations separately
-
-### **Commit 4.4:** Add virtual dice interaction
-- Click virtual dice to expand individual results
-- Show breakdown in modal or expandable panel
-- Maintain correlation with chat activity
-- Allow re-rolling virtual dice with same parameters
-
----
-
-## **Phase 5: Cross-System Highlighting & Navigation** 🎯 **MEDIUM PRIORITY**
-Implement bidirectional highlighting between canvas and chat.
-
-### **Commit 5.1:** Create highlighting state management
-- Add `HighlightManager` service:
-  - Track highlighted dice and chat activities
-  - Manage highlight states across components
+- **Update `ActivityFeed` component:**
+  - Add highlighting state management
+  - Implement smooth scrolling to highlighted activities
+  - Add visual connection animations
   - Handle multiple simultaneous highlights
-- Implement highlight persistence during session
 
-### **Commit 5.2:** Canvas → Chat highlighting
-- Add click handlers to canvas dice:
-  - Highlight corresponding chat activity
-  - Scroll activity feed to relevant message
-  - Show visual connection (animation, color matching)
-- Implement hover effects for preview highlighting
+### **Commit 5.3:** Implement chat → canvas navigation
+- **Enhance `ActivityFeed` component:**
+  - Add click handlers to roll result displays
+  - Integrate with camera controls for smooth transitions
+  - Handle cases where dice no longer exist
+  - Add visual feedback for navigation actions
 
-### **Commit 5.3:** Chat → Canvas navigation
-- Add click handlers to activity feed roll results:
-  - Focus camera on corresponding canvas dice
-  - Highlight dice with visual effects
-  - Smooth camera transitions with animation
-- Handle cases where dice no longer exist
+- **Update camera control system:**
+  - Extend `useCameraControls` hook with focus methods
+  - Implement smooth camera transitions to dice
+  - Add zoom and framing for highlighted dice
+  - Handle multiple dice highlighting scenarios
 
 ### **Commit 5.4:** Enhanced result display system
-- **Canvas Side**:
-  - Show result numbers floating above dice
-  - Hide by default, show on hover/selection
-  - Click to expand virtual dice details
-- **Chat Side**:
-  - Show summary results by default
-  - Hover to show expanded roll breakdown
-  - Click to navigate to canvas dice
+- **Canvas side enhancements:**
+  - Add floating result numbers above dice (using existing overlay system)
+  - Integrate with `VirtualDice` expandable details
+  - Show/hide results based on highlight state
+  - Add click-to-expand for virtual dice details
+
+- **Chat side enhancements:**
+  - Enhance activity display with hover tooltips
+  - Show expanded roll breakdowns on hover
+  - Add navigation indicators for canvas correlation
+  - Implement result summary vs detailed view toggle
 
 ---
 
-## **Phase 6: UI/UX Polish & Edge Cases** 🎯 **LOW PRIORITY**
-Handle edge cases and improve user experience.
+## **🎯 PHASE 6: UI/UX Polish & Edge Cases**
+*Building on refactored architecture*
 
 ### **Commit 6.1:** Implement canvas cleanup strategies
-- Auto-remove old dice after time limit
-- Manual "Clear All" button affects all users
-- Handle user disconnection cleanup
-- Prevent canvas overcrowding with smart limits
+- **Extend `CanvasStateManager` service:**
+  - Add auto-cleanup timers for old dice
+  - Implement "Clear All" functionality affecting all users
+  - Add canvas overcrowding prevention with smart limits
+  - Handle user disconnection cleanup
 
-### **Commit 6.2:** Add roll history and replay
-- Store recent rolls in session state
-- Add "Repeat Last Roll" functionality
-- Implement roll bookmarking/favorites
-- Show roll statistics and patterns
+- **Update `DiceCanvas` component:**
+  - Add cleanup UI controls using existing control components
+  - Integrate with `CanvasEventService` for broadcast cleanup
+  - Add visual feedback for cleanup operations
 
-### **Commit 6.3:** Enhanced error handling
-- Handle network disconnections gracefully
-- Show sync status indicators
-- Implement offline mode with sync on reconnect
-- Add user feedback for failed operations
+### **Commit 6.2:** Add roll history and replay system
+- **Create `RollHistoryService`:**
+  - Store recent rolls in session state
+  - Implement roll bookmarking/favorites
+  - Add roll statistics and pattern tracking
+  - Integrate with existing `RollProcessor`
+
+- **Enhance chat system:**
+  - Add "Repeat Last Roll" functionality to `ChatInput`
+  - Implement roll history dropdown
+  - Add quick-access buttons for favorite rolls
+  - Show roll statistics in user interface
+
+### **Commit 6.3:** Enhanced error handling and sync status
+- **Extend existing sync components:**
+  - Enhance `SyncStatusIndicator` with detailed connection info
+  - Add offline mode detection and sync-on-reconnect
+  - Implement graceful degradation for network issues
+  - Add user feedback for failed operations
+
+- **Update error boundaries:**
+  - Add canvas-specific error boundaries
+  - Implement fallback UI for sync failures
+  - Add retry mechanisms for failed operations
 
 ### **Commit 6.4:** Performance optimizations
-- Implement canvas dice limits (max 50 active dice)
-- Add LOD for distant dice
-- Optimize GraphQL subscriptions
-- Implement smart batching for rapid rolls
+- **Optimize existing services:**
+  - Add canvas dice limits to `CanvasStateManager` (max 50 active dice)
+  - Implement smart batching in `CanvasEventService`
+  - Add LOD (Level of Detail) for distant dice
+  - Optimize GraphQL subscription handling
+
+- **Enhance rendering performance:**
+  - Add React.memo to expensive components
+  - Implement virtual scrolling for large activity feeds
+  - Optimize physics simulation for many dice
+  - Add performance monitoring and metrics
 
 ---
 
-## **Phase 7: Advanced Features** 🎯 **FUTURE ENHANCEMENTS**
-Optional advanced features for enhanced experience.
+## **🚀 PHASE 7: Advanced Features**
+*Future enhancements building on solid foundation*
 
 ### **Commit 7.1:** User permissions and room management
-- Add room-based dice isolation
-- Implement moderator controls (clear all, mute dice)
-- Add private dice rolls (visible only to roller)
-- Create spectator mode (view-only canvas)
+- **Extend `CanvasStateManager` with room features:**
+  - Add room-based dice isolation
+  - Implement moderator controls (clear all, mute dice)
+  - Add private dice rolls (visible only to roller)
+  - Create spectator mode (view-only canvas)
 
 ### **Commit 7.2:** Dice customization sync
-- Sync user dice colors/themes across clients
-- Add dice "ownership" indicators
-- Implement custom dice sets per user
-- Add dice sound preferences sync
+- **Create `DiceCustomizationService`:**
+  - Sync user dice colors/themes across clients
+  - Add dice "ownership" indicators
+  - Implement custom dice sets per user
+  - Add dice sound preferences sync
 
 ### **Commit 7.3:** Advanced roll expressions
-- Support complex expressions: `(2d6+3)*2`
-- Add conditional rolls: `1d20 advantage/disadvantage`
-- Implement roll modifiers: `1d20+5 vs DC 15`
-- Add custom dice types: `1d[1,3,5,7,9]`
+- **Enhance `RollProcessor` service:**
+  - Support complex expressions: `(2d6+3)*2`
+  - Add conditional rolls: `1d20 advantage/disadvantage`
+  - Implement roll modifiers: `1d20+5 vs DC 15`
+  - Add custom dice types: `1d[1,3,5,7,9]`
 
 ### **Commit 7.4:** Analytics and insights
-- Track roll statistics per user
-- Show probability distributions
-- Add "hot" and "cold" dice indicators
-- Implement roll pattern analysis
+- **Create `AnalyticsService`:**
+  - Track roll statistics per user
+  - Show probability distributions
+  - Add "hot" and "cold" dice indicators
+  - Implement roll pattern analysis
 
 ---
 
-## **Technical Architecture**
+## **Technical Architecture (Updated)**
 
 ### **Data Flow**
 ```
-User Input → Chat Command → GraphQL Mutation → Server Processing → 
-Canvas Instructions → Real-time Broadcast → All Clients → Canvas Update
+User Input → ChatCommandParser → RollProcessor → GraphQL Mutation → 
+CanvasStateManager → CanvasEventService → Real-time Broadcast → 
+CanvasSyncManager → Canvas Update
 ```
 
-### **Key Components**
-- **RollProcessor**: Unified roll parsing and processing
-- **CanvasSyncManager**: Real-time canvas synchronization
-- **DiceResultManager**: Cross-system correlation and highlighting
-- **VirtualDice**: Smart representation for complex rolls
-- **HighlightManager**: Bidirectional highlighting system
+### **Key Services (Existing)**
+- ✅ **RollProcessor**: Unified roll parsing and virtual dice detection
+- ✅ **DiceResultManager**: Cross-system correlation and state tracking
+- ✅ **CanvasEventService**: Local event broadcasting and history
+- ✅ **RemoteDiceService**: Remote dice state management
+- ✅ **CanvasStateManager**: Server-side state and event broadcasting
+- ✅ **ChatCommandParser**: Command parsing and validation
 
-### **GraphQL Schema Extensions**
-```graphql
-type DiceRoll {
-  canvasId: String!
-  diceType: String!
-  position: Position
-  isVirtual: Boolean!
-  virtualRolls: [Int!]
-}
+### **Key Services (To Implement)**
+- 🎯 **HighlightManager**: Bidirectional highlighting system
+- 🎯 **RollHistoryService**: Roll history and replay functionality
+- 🚀 **DiceCustomizationService**: User preferences and themes
+- 🚀 **AnalyticsService**: Statistics and insights
 
-type Position {
-  x: Float!
-  y: Float!
-  z: Float!
-}
-
-type CanvasEvent {
-  type: String!
-  diceId: String!
-  userId: String!
-  data: JSON
-}
-
-subscription canvasEventsUpdated {
-  canvasEventsUpdated {
-    type
-    diceId
-    userId
-    data
-  }
-}
-```
+### **Component Architecture (Existing)**
+- ✅ **Modular dice components**: D4-D20 geometry, physics, virtual dice
+- ✅ **Control components**: Panels, buttons, camera controls
+- ✅ **Sync components**: Remote dice, sync status, canvas overlay
+- ✅ **Specialized hooks**: Controls, sync, physics, camera
 
 ---
 
-## **Implementation Priority**
+## **Implementation Priority (Rebased)**
 
-### **Sprint 1: Core Integration**
-- Phase 1: Unified Roll System
-- Phase 2: Chat Integration
+### **Sprint 1: Cross-System Integration** 🎯 **IMMEDIATE**
+- Phase 5: Cross-System Highlighting & Navigation
+- Leverage existing services and component architecture
+- High user impact, moderate implementation complexity
 
-### **Sprint 2: Real-time Sync**
-- Phase 3: Canvas Synchronization
-- Basic virtual dice (Phase 4.1-4.2)
+### **Sprint 2: Polish & Optimization** 🎯 **SHORT TERM**
+- Phase 6: UI/UX Polish & Edge Cases
+- Build on solid service foundation
+- Focus on user experience and performance
 
-### **Sprint 3: Enhanced UX**
-- Phase 4: Complete Virtual Dice System
-- Phase 5: Cross-System Highlighting
-
-### **Sprint 4: Polish & Advanced**
-- Phase 6: Edge Cases & Polish
+### **Sprint 3: Advanced Features** 🚀 **FUTURE**
 - Phase 7: Advanced Features (as needed)
+- Room management, customization, analytics
+- Extend existing service architecture
 
 ---
 
-## **Success Metrics**
+## **Success Metrics (Updated)**
 
+### **✅ Already Achieved**
 - ✅ All dice rolls originate from unified chat `/roll` commands
-- ✅ Canvas dice movements visible to all room participants
+- ✅ Canvas dice movements visible to all room participants  
 - ✅ Perfect correlation between chat results and canvas dice
 - ✅ Smooth handling of both standard and virtual dice
-- ✅ Intuitive cross-system navigation and highlighting
 - ✅ Stable real-time synchronization with minimal lag
+- ✅ Modular, testable, maintainable architecture
 
-## **Original Conceit (Rambling rough outline)**
-"""
-The conceit of this webapp is to be a chat lobby with dice rolling, where people can see on a fancy 3d grid what dice you've rolled.
-That means, however, that all these dice movements *if possible* need to be broadcast to EVERYONE in the room via the graphql server.
+### **🎯 Next Targets**
+- 🎯 Intuitive cross-system navigation and highlighting
+- 🎯 Enhanced user experience with polish and optimization
+- 🎯 Advanced features for power users and communities
 
-Alternatively, if that is not possible, everyone should see the rolls and dice spawning in the dice canvas, but any subsequent chaos or playing around with the dice done by them is all client-side.
+---
 
-Right now I have two disparate systems. I have the dice canvas, whose behavior is basically all client side. And I have the chat room (activity feed) and chat rolling functionality. Furthermore, the rolls and chat functionality are separated, but both essentially go in the chat.
+## **Key Advantages of Refactored Architecture**
 
-I would like to do a massive FUSION of these two functionalities.
-As for the dice rolling buttons. RIght now I have chat buttons and buttons for the canvas.
-I would like the buttons to produce an activity log AND influence the canvas, and I would like to replace the roll text input with a chat `/roll` functionality (eg, `/roll 2d6`). This functionality should ALSO influence the canvas and THAT should always get broadcast to all other users.
+### **Service-Based Implementation**
+- **Clean separation**: Business logic in services, UI logic in components
+- **Easy testing**: Services can be unit tested independently
+- **Reusable**: Services can be used across different components
+- **Extensible**: New features integrate cleanly with existing services
 
-Lastly, roll buttons expose the standard ttrpg dice (d4, d6, d10, d12, d20), but I still want to allow rolling of nonstandard dice, and maybe on the canvas they just roll a d6 or cluster of d6s and then pop up the wacky number.
-Something similar to this should happen if, eg, someone rolls 1000d20. Rather than spawning that many dice, it should just spawn ONE d20 die, that pops up the wacky result.
-(And if I could have everything I wanted, highlighting a die result in-canvas would:
-- highlight the relevant chat result (and vice versa highlighting the chat result would highlight the die
-- only show the result number
-- but on-click, expand to show the expanded results of each individual roll
-)
-(And meanwhile on the chat side:
-- clicking the chat box would jump your view in the canvas to the relevant die
-- the chat would only show the result number
-- but on-hover, would show the expanded results of each individual roll
-)
-"""
+### **Component Modularity**
+- **Focused components**: Each component has single responsibility
+- **Reusable**: Dice, controls, sync components work independently
+- **Maintainable**: Easy to locate and fix issues
+- **Performant**: Better React optimization opportunities
+
+### **Simplified Implementation**
+- **Phase 5**: Mostly UI integration work, services already exist
+- **Phase 6**: Extend existing services, add UI polish
+- **Phase 7**: Build on solid foundation, add advanced features
+
+**The refactoring has dramatically simplified the remaining integration work!** 🎉
 
