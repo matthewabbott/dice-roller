@@ -7,6 +7,8 @@ export interface DiceResultOverlay {
     isVisible: boolean;
     timestamp: number;
     originalPosition?: [number, number, number]; // Store original position for distance checks
+    rollId?: string; // For grouping dice from the same roll
+    isGroupSum?: boolean; // Whether this shows a sum for multiple dice
 }
 
 /**
@@ -17,27 +19,82 @@ export const useDiceResultOverlays = () => {
     const [overlays, setOverlays] = useState<Map<string, DiceResultOverlay>>(new Map());
 
     /**
-     * Show a result overlay for a specific dice
+     * Show a result overlay for a specific dice (only if not already visible)
      */
     const showResultOverlay = useCallback((
         diceId: string,
         result: number,
-        position: [number, number, number]
+        position: [number, number, number],
+        rollId?: string,
+        isGroupSum?: boolean
     ) => {
         setOverlays(prev => {
-            const newOverlays = new Map(prev);
-            newOverlays.set(diceId, {
-                diceId,
-                result,
-                position,
-                isVisible: true,
-                timestamp: Date.now(),
-                originalPosition: [...position] as [number, number, number]
-            });
-            return newOverlays;
-        });
+            const existing = prev.get(diceId);
 
-        console.log(`🎲 Showing result overlay for dice ${diceId}: ${result}`);
+            // Only update if overlay doesn't exist or is not visible
+            if (!existing || !existing.isVisible) {
+                const newOverlays = new Map(prev);
+                newOverlays.set(diceId, {
+                    diceId,
+                    result,
+                    position,
+                    isVisible: true,
+                    timestamp: Date.now(),
+                    originalPosition: [...position] as [number, number, number],
+                    rollId,
+                    isGroupSum
+                });
+
+                console.log(`🎲 Showing ${isGroupSum ? 'group sum' : 'result'} overlay for dice ${diceId}: ${result}`);
+                return newOverlays;
+            }
+
+            return prev;
+        });
+    }, []);
+
+    /**
+     * Show group sum overlay for multiple dice from the same roll
+     */
+    const showGroupSumOverlay = useCallback((
+        diceIds: string[],
+        totalSum: number,
+        rollId: string,
+        getDicePosition: (diceId: string) => [number, number, number] | null
+    ) => {
+        if (diceIds.length === 0) return;
+
+        // Use the first dice position for the group sum overlay
+        const primaryDiceId = diceIds[0];
+        const position = getDicePosition(primaryDiceId);
+
+        if (position) {
+            // Remove individual overlays for all dice in the group
+            setOverlays(prev => {
+                const newOverlays = new Map(prev);
+
+                // Remove individual overlays
+                diceIds.forEach(diceId => {
+                    newOverlays.delete(diceId);
+                });
+
+                // Add group sum overlay on the primary dice
+                newOverlays.set(primaryDiceId, {
+                    diceId: primaryDiceId,
+                    result: totalSum,
+                    position,
+                    isVisible: true,
+                    timestamp: Date.now(),
+                    originalPosition: [...position] as [number, number, number],
+                    rollId,
+                    isGroupSum: true
+                });
+
+                return newOverlays;
+            });
+
+            console.log(`🎲 Showing group sum overlay (${diceIds.length} dice): ${totalSum}`);
+        }
     }, []);
 
     /**
@@ -48,15 +105,16 @@ export const useDiceResultOverlays = () => {
         newPosition: [number, number, number]
     ) => {
         setOverlays(prev => {
-            const newOverlays = new Map(prev);
-            const overlay = newOverlays.get(diceId);
+            const overlay = prev.get(diceId);
             if (overlay && overlay.isVisible) {
+                const newOverlays = new Map(prev);
                 newOverlays.set(diceId, {
                     ...overlay,
                     position: [newPosition[0], newPosition[1] + 2, newPosition[2]] // Keep 2 units above dice
                 });
+                return newOverlays;
             }
-            return newOverlays;
+            return prev;
         });
     }, []);
 
@@ -99,28 +157,30 @@ export const useDiceResultOverlays = () => {
      */
     const hideResultOverlay = useCallback((diceId: string) => {
         setOverlays(prev => {
-            const newOverlays = new Map(prev);
-            const overlay = newOverlays.get(diceId);
-            if (overlay) {
+            const overlay = prev.get(diceId);
+            if (overlay && overlay.isVisible) {
+                const newOverlays = new Map(prev);
                 newOverlays.set(diceId, { ...overlay, isVisible: false });
+                console.log(`🎲 Hiding result overlay for dice ${diceId}`);
+                return newOverlays;
             }
-            return newOverlays;
+            return prev;
         });
-
-        console.log(`🎲 Hiding result overlay for dice ${diceId}`);
     }, []);
 
     /**
-     * Remove a result overlay completely
+     * Remove a result overlay completely (only if it exists)
      */
     const removeResultOverlay = useCallback((diceId: string) => {
         setOverlays(prev => {
-            const newOverlays = new Map(prev);
-            newOverlays.delete(diceId);
-            return newOverlays;
+            if (prev.has(diceId)) {
+                const newOverlays = new Map(prev);
+                newOverlays.delete(diceId);
+                console.log(`🎲 Removed result overlay for dice ${diceId}`);
+                return newOverlays;
+            }
+            return prev;
         });
-
-        console.log(`🎲 Removed result overlay for dice ${diceId}`);
     }, []);
 
     /**
@@ -161,15 +221,25 @@ export const useDiceResultOverlays = () => {
         return overlays.get(diceId);
     }, [overlays]);
 
+    /**
+     * Check if an overlay exists and is visible for a dice
+     */
+    const hasVisibleOverlay = useCallback((diceId: string) => {
+        const overlay = overlays.get(diceId);
+        return overlay && overlay.isVisible;
+    }, [overlays]);
+
     return {
         overlays: getOverlaysArray(),
         showResultOverlay,
+        showGroupSumOverlay,
         updateOverlayPosition,
         checkDistanceAndHide,
         hideResultOverlay,
         removeResultOverlay,
         clearAllOverlays,
         cleanupOldOverlays,
-        getOverlay
+        getOverlay,
+        hasVisibleOverlay
     };
 }; 

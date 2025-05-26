@@ -335,9 +335,10 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const {
         overlays: resultOverlays,
         showResultOverlay,
+        showGroupSumOverlay,
         updateOverlayPosition,
-        checkDistanceAndHide,
-        removeResultOverlay
+        removeResultOverlay,
+        hasVisibleOverlay
     } = useDiceResultOverlays();
 
     // Monitor highlighted dice and show/update overlays
@@ -345,93 +346,98 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
         if (!isInitialized) return;
 
         const updateHighlightedDiceOverlays = () => {
-            // Helper function to get dice result from chat data
-            const getDiceResultFromChat = (diceId: string): number | null => {
-                const activities = getActivities();
-                for (const activity of activities) {
-                    if (activity.roll?.canvasData?.dice) {
-                        for (const diceData of activity.roll.canvasData.dice) {
-                            if (diceData.canvasId === diceId && !diceData.isVirtual && diceData.result !== undefined) {
-                                return diceData.result;
-                            }
-                        }
-                    }
+            // Helper function to get dice position
+            const getDicePosition = (diceId: string): [number, number, number] | null => {
+                // Check local dice
+                const localDice = diceState.dice.find((die, index) =>
+                    (die as any).canvasId === diceId || `local-dice-${index}` === diceId
+                );
+                if (localDice && localDice.body) {
+                    return [localDice.body.position.x, localDice.body.position.y, localDice.body.position.z];
                 }
+
+                // Check remote dice
+                const remoteDie = remoteDice.get(diceId);
+                if (remoteDie && remoteDie.body) {
+                    return [remoteDie.body.position.x, remoteDie.body.position.y, remoteDie.body.position.z];
+                }
+
+                // Check virtual dice
+                const virtualDie = virtualDice.find(die => die.canvasId === diceId);
+                if (virtualDie && virtualDie.position) {
+                    return [virtualDie.position.x, virtualDie.position.y, virtualDie.position.z];
+                }
+
                 return null;
             };
 
-            // Check local dice
-            diceState.dice.forEach((dice, index) => {
-                const diceId = (dice as any).canvasId || `local-dice-${index}`;
-                const isHighlighted = isDiceHighlighted(diceId);
-                const currentPosition: [number, number, number] = [
-                    dice.body.position.x,
-                    dice.body.position.y,
-                    dice.body.position.z
-                ];
+            // Helper function to get roll data for highlighted dice
+            const getHighlightedRollData = () => {
+                const activities = getActivities();
+                const highlightedRolls = new Map<string, { diceIds: string[], total: number, rollId: string }>();
 
-                if (isHighlighted) {
-                    // Get result from chat data
-                    const chatResult = getDiceResultFromChat(diceId);
+                for (const activity of activities) {
+                    if (activity.roll?.canvasData?.dice) {
+                        const rollId = activity.id;
+                        const highlightedDiceInRoll: string[] = [];
+                        let rollTotal = 0;
 
-                    if (chatResult !== null) {
-                        // Always show/update overlay for highlighted dice with chat result
-                        showResultOverlay(diceId, chatResult, currentPosition);
-                    } else if (dice.isFinished && dice.isFinished()) {
-                        // Fallback to physics result if no chat result available
-                        const physicsResult = dice.getUpperValue ? dice.getUpperValue() : 1;
-                        showResultOverlay(diceId, physicsResult, currentPosition);
+                        for (const diceData of activity.roll.canvasData.dice) {
+                            if (!diceData.isVirtual && isDiceHighlighted(diceData.canvasId)) {
+                                highlightedDiceInRoll.push(diceData.canvasId);
+                                rollTotal += diceData.result || 0;
+                            }
+                        }
+
+                        if (highlightedDiceInRoll.length > 0) {
+                            highlightedRolls.set(rollId, {
+                                diceIds: highlightedDiceInRoll,
+                                total: rollTotal,
+                                rollId
+                            });
+                        }
                     }
-                } else {
-                    // If not highlighted, check if dice has moved too far and hide overlay
-                    checkDistanceAndHide(diceId, currentPosition, 4); // Increased distance threshold
                 }
 
-                // Always update position if overlay exists
-                updateOverlayPosition(diceId, currentPosition);
-            });
+                return highlightedRolls;
+            };
 
-            // Check remote dice
-            remoteDice.forEach((remoteDie, diceId) => {
-                const isHighlighted = isDiceHighlighted(diceId);
-                const currentPosition: [number, number, number] = [
-                    remoteDie.body.position.x,
-                    remoteDie.body.position.y,
-                    remoteDie.body.position.z
-                ];
+            // Get highlighted roll data
+            const highlightedRolls = getHighlightedRollData();
 
-                if (isHighlighted) {
-                    // Get result from chat data
-                    const chatResult = getDiceResultFromChat(diceId);
-
-                    if (chatResult !== null) {
-                        // Always show/update overlay for highlighted dice with chat result
-                        showResultOverlay(diceId, chatResult, currentPosition);
-                    } else if (remoteDie.isFinished && remoteDie.isFinished()) {
-                        // Fallback to physics result if no chat result available
-                        const physicsResult = remoteDie.getUpperValue ? remoteDie.getUpperValue() : 1;
-                        showResultOverlay(diceId, physicsResult, currentPosition);
+            // Process highlighted rolls and show group sums
+            highlightedRolls.forEach(({ diceIds, total, rollId }) => {
+                if (diceIds.length > 1) {
+                    // Multiple dice from same roll - show group sum
+                    showGroupSumOverlay(diceIds, total, rollId, getDicePosition);
+                } else if (diceIds.length === 1) {
+                    // Single dice - show individual result
+                    const diceId = diceIds[0];
+                    const position = getDicePosition(diceId);
+                    if (position && !hasVisibleOverlay(diceId)) {
+                        showResultOverlay(diceId, total, position, rollId, false);
                     }
-                } else {
-                    // If not highlighted, check if dice has moved too far and hide overlay
-                    checkDistanceAndHide(diceId, currentPosition, 4); // Increased distance threshold
                 }
-
-                // Always update position if overlay exists
-                updateOverlayPosition(diceId, currentPosition);
             });
 
-            // Check virtual dice
-            virtualDice.forEach(dice => {
-                const isHighlighted = isDiceHighlighted(dice.canvasId);
+            // Remove overlays for unhighlighted dice
+            const allDiceIds = [
+                ...diceState.dice.map((die, index) => (die as any).canvasId || `local-dice-${index}`),
+                ...Array.from(remoteDice.keys()),
+                ...virtualDice.map(die => die.canvasId)
+            ];
 
-                if (isHighlighted && dice.result !== undefined && dice.position) {
-                    const position: [number, number, number] = [
-                        dice.position.x,
-                        dice.position.y,
-                        dice.position.z
-                    ];
-                    showResultOverlay(dice.canvasId, dice.result, position);
+            allDiceIds.forEach(diceId => {
+                if (!isDiceHighlighted(diceId)) {
+                    removeResultOverlay(diceId);
+                }
+            });
+
+            // Update positions for existing overlays
+            resultOverlays.forEach(overlay => {
+                const currentPosition = getDicePosition(overlay.diceId);
+                if (currentPosition) {
+                    updateOverlayPosition(overlay.diceId, currentPosition);
                 }
             });
         };
@@ -440,7 +446,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
         const interval = setInterval(updateHighlightedDiceOverlays, 200); // Check every 200ms
 
         return () => clearInterval(interval);
-    }, [isInitialized, diceState.dice, remoteDice, virtualDice, isDiceHighlighted, getActivities, showResultOverlay, updateOverlayPosition, checkDistanceAndHide]);
+    }, [isInitialized, diceState.dice, remoteDice, virtualDice, isDiceHighlighted, getActivities, showResultOverlay, showGroupSumOverlay, updateOverlayPosition, removeResultOverlay, hasVisibleOverlay, resultOverlays]);
 
     // Handle virtual dice click
     const handleVirtualDiceClick = useCallback((diceId: string) => {
