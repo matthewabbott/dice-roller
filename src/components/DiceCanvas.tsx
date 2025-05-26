@@ -5,11 +5,10 @@ import * as THREE from 'three';
 
 import { DiceManager, DiceD6, DiceD4, DiceD8, DiceD10, DiceD12, DiceD20 } from '../physics';
 
-import { useCanvasSync, type CanvasSyncCallbacks, type RemoteDiceData } from '../services/CanvasSyncManager';
-
 import { DICE_GEOMETRIES } from './dice';
 import { PhysicsWorld, PhysicsGround } from './physics';
-import { useDiceInteraction, usePhysicsSync } from '../hooks';
+import { SyncStatusIndicator, RemoteDiceRenderer } from './sync';
+import { useDiceInteraction, usePhysicsSync, useCanvasSync } from '../hooks';
 
 // Extend R3F with the geometry we need
 extend({ EdgesGeometry: THREE.EdgesGeometry });
@@ -166,169 +165,8 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const [isInitialized, setIsInitialized] = useState(false);
     const [isCameraLocked, setIsCameraLocked] = useState(false);
 
-    // Canvas synchronization state
-    const [remoteDice, setRemoteDice] = useState<Map<string, DiceInstance>>(new Map());
-    const [syncStatus, setSyncStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
-
-
-
-    // Remote dice handling functions for canvas synchronization
-    const spawnRemoteDice = useCallback(async (diceData: RemoteDiceData) => {
-        if (!isInitialized) return;
-
-        try {
-            let newDice: DiceInstance;
-            const options = { size: 1 };
-
-            // Create dice based on type
-            switch (diceData.diceType as DiceType) {
-                case 'd4':
-                    newDice = new DiceD4(options);
-                    break;
-                case 'd6':
-                    newDice = new DiceD6(options);
-                    break;
-                case 'd8':
-                    newDice = new DiceD8(options);
-                    break;
-                case 'd10':
-                    newDice = new DiceD10(options);
-                    break;
-                case 'd12':
-                    newDice = new DiceD12(options);
-                    break;
-                case 'd20':
-                    newDice = new DiceD20(options);
-                    break;
-                default:
-                    newDice = new DiceD6(options);
-            }
-
-            // Set position from remote data
-            newDice.body.position.set(
-                diceData.position.x,
-                diceData.position.y,
-                diceData.position.z
-            );
-
-            // Add random rotation for visual variety
-            newDice.body.quaternion.set(
-                Math.random() * 0.5,
-                Math.random() * 0.5,
-                Math.random() * 0.5,
-                Math.random() * 0.5
-            );
-            newDice.body.quaternion.normalize();
-
-            // Add to physics world
-            DiceManager.addBody(newDice.body);
-
-            // Apply dampening for controlled behavior
-            newDice.body.linearDamping = 0.1;
-            newDice.body.angularDamping = 0.1;
-
-            // Store in remote dice map
-            setRemoteDice(prev => new Map(prev.set(diceData.canvasId, newDice)));
-
-            console.log(`📡 Spawned remote ${diceData.diceType} from user ${diceData.userId} at:`, diceData.position);
-
-        } catch (error) {
-            console.error(`❌ Failed to spawn remote ${diceData.diceType}:`, error);
-        }
-    }, [isInitialized]);
-
-    const applyRemoteDiceThrow = useCallback((diceId: string, velocity: { x: number; y: number; z: number }) => {
-        const remoteDie = remoteDice.get(diceId);
-        if (remoteDie) {
-            remoteDie.body.velocity.set(velocity.x, velocity.y, velocity.z);
-            remoteDie.body.wakeUp();
-            console.log(`📡 Applied remote throw to dice ${diceId}`);
-        }
-    }, [remoteDice]);
-
-    const applyRemoteDiceSettle = useCallback((diceId: string, position: { x: number; y: number; z: number }, result: number) => {
-        const remoteDie = remoteDice.get(diceId);
-        if (remoteDie) {
-            // Smoothly move to final position
-            remoteDie.body.position.set(position.x, position.y, position.z);
-            remoteDie.body.velocity.set(0, 0, 0);
-            remoteDie.body.angularVelocity.set(0, 0, 0);
-            console.log(`📡 Settled remote dice ${diceId} at result ${result}`);
-        }
-    }, [remoteDice]);
-
-    const applyRemoteDiceHighlight = useCallback((diceId: string, color: string) => {
-        // TODO: Implement visual highlighting
-        console.log(`📡 Highlighting dice ${diceId} with color ${color}`);
-    }, []);
-
-    const removeRemoteDice = useCallback((diceId: string) => {
-        const remoteDie = remoteDice.get(diceId);
-        if (remoteDie) {
-            DiceManager.removeBody(remoteDie.body);
-            setRemoteDice(prev => {
-                const newMap = new Map(prev);
-                newMap.delete(diceId);
-                return newMap;
-            });
-            console.log(`📡 Removed remote dice ${diceId}`);
-        }
-    }, [remoteDice]);
-
-    const clearRemoteDice = useCallback(() => {
-        remoteDice.forEach(die => {
-            DiceManager.removeBody(die.body);
-        });
-        setRemoteDice(new Map());
-        console.log('📡 Cleared all remote dice');
-    }, [remoteDice]);
-
-    // Canvas synchronization callbacks
-    const canvasSyncCallbacks: CanvasSyncCallbacks = {
-        onDiceSpawn: useCallback((diceData: RemoteDiceData) => {
-            console.log(`📡 Remote dice spawn: ${diceData.diceType} from user ${diceData.userId}`);
-            spawnRemoteDice(diceData);
-        }, [spawnRemoteDice]),
-
-        onDiceThrow: useCallback((diceId: string, velocity, userId: string) => {
-            console.log(`📡 Remote dice throw: ${diceId} from user ${userId}`);
-            applyRemoteDiceThrow(diceId, velocity);
-        }, [applyRemoteDiceThrow]),
-
-        onDiceSettle: useCallback((diceId: string, position, result: number, userId: string) => {
-            console.log(`📡 Remote dice settle: ${diceId} = ${result} from user ${userId}`);
-            applyRemoteDiceSettle(diceId, position, result);
-        }, [applyRemoteDiceSettle]),
-
-        onDiceHighlight: useCallback((diceId: string, color: string, userId: string) => {
-            console.log(`📡 Remote dice highlight: ${diceId} color ${color} from user ${userId}`);
-            applyRemoteDiceHighlight(diceId, color);
-        }, [applyRemoteDiceHighlight]),
-
-        onDiceRemove: useCallback((diceId: string, userId: string) => {
-            console.log(`📡 Remote dice remove: ${diceId} from user ${userId}`);
-            removeRemoteDice(diceId);
-        }, [removeRemoteDice]),
-
-        onCanvasClear: useCallback((userId: string) => {
-            console.log(`📡 Remote canvas clear from user ${userId}`);
-            clearRemoteDice();
-        }, [clearRemoteDice])
-    };
-
-    // Initialize canvas synchronization
-    const { isConnected, error, stats } = useCanvasSync(canvasSyncCallbacks);
-
-    // Update sync status
-    useEffect(() => {
-        if (error) {
-            setSyncStatus('error');
-        } else if (isConnected) {
-            setSyncStatus('connected');
-        } else {
-            setSyncStatus('connecting');
-        }
-    }, [isConnected, error]);
+    // Canvas synchronization using new sync hooks
+    const { remoteDice, syncStatus, stats } = useCanvasSync({ isInitialized });
 
     // Physics initialization is now handled by PhysicsWorld component
     const handlePhysicsInitialized = useCallback((initialized: boolean) => {
@@ -569,23 +407,21 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                     ))}
 
                     {/* Remote Dice */}
-                    {Array.from(remoteDice.entries()).map(([diceId, die]) => (
-                        <PhysicsDice key={`remote-${diceId}`} dice={die} />
-                    ))}
+                    <RemoteDiceRenderer
+                        remoteDice={remoteDice}
+                        PhysicsDiceComponent={PhysicsDice}
+                    />
                 </PhysicsWorld>
             </Canvas>
 
             {/* Canvas Controls */}
             <div className={`absolute ${isFullScreen ? 'top-4 right-4' : 'top-2 right-2'} flex gap-2`}>
                 {/* Sync Status Indicator */}
-                <div className={`px-2 py-1 rounded text-xs font-mono ${syncStatus === 'connected' ? 'bg-green-600 text-white' :
-                    syncStatus === 'connecting' ? 'bg-yellow-600 text-white' :
-                        'bg-red-600 text-white'
-                    }`}>
-                    {syncStatus === 'connected' ? '📡 Synced' :
-                        syncStatus === 'connecting' ? '📡 Connecting...' :
-                            '📡 Offline'}
-                </div>
+                <SyncStatusIndicator
+                    status={syncStatus.status}
+                    isFullScreen={isFullScreen}
+                    stats={stats}
+                />
 
                 <div className={`bg-gray-800 px-3 py-2 rounded text-white font-mono ${isFullScreen ? 'text-base' : 'text-xs'}`}>
                     {isRolling ? 'Rolling...' : rollResult ? `Total: ${rollResult}` : 'Ready to roll'}
@@ -718,7 +554,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                             Last Total: {rollResult}
                         </div>
                     )}
-                    {syncStatus === 'connected' && stats && (
+                    {syncStatus.status === 'connected' && stats && (
                         <div className="text-xs text-blue-400 mt-1">
                             Users: {Object.keys(stats.diceByUser).length}
                         </div>
