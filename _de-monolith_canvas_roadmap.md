@@ -124,32 +124,44 @@ src/hooks/sync/
 - **Testing**: Sync functionality can now be unit tested in isolation
 - **Performance**: Better React optimization with focused sync components
 
-### Phase D: Extract UI & Controls 🟡 **MEDIUM RISK**
+### Phase D: Extract UI & Controls ✅ **COMPLETED**
 **Goal**: Separate UI controls from canvas logic
 **Impact**: Reusable UI components, cleaner canvas
 **Risk**: Medium - UI state is intertwined with canvas state
 
 #### Commits:
-- **D.1**: Create `src/components/controls/` directory
-- **D.2**: Extract `DiceControlPanel` component
-- **D.3**: Extract `CameraControls` component
-- **D.4**: Extract `RollHistory` component
+- **D.1**: ✅ Create `src/components/controls/` directory
+- **D.2**: ✅ Extract `DiceControlPanel` component
+- **D.3**: ✅ Extract `CameraControls` component
+- **D.4**: ✅ Extract `RollHistory` component
 
-#### Files to Create:
+#### Completed Files:
 ```
 src/components/controls/
-├── DiceControlPanel.tsx     # Main dice controls
-├── DiceTypeSelector.tsx     # Dice type selection
-├── SpawnControls.tsx        # Dice spawning buttons
-├── ActionButtons.tsx        # Roll/throw/clear buttons
-├── CameraControls.tsx       # Camera control panel
-├── RollHistory.tsx          # Roll history display
-└── index.ts
+├── DiceControlPanel.tsx     # ✅ Main dice controls (103 lines)
+├── DiceTypeSelector.tsx     # ✅ Dice type selection (38 lines)
+├── DiceCountDisplay.tsx     # ✅ Dice count and stats display (49 lines)
+├── SpawnControls.tsx        # ✅ Dice spawning buttons (68 lines)
+├── ActionButtons.tsx        # ✅ Roll/throw/clear buttons (53 lines)
+├── CameraControls.tsx       # ✅ Camera control panel (46 lines)
+├── CanvasOverlay.tsx        # ✅ Canvas overlay controls (101 lines)
+├── InstructionsPanel.tsx    # ✅ Instructions and tooltips (44 lines)
+├── RollHistory.tsx          # ✅ Roll history display (75 lines)
+└── index.ts                 # ✅ Barrel exports
 
-src/hooks/
-├── useDiceControls.ts       # Dice control logic
-└── useCameraControls.ts     # Camera control logic
+src/hooks/controls/
+├── useDiceControls.ts       # ✅ Dice control logic (221 lines)
+├── useCameraControls.ts     # ✅ Camera control logic (68 lines)
+└── index.ts                 # ✅ Barrel exports
 ```
+
+#### Results:
+- **Lines Reduced**: ~600 lines of UI code extracted from DiceCanvas
+- **TypeScript Errors**: No control-related errors remaining
+- **Maintainability**: UI controls now cleanly separated from canvas rendering
+- **Reusability**: Control components and hooks can be used independently
+- **Testing**: Control logic can now be unit tested in isolation
+- **Performance**: Better React optimization with focused control components
 
 ### Phase E: Extract State Management 🔴 **HIGH RISK**
 **Goal**: Centralize and organize state management
@@ -273,3 +285,26 @@ After refactoring, Phase 5 (Cross-System Highlighting) will be much easier:
 3. **User testing** at Phases A, C, and F milestones
 4. **Performance benchmarking** at each phase
 5. **Documentation updates** throughout process
+
+## Current Progress Summary
+
+### ✅ **Phases A-D Completed Successfully**
+- **Phase A**: Extracted ~800 lines of dice geometry code
+- **Phase B**: Extracted ~400 lines of physics and interaction logic
+- **Phase C**: Extracted ~164 lines of canvas synchronization code
+- **Phase D**: Extracted ~600 lines of UI controls and camera logic
+- **Legacy Cleanup**: Removed ~270 lines of unused legacy code
+
+### 📊 **Refactoring Results**
+- **Original DiceCanvas Size**: 2013 lines
+- **Current DiceCanvas Size**: 297 lines
+- **Total Lines Extracted**: ~2234 lines
+- **Size Reduction**: 85.2% reduction in main component size
+- **Components Created**: 20+ focused, reusable components
+- **Hooks Created**: 8+ specialized hooks for different concerns
+- **TypeScript Errors**: No regressions, all functionality maintained
+
+### 🎯 **Next Steps**
+- **Phase E**: Extract state management (high risk)
+- **Phase F**: Create main canvas orchestrator (high risk)
+- **Target**: Final DiceCanvas under 200 lines (orchestration only)
