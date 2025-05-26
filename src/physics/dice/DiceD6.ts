@@ -245,10 +245,10 @@ export class DiceD6 extends DiceObject {
 
     /**
      * Gets the type name of this dice
-     * @returns "D6" string identifier
+     * @returns "d6" string identifier
      */
     public get diceType(): string {
-        return 'D6';
+        return 'd6';
     }
 
     /**

@@ -10,6 +10,7 @@ import { PhysicsWorld, PhysicsGround } from './physics';
 import { RemoteDiceRenderer } from './sync';
 import { DiceControlPanel, CanvasOverlay, InstructionsPanel, RollHistory } from './controls';
 import { useDiceInteraction, usePhysicsSync, useCanvasSync, useDiceControls, useCameraControls } from '../hooks';
+import { useHighlighting } from '../hooks/useHighlighting';
 
 // Extend R3F with the geometry we need
 extend({ EdgesGeometry: THREE.EdgesGeometry });
@@ -20,7 +21,7 @@ interface DiceCanvasProps {
 
 // Define available dice types (now imported from hooks)
 import type { DiceType } from '../hooks/controls/useDiceControls';
-type DiceInstance = DiceD4 | DiceD6 | DiceD8 | DiceD10 | DiceD12 | DiceD20;
+type DiceInstance = (DiceD4 | DiceD6 | DiceD8 | DiceD10 | DiceD12 | DiceD20) & { canvasId?: string };
 
 // Dice configuration
 const DICE_CONFIG = {
@@ -81,10 +82,13 @@ const DICE_CONFIG = {
 };
 
 // Enhanced Physics Dice Component that renders actual dice geometry
-const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
+const PhysicsDice: React.FC<{ dice: DiceInstance; canvasId?: string }> = ({ dice, canvasId }) => {
     const meshRef = useRef<THREE.Mesh>(null);
     const cameraRef = useRef<THREE.Camera | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+    // Add highlighting functionality
+    const { highlightFromDice, isDiceHighlighted } = useHighlighting();
 
     // Store camera and canvas references for use in event handlers
     useFrame((state) => {
@@ -108,9 +112,40 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
         isDragging: interactionState.isDragging
     });
 
+    // Check if this dice is highlighted
+    const isHighlighted = canvasId ? isDiceHighlighted(canvasId) : false;
+
+    // Handle dice click for highlighting
+    const handleDiceClick = useCallback((event: any) => {
+        event.stopPropagation();
+        console.log(`🎲 Dice clicked with canvasId: "${canvasId}"`);
+        if (canvasId) {
+            highlightFromDice(canvasId);
+        } else {
+            console.warn('🎲 Dice clicked but no canvasId provided');
+        }
+    }, [canvasId, highlightFromDice]);
+
+    // Normalize dice type to lowercase for lookup
+    const normalizedDiceType = dice.diceType.toLowerCase() as DiceType;
+
     // Get dice configuration for colors and geometry
-    const diceConfig = DICE_CONFIG[dice.diceType as DiceType];
-    const GeometryComponent = DICE_GEOMETRIES[dice.diceType as DiceType];
+    const diceConfig = DICE_CONFIG[normalizedDiceType];
+    const GeometryComponent = DICE_GEOMETRIES[normalizedDiceType];
+
+    // Debug unknown dice types
+    if (!diceConfig) {
+        console.warn(`Unknown dice type: "${dice.diceType}" (normalized: "${normalizedDiceType}"). Available types:`, Object.keys(DICE_CONFIG));
+    }
+
+    // Determine dice color based on highlighting state - with fallback for unknown dice types
+    const diceColor = isHighlighted ? '#ffff00' : (diceConfig?.color || '#888888');
+
+    // Enhanced pointer handlers that include highlighting
+    const enhancedPointerDown = useCallback((event: any) => {
+        interactionHandlers.handlePointerDown(event);
+        handleDiceClick(event);
+    }, [interactionHandlers.handlePointerDown, handleDiceClick]);
 
     // Render using the new geometry components
     if (GeometryComponent) {
@@ -118,9 +153,9 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
             <GeometryComponent
                 key={`dice-${dice.diceType}`}
                 size={dice.options.size}
-                color={diceConfig.color}
-                isHovered={interactionState.isHovered}
-                onPointerDown={interactionHandlers.handlePointerDown}
+                color={diceColor}
+                isHovered={interactionState.isHovered || isHighlighted}
+                onPointerDown={enhancedPointerDown}
                 onPointerMove={interactionHandlers.handlePointerMove}
                 onPointerUp={interactionHandlers.handlePointerUp}
                 onPointerEnter={interactionHandlers.handlePointerEnter}
@@ -136,7 +171,7 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 ref={meshRef}
                 castShadow
                 receiveShadow
-                onPointerDown={interactionHandlers.handlePointerDown}
+                onPointerDown={enhancedPointerDown}
                 onPointerMove={interactionHandlers.handlePointerMove}
                 onPointerUp={interactionHandlers.handlePointerUp}
                 onPointerEnter={interactionHandlers.handlePointerEnter}
@@ -144,11 +179,11 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
             >
                 <boxGeometry args={[1, 1, 1]} />
                 <meshStandardMaterial
-                    color="#888888"
-                    roughness={interactionState.isHovered ? 0.1 : 0.3}
-                    metalness={interactionState.isHovered ? 0.3 : 0.1}
-                    emissive={interactionState.isHovered ? '#888888' : '#000000'}
-                    emissiveIntensity={interactionState.isHovered ? 0.1 : 0}
+                    color={diceColor}
+                    roughness={interactionState.isHovered || isHighlighted ? 0.1 : 0.3}
+                    metalness={interactionState.isHovered || isHighlighted ? 0.3 : 0.1}
+                    emissive={isHighlighted ? diceColor : (interactionState.isHovered ? '#888888' : '#000000')}
+                    emissiveIntensity={isHighlighted ? 0.3 : (interactionState.isHovered ? 0.1 : 0)}
                 />
             </mesh>
         );
@@ -180,8 +215,6 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
             });
         };
     }, [diceState.dice]);
-
-
 
     const canvasContent = (
         <>
@@ -217,7 +250,11 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
 
                     {/* Physics Dice */}
                     {diceState.dice.map((die, index) => (
-                        <PhysicsDice key={`dice-${index}`} dice={die} />
+                        <PhysicsDice
+                            key={`dice-${index}`}
+                            dice={die}
+                            canvasId={(die as any).canvasId || `local-dice-${index}`}
+                        />
                     ))}
 
                     {/* Remote Dice */}

@@ -1,0 +1,160 @@
+import { useState, useCallback } from 'react';
+
+export interface HighlightState {
+    highlightedActivityId: string | null;
+    highlightedDiceIds: Set<string>;
+}
+
+export interface ActivityData {
+    id: string;
+    roll?: {
+        canvasData?: {
+            dice: Array<{
+                canvasId: string;
+                diceType: string;
+                isVirtual: boolean;
+                result?: number;
+            }>;
+        };
+    };
+}
+
+// Global state for highlighting - shared across all hook instances
+let globalHighlightState: HighlightState = {
+    highlightedActivityId: null,
+    highlightedDiceIds: new Set()
+};
+
+let globalActivities: ActivityData[] = [];
+let stateUpdateCallbacks: Set<(state: HighlightState) => void> = new Set();
+
+/**
+ * Client-side highlighting hook that manages global highlight state
+ * and provides correlation between activities and dice
+ */
+export const useHighlighting = () => {
+    const [highlightState, setHighlightState] = useState<HighlightState>(globalHighlightState);
+
+    // Register this component for state updates
+    const updateLocalState = useCallback((newState: HighlightState) => {
+        setHighlightState(newState);
+    }, []);
+
+    // Add this callback to the global set
+    stateUpdateCallbacks.add(updateLocalState);
+
+    // Helper to update global state and notify all components
+    const updateGlobalState = useCallback((newState: HighlightState) => {
+        globalHighlightState = newState;
+        stateUpdateCallbacks.forEach(callback => callback(newState));
+    }, []);
+
+    /**
+     * Update the global activities list
+     */
+    const setActivities = useCallback((activities: ActivityData[]) => {
+        globalActivities = activities;
+    }, []);
+
+    /**
+     * Highlight an activity and all its associated dice
+     */
+    const highlightFromActivity = useCallback((activityId: string, activities?: ActivityData[]) => {
+        const activitiesToSearch = activities || globalActivities;
+        const activity = activitiesToSearch.find(a => a.id === activityId);
+
+        if (!activity?.roll?.canvasData?.dice) {
+            console.warn(`No dice found for activity ${activityId}`);
+            // Still highlight the activity even if no dice
+            updateGlobalState({
+                highlightedActivityId: activityId,
+                highlightedDiceIds: new Set()
+            });
+            return;
+        }
+
+        const diceIds = activity.roll.canvasData.dice.map(die => die.canvasId);
+
+        updateGlobalState({
+            highlightedActivityId: activityId,
+            highlightedDiceIds: new Set(diceIds)
+        });
+
+        console.log(`🎯 Highlighted activity ${activityId} with ${diceIds.length} dice:`, diceIds);
+    }, [updateGlobalState]);
+
+    /**
+     * Highlight a dice and its associated activity + all dice from that roll
+     */
+    const highlightFromDice = useCallback((diceId: string, activities?: ActivityData[]) => {
+        const activitiesToSearch = activities || globalActivities;
+
+        console.log(`🔍 Looking for dice ${diceId} in ${activitiesToSearch.length} activities`);
+
+        // Debug: log all available dice IDs
+        const availableDiceIds = activitiesToSearch.flatMap(a =>
+            a.roll?.canvasData?.dice?.map(die => die.canvasId) || []
+        );
+        console.log(`🔍 Available dice IDs:`, availableDiceIds);
+
+        // Find the activity that contains this dice
+        const activity = activitiesToSearch.find(a =>
+            a.roll?.canvasData?.dice?.some(die => die.canvasId === diceId)
+        );
+
+        if (!activity) {
+            console.warn(`No activity found for dice ${diceId}`);
+            // Still highlight just this dice
+            updateGlobalState({
+                highlightedActivityId: null,
+                highlightedDiceIds: new Set([diceId])
+            });
+            return;
+        }
+
+        // Highlight the activity and all its dice
+        const allDiceIds = activity.roll?.canvasData?.dice?.map(die => die.canvasId) || [];
+
+        updateGlobalState({
+            highlightedActivityId: activity.id,
+            highlightedDiceIds: new Set(allDiceIds)
+        });
+
+        console.log(`🎯 Highlighted dice ${diceId} -> activity ${activity.id} with ${allDiceIds.length} dice:`, allDiceIds);
+    }, [updateGlobalState]);
+
+    /**
+     * Clear all highlights
+     */
+    const clearHighlight = useCallback(() => {
+        updateGlobalState({
+            highlightedActivityId: null,
+            highlightedDiceIds: new Set()
+        });
+        console.log('🎯 Cleared all highlights');
+    }, [updateGlobalState]);
+
+    /**
+     * Check if an activity is highlighted
+     */
+    const isActivityHighlighted = useCallback((activityId: string) => {
+        return globalHighlightState.highlightedActivityId === activityId;
+    }, []);
+
+    /**
+     * Check if a dice is highlighted
+     */
+    const isDiceHighlighted = useCallback((diceId: string) => {
+        return globalHighlightState.highlightedDiceIds.has(diceId);
+    }, []);
+
+    return {
+        highlightState,
+        setActivities,
+        highlightFromActivity,
+        highlightFromDice,
+        clearHighlight,
+        isActivityHighlighted,
+        isDiceHighlighted
+    };
+}; 

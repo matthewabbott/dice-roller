@@ -7,6 +7,7 @@ type DiceInstance = DiceD4 | DiceD6 | DiceD8 | DiceD10 | DiceD12 | DiceD20;
 // Import the PhysicsDice component type (we'll need to extract this interface)
 interface PhysicsDiceProps {
     dice: DiceInstance;
+    canvasId?: string;
 }
 
 export interface RemoteDiceRendererProps {
@@ -26,7 +27,7 @@ export const RemoteDiceRenderer: React.FC<RemoteDiceRendererProps> = ({
     return (
         <>
             {Array.from(remoteDice.entries()).map(([diceId, die]) => (
-                <PhysicsDiceComponent key={`remote-${diceId}`} dice={die} />
+                <PhysicsDiceComponent key={`remote-${diceId}`} dice={die} canvasId={diceId} />
             ))}
         </>
     );

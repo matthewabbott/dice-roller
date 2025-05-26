@@ -3,6 +3,7 @@ TODOs:
 - possible bug: when dice clip into eachother, they just freeze forever?
 - physics validation 'tests' should probably get ripped out and readjusted
 - hardcoded colors in canvas related stuff
+- different kinds of dice (chat command vs. canvas UI)
 - credit to https://github.com/byWulf/threejs-dice. Package doesn't work for current ver three.js, but I used his vertex definitions and dicemanager structure.
 
 

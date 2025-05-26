@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useSubscription } from '@apollo/client';
 import { ACTIVITY_ADDED_SUBSCRIPTION, GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
+import { useHighlighting } from '../hooks/useHighlighting';
 
 interface Roll {
     expression: string;
@@ -42,11 +43,19 @@ interface User {
 }
 
 const ActivityFeed: React.FC = () => {
-    const [activities, setActivities] = useState<Activity[]>([]);
+    const [activities, setActivitiesState] = useState<Activity[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [showRolls, setShowRolls] = useState(true);
     const [showSystemMessages, setShowSystemMessages] = useState(true);
     const [showChatMessages, setShowChatMessages] = useState(true);
+
+    // Add highlighting functionality
+    const { highlightFromActivity, isActivityHighlighted, setActivities } = useHighlighting();
+
+    // Share activities with the highlighting system
+    useEffect(() => {
+        setActivities(activities);
+    }, [activities, setActivities]);
 
     const { data: usersData } = useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY, {
         onCompleted: (data) => {
@@ -69,7 +78,11 @@ const ActivityFeed: React.FC = () => {
             const newActivity = subscriptionData?.data?.activityAdded;
             if (newActivity) {
                 console.log('New activity from subscription:', newActivity);
-                setActivities(prevActivities => [newActivity, ...prevActivities]);
+                if (newActivity.type === 'ROLL' && newActivity.roll?.canvasData) {
+                    console.log('🎲 Roll activity with canvasData:', newActivity.roll.canvasData);
+                    console.log('🎲 Dice in this roll:', newActivity.roll.canvasData.dice);
+                }
+                setActivitiesState(prevActivities => [newActivity, ...prevActivities]);
             } else {
                 console.log('Subscription data received, but no activityAdded field:', subscriptionData?.data);
             }
@@ -91,18 +104,34 @@ const ActivityFeed: React.FC = () => {
         return users.find(user => user.username === username)?.color;
     };
 
+    const handleActivityClick = (activity: Activity) => {
+        if (activity.type === 'ROLL') {
+            highlightFromActivity(activity.id, activities);
+        }
+    };
+
     const renderActivity = (activity: Activity) => {
         // Filter activities based on user preferences
         if (activity.type === 'ROLL' && !showRolls) return null;
         if (activity.type === 'SYSTEM_MESSAGE' && !showSystemMessages) return null;
         if (activity.type === 'CHAT_MESSAGE' && !showChatMessages) return null;
 
+        const isHighlighted = isActivityHighlighted(activity.id);
+
         if (activity.type === 'ROLL' && activity.roll && activity.user) {
             const roll = activity.roll;
             const userColor = getUserColor(activity.user);
 
             return (
-                <li key={activity.id} className="bg-brand-surface p-2 rounded">
+                <li
+                    key={activity.id}
+                    className={`p-2 rounded cursor-pointer transition-all duration-200 ${isHighlighted
+                        ? 'bg-yellow-200 border-2 border-yellow-400 shadow-lg'
+                        : 'bg-brand-surface hover:bg-brand-background'
+                        }`}
+                    onClick={() => handleActivityClick(activity)}
+                    title="Click to highlight dice on canvas"
+                >
                     <div className="flex justify-between items-start">
                         <div className="flex-grow">
                             <strong
