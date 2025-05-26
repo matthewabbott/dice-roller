@@ -342,14 +342,11 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
         hasVisibleOverlay
     } = useDiceResultOverlays();
 
-    // Global hotkeys for canvas controls
+    // Global hotkeys for canvas camera and view controls only
     const hotkeyActions: HotkeyActions = {
         toggleCameraLock: cameraOperations.toggleCameraLock,
-        rollAllDice: diceOperations.rollAllDice,
-        clearAllDice: diceOperations.clearAllDice,
         toggleFullScreen: cameraOperations.toggleFullScreen,
-        resetCamera: cameraOperations.resetCamera,
-        throwAllDice: diceOperations.throwAllDice
+        resetCamera: cameraOperations.resetCamera
     };
 
     const { getHotkeyHints } = useGlobalHotkeys(hotkeyActions, {
@@ -604,9 +601,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                 stats={stats}
                 isCameraLocked={cameraState.isCameraLocked}
                 diceCount={diceState.dice.length + virtualDice.length}
-                onRollAllDice={diceOperations.rollAllDice}
                 onToggleCameraLock={cameraOperations.toggleCameraLock}
-                onClearAllDice={diceOperations.clearAllDice}
                 onResetCamera={cameraOperations.resetCamera}
                 onToggleFullScreen={cameraOperations.toggleFullScreen}
             />

@@ -2,11 +2,8 @@ import { useEffect, useCallback } from 'react';
 
 export interface HotkeyActions {
     toggleCameraLock: () => void;
-    rollAllDice: () => void;
-    clearAllDice: () => void;
     toggleFullScreen: () => void;
     resetCamera: () => void;
-    throwAllDice: () => void;
 }
 
 export interface HotkeyConfig {
@@ -41,8 +38,9 @@ const isInputFocused = (): boolean => {
 };
 
 /**
- * Global hotkeys hook for canvas and dice controls
+ * Global hotkeys hook for canvas camera and view controls
  * Provides keyboard shortcuts while respecting input field focus
+ * Focused on camera/view operations only - dice operations are in local controls
  */
 export const useGlobalHotkeys = (
     actions: HotkeyActions,
@@ -58,26 +56,12 @@ export const useGlobalHotkeys = (
         // Skip if modifier keys are pressed (except for specific combinations)
         if (event.ctrlKey || event.altKey || event.metaKey) return;
 
-        // Handle hotkeys
+        // Handle hotkeys - Camera and View Controls Only
         switch (event.code) {
             case 'Space':
                 event.preventDefault();
                 actions.toggleCameraLock();
                 showHotkeyFeedback('Camera Lock Toggled', '🔒');
-                break;
-
-            case 'KeyR':
-                if (!event.shiftKey) {
-                    event.preventDefault();
-                    actions.rollAllDice();
-                    showHotkeyFeedback('Rolling All Dice', '🎲');
-                }
-                break;
-
-            case 'KeyC':
-                event.preventDefault();
-                actions.clearAllDice();
-                showHotkeyFeedback('Cleared All Dice', '🗑️');
                 break;
 
             case 'KeyF':
@@ -90,12 +74,6 @@ export const useGlobalHotkeys = (
                 event.preventDefault();
                 actions.resetCamera();
                 showHotkeyFeedback('Camera Reset', '📷');
-                break;
-
-            case 'KeyT':
-                event.preventDefault();
-                actions.throwAllDice();
-                showHotkeyFeedback('Throwing All Dice', '🚀');
                 break;
 
             case 'Escape':
@@ -146,11 +124,8 @@ export const useGlobalHotkeys = (
     const getHotkeyHints = useCallback(() => {
         return [
             { key: 'Space', action: 'Toggle Camera Lock', icon: '🔒' },
-            { key: 'R', action: 'Roll All Dice', icon: '🎲' },
-            { key: 'C', action: 'Clear All Dice', icon: '🗑️' },
             { key: 'F', action: 'Toggle Fullscreen', icon: '⛶' },
             { key: 'V', action: 'Reset Camera', icon: '📷' },
-            { key: 'T', action: 'Throw All Dice', icon: '🚀' },
             { key: 'Esc', action: 'Unfocus Input', icon: '⌨️' },
         ];
     }, []);

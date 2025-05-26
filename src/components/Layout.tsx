@@ -19,33 +19,41 @@ const Layout: React.FC = () => {
     return (
         <div className="min-h-screen bg-brand-background text-brand-text flex flex-col">
             <Header />
-            <main className="flex-grow flex flex-col">
-                {/* Canvas - Primary Focus (70% of viewport height) */}
-                <div className="flex-grow-[7] min-h-0 p-4">
-                    <div className="h-full">
-                        <DiceCanvas />
+            <main className="flex-grow flex">
+                {/* Left Sidebar - Chat & Activity (40% width) */}
+                <div className="w-2/5 min-w-0 border-r border-brand-surface">
+                    <div className="h-full flex flex-col p-4 space-y-4">
+                        {/* Activity Feed and Lobby - Takes most space */}
+                        <div className="flex-grow min-h-0">
+                            <ActivityFeed />
+                        </div>
+
+                        {/* Chat Input - Fixed at bottom */}
+                        <div className="flex-shrink-0">
+                            <ChatInput ref={chatInputRef} />
+                        </div>
                     </div>
                 </div>
 
-                {/* Bottom Panel - Chat & Controls (30% of viewport height) */}
-                <div className="flex-grow-[3] min-h-0 border-t border-brand-surface">
-                    <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
-                        {/* Left: Chat/Activity (spans 2 columns on large screens) */}
-                        <div className="lg:col-span-2 flex flex-col space-y-4 min-h-0">
-                            <div className="flex-grow min-h-0">
-                                <ActivityFeed />
-                            </div>
-                            <div className="flex-shrink-0">
-                                <ChatInput ref={chatInputRef} />
-                            </div>
+                {/* Right Side - Canvas & Controls (60% width) */}
+                <div className="w-3/5 min-w-0 flex flex-col">
+                    {/* Square Canvas - Main focus */}
+                    <div className="flex-grow flex items-center justify-center p-4">
+                        <div className="aspect-square w-full max-w-2xl">
+                            <DiceCanvas />
                         </div>
+                    </div>
 
-                        {/* Right: Controls/Users (1 column on large screens) */}
-                        <div className="flex flex-col space-y-4 min-h-0">
-                            <div className="flex-shrink-0">
+                    {/* Bottom Controls Panel */}
+                    <div className="flex-shrink-0 border-t border-brand-surface p-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            {/* User Settings */}
+                            <div>
                                 <UserList />
                             </div>
-                            <div className="flex-shrink-0">
+
+                            {/* Local Dice Controls */}
+                            <div>
                                 <DiceRoller onQuickRoll={handleQuickRoll} />
                             </div>
                         </div>

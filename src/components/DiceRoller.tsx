@@ -189,17 +189,17 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll }) => {
                 <ColorPicker currentColor={userColor} onColorChange={setUserColor} />
             </div>
 
-            {/* Local Dice Controls - Collapsible Section */}
+            {/* Quick Roll Commands - Collapsible Section */}
             <div className="border-t border-brand-surface pt-3">
                 <button
                     onClick={() => setIsLocalDiceExpanded(!isLocalDiceExpanded)}
                     className="w-full flex items-center justify-between p-2 hover:bg-brand-surface rounded transition-colors"
-                    title="Local dice controls for testing and practice"
+                    title="Quick roll commands that generate shared dice visible to all players"
                 >
                     <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-brand-text-muted">Local Dice Controls</span>
-                        <span className="text-xs bg-orange-900/30 text-orange-300 px-2 py-1 rounded border border-orange-500/30">
-                            Testing Only
+                        <span className="text-sm font-medium text-brand-text-muted">Quick Roll Commands</span>
+                        <span className="text-xs bg-blue-900/30 text-blue-300 px-2 py-1 rounded border border-blue-500/30">
+                            Shared Dice
                         </span>
                     </div>
                     <span className="text-brand-text-muted">
@@ -210,34 +210,33 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll }) => {
                 {isLocalDiceExpanded && (
                     <div className="mt-3 space-y-3">
                         {/* Professional Notice */}
-                        <div className="p-3 bg-orange-900/20 rounded border-l-4 border-orange-500">
+                        <div className="p-3 bg-blue-900/20 rounded border-l-4 border-blue-500">
                             <div className="flex items-start gap-2">
-                                <span className="text-orange-400 text-sm">ℹ️</span>
-                                <div className="text-xs text-orange-300">
-                                    <strong>Local Testing Mode:</strong> These dice are for testing and practice only.
-                                    They are not shared with other players in the session. Use the chat's <code>/roll</code>
-                                    command to roll dice that everyone can see.
+                                <span className="text-blue-400 text-sm">🎲</span>
+                                <div className="text-xs text-blue-300">
+                                    <strong>Shared Dice Commands:</strong> These buttons generate <code>/roll</code> commands
+                                    that create dice visible to all players in the session. Results appear in chat and on the canvas.
                                 </div>
                             </div>
                         </div>
 
                         {/* Quick Roll Buttons */}
                         <div>
-                            <h3 className="text-sm font-medium text-brand-text-muted mb-2">Quick Roll Dice</h3>
+                            <h3 className="text-sm font-medium text-brand-text-muted mb-2">Quick Roll Commands</h3>
                             <div className="grid grid-cols-3 gap-2">
                                 {commonDice.map((die) => (
                                     <button
                                         key={die}
-                                        className="btn-secondary px-3 py-2 text-sm"
+                                        className="btn-primary px-3 py-2 text-sm"
                                         onClick={() => handleDieButtonClick(die)}
-                                        title={`Roll 1d${die} - populates chat with /roll 1d${die}`}
+                                        title={`Roll 1d${die} - creates shared dice visible to all players`}
                                     >
                                         🎲 d{die}
                                     </button>
                                 ))}
                             </div>
                             <p className="text-xs text-brand-text-muted mt-2">
-                                💡 These buttons populate the chat input with <code>/roll</code> commands
+                                💡 These create <code>/roll</code> commands for dice shared with all players
                             </p>
                         </div>
                     </div>
