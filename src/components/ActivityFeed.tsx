@@ -151,7 +151,7 @@ const ActivityFeed: React.FC = () => {
                     <div className="flex justify-between items-start">
                         <div className="flex-grow">
                             <span className="text-brand-text-muted italic text-sm">
-                                {activity.message}
+                                {activity.user ? `${activity.user}: ` : ''}{activity.message}
                             </span>
                         </div>
                         <span className="text-xs text-brand-text-muted ml-2 flex-shrink-0">

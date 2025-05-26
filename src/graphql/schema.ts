@@ -20,7 +20,7 @@ export const typeDefs = `#graphql
   type Activity {
     id: String!
     type: String!
-    user: String!
+    user: String
     message: String
     timestamp: String!
     roll: Roll
