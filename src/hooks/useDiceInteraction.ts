@@ -1,0 +1,271 @@
+import { useState, useCallback } from 'react';
+import * as THREE from 'three';
+import * as CANNON from 'cannon-es';
+
+export interface DiceInteractionState {
+    isDragging: boolean;
+    isHovered: boolean;
+    dragStart: { x: number; y: number; time: number; worldPos: THREE.Vector3 } | null;
+    dragCurrent: { x: number; y: number } | null;
+    originalPosition: THREE.Vector3 | null;
+    targetPosition: THREE.Vector3 | null;
+    velocity: THREE.Vector3;
+    positionHistory: Array<{ pos: THREE.Vector3; time: number }>;
+}
+
+export interface DiceInteractionHandlers {
+    handlePointerDown: (event: any) => void;
+    handlePointerMove: (event: any) => void;
+    handlePointerUp: (event: any) => void;
+    handlePointerEnter: () => void;
+    handlePointerLeave: () => void;
+}
+
+export interface UseDiceInteractionProps {
+    diceBody: CANNON.Body;
+    meshRef: React.RefObject<THREE.Mesh | null>;
+    cameraRef: React.RefObject<THREE.Camera | null>;
+    canvasRef: React.RefObject<HTMLCanvasElement | null>;
+}
+
+/**
+ * Custom hook for handling dice interaction (click, drag, throw mechanics)
+ * Extracted from PhysicsDice component for better reusability and testing
+ */
+export const useDiceInteraction = ({
+    diceBody,
+    meshRef,
+    cameraRef,
+    canvasRef
+}: UseDiceInteractionProps): [DiceInteractionState, DiceInteractionHandlers] => {
+    // Interaction state
+    const [isDragging, setIsDragging] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+    const [dragStart, setDragStart] = useState<{ x: number; y: number; time: number; worldPos: THREE.Vector3 } | null>(null);
+    const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
+    const [originalPosition, setOriginalPosition] = useState<THREE.Vector3 | null>(null);
+    const [targetPosition, setTargetPosition] = useState<THREE.Vector3 | null>(null);
+    const [velocity, setVelocity] = useState<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
+    const [positionHistory, setPositionHistory] = useState<Array<{ pos: THREE.Vector3; time: number }>>([]);
+
+    const handlePointerDown = useCallback((event: any) => {
+        // Only handle dice throwing if Shift key is held down
+        if (!event.shiftKey) {
+            return; // Let camera controls handle normal clicks
+        }
+
+        event.stopPropagation();
+
+        // Store original position for physics restoration
+        const currentPos = new THREE.Vector3(
+            diceBody.position.x,
+            diceBody.position.y,
+            diceBody.position.z
+        );
+        setOriginalPosition(currentPos);
+
+        // Get world position of the dice when drag starts
+        const worldPos = new THREE.Vector3();
+        if (meshRef.current) {
+            meshRef.current.getWorldPosition(worldPos);
+        }
+
+        setIsDragging(true);
+        setDragStart({
+            x: event.clientX,
+            y: event.clientY,
+            time: Date.now(),
+            worldPos: worldPos
+        });
+        setDragCurrent({ x: event.clientX, y: event.clientY });
+        setTargetPosition(worldPos.clone());
+        setVelocity(new THREE.Vector3(0, 0, 0));
+        setPositionHistory([{ pos: worldPos.clone(), time: Date.now() }]);
+
+        // Make dice kinematic (not affected by physics) during drag
+        diceBody.type = CANNON.Body.KINEMATIC;
+        diceBody.velocity.set(0, 0, 0);
+        diceBody.angularVelocity.set(0, 0, 0);
+
+        // Capture pointer for consistent drag behavior
+        if (event.target.setPointerCapture) {
+            event.target.setPointerCapture(event.pointerId);
+        }
+    }, [diceBody, meshRef]);
+
+    const handlePointerMove = useCallback((event: any) => {
+        if (isDragging && dragStart && meshRef.current && cameraRef.current && canvasRef.current) {
+            setDragCurrent({ x: event.clientX, y: event.clientY });
+
+            // Get canvas and camera from stored refs
+            const camera = cameraRef.current;
+            const canvas = canvasRef.current;
+            const rect = canvas.getBoundingClientRect();
+
+            // Calculate mouse movement in pixels
+            const deltaX = event.clientX - dragStart.x;
+            const deltaY = event.clientY - dragStart.y;
+
+            // Convert pixel movement to normalized movement (-1 to 1 range)
+            const normalizedDeltaX = (deltaX / rect.width) * 2;
+            const normalizedDeltaY = -(deltaY / rect.height) * 2; // Negative because screen Y is inverted
+
+            // Get camera's right and up vectors (these define the camera's view plane)
+            const cameraDirection = new THREE.Vector3();
+            camera.getWorldDirection(cameraDirection);
+
+            // Calculate right vector (camera's local X axis) - FIXED: reversed for correct direction
+            const right = new THREE.Vector3();
+            right.crossVectors(cameraDirection, camera.up).normalize(); // Swapped order to fix left/right
+
+            // Calculate up vector (camera's local Y axis)
+            const up = new THREE.Vector3();
+            up.crossVectors(right, cameraDirection).normalize();
+
+            // Scale movement based on distance from camera for natural feel
+            const distanceFromCamera = camera.position.distanceTo(dragStart.worldPos);
+            const movementScale = distanceFromCamera * 0.5;
+
+            // Calculate target position in world space using camera's right and up vectors
+            const worldMovement = new THREE.Vector3();
+            worldMovement.addScaledVector(right, normalizedDeltaX * movementScale);
+            worldMovement.addScaledVector(up, normalizedDeltaY * movementScale);
+
+            // Calculate new target position
+            const newTargetPosition = dragStart.worldPos.clone();
+            newTargetPosition.add(worldMovement);
+
+            // Keep target above the table but remove restrictive bounds during dragging
+            newTargetPosition.y = Math.max(newTargetPosition.y, 0.5);
+
+            setTargetPosition(newTargetPosition);
+
+            // Update position history for velocity calculation
+            const currentTime = Date.now();
+            setPositionHistory(prev => {
+                const newHistory = [...prev, { pos: newTargetPosition.clone(), time: currentTime }];
+                // Keep only last 10 positions (for velocity calculation)
+                return newHistory.slice(-10);
+            });
+        }
+    }, [isDragging, dragStart, meshRef, cameraRef, canvasRef]);
+
+    const handlePointerUp = useCallback((event: any) => {
+        if (isDragging && dragStart && dragCurrent) {
+            // Restore physics body to dynamic
+            diceBody.type = CANNON.Body.DYNAMIC;
+
+            // Calculate throwing velocity based on recent movement history
+            let throwVelocity = new THREE.Vector3(0, 0, 0);
+
+            if (positionHistory.length >= 2) {
+                // Use position history to calculate average velocity over last few frames
+                const recentHistory = positionHistory.slice(-5); // Last 5 positions
+                const timeSpan = recentHistory[recentHistory.length - 1].time - recentHistory[0].time;
+
+                if (timeSpan > 0) {
+                    const positionDelta = new THREE.Vector3();
+                    positionDelta.subVectors(
+                        recentHistory[recentHistory.length - 1].pos,
+                        recentHistory[0].pos
+                    );
+
+                    // Convert to velocity (units per second)
+                    throwVelocity = positionDelta.multiplyScalar(1000 / timeSpan);
+
+                    // Reduce throwing force for more controlled behavior
+                    const throwMultiplier = 1.0;
+                    throwVelocity.multiplyScalar(throwMultiplier);
+
+                    // Add much less upward force to reduce the "jink" effect
+                    const horizontalSpeed = Math.sqrt(throwVelocity.x * throwVelocity.x + throwVelocity.z * throwVelocity.z);
+                    if (horizontalSpeed > 2) { // Only add upward force for faster horizontal movement
+                        throwVelocity.y += Math.min(horizontalSpeed * 0.15, 4); // Reduced from 0.3 and capped at 4
+                    }
+                }
+            }
+
+            // If no significant movement, just let it drop gently
+            if (throwVelocity.length() < 0.5) {
+                throwVelocity.set(0, -1, 0); // Gentler downward velocity
+            }
+
+            // Cap maximum throwing velocity to prevent dice from flying too far
+            const maxThrowSpeed = 12; // Reasonable maximum
+            if (throwVelocity.length() > maxThrowSpeed) {
+                throwVelocity.normalize().multiplyScalar(maxThrowSpeed);
+            }
+
+            // Apply the calculated velocity
+            diceBody.velocity.set(throwVelocity.x, throwVelocity.y, throwVelocity.z);
+
+            // Add rotational velocity based on throw direction and speed (reduced intensity)
+            const throwSpeed = throwVelocity.length();
+            const rotationIntensity = Math.min(throwSpeed * 0.3, 10); // Reduced from 0.5 and capped at 10
+
+            diceBody.angularVelocity.set(
+                (Math.random() - 0.5) * rotationIntensity + throwVelocity.z * 0.05, // Reduced influence
+                (Math.random() - 0.5) * rotationIntensity,
+                (Math.random() - 0.5) * rotationIntensity - throwVelocity.x * 0.05  // Reduced influence
+            );
+
+            diceBody.wakeUp();
+
+            console.log('🎲 Dice thrown with controlled physics:', {
+                throwVelocity: throwVelocity.toArray(),
+                throwSpeed: throwSpeed,
+                rotationIntensity: rotationIntensity
+            });
+        }
+
+        setIsDragging(false);
+        setDragStart(null);
+        setDragCurrent(null);
+        setOriginalPosition(null);
+        setTargetPosition(null);
+        setVelocity(new THREE.Vector3(0, 0, 0));
+        setPositionHistory([]);
+
+        // Release pointer capture
+        if (event.target.releasePointerCapture) {
+            event.target.releasePointerCapture(event.pointerId);
+        }
+    }, [isDragging, dragStart, dragCurrent, diceBody, positionHistory]);
+
+    const handlePointerEnter = useCallback(() => {
+        setIsHovered(true);
+    }, []);
+
+    const handlePointerLeave = useCallback(() => {
+        setIsHovered(false);
+        // If dragging is interrupted by leaving the mesh, clean up
+        if (isDragging) {
+            diceBody.type = CANNON.Body.DYNAMIC;
+            setIsDragging(false);
+            setDragStart(null);
+            setDragCurrent(null);
+            setOriginalPosition(null);
+        }
+    }, [isDragging, diceBody]);
+
+    const state: DiceInteractionState = {
+        isDragging,
+        isHovered,
+        dragStart,
+        dragCurrent,
+        originalPosition,
+        targetPosition,
+        velocity,
+        positionHistory
+    };
+
+    const handlers: DiceInteractionHandlers = {
+        handlePointerDown,
+        handlePointerMove,
+        handlePointerUp,
+        handlePointerEnter,
+        handlePointerLeave
+    };
+
+    return [state, handlers];
+}; 

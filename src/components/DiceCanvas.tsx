@@ -9,6 +9,8 @@ import { useCanvasSync, type CanvasSyncCallbacks, type RemoteDiceData } from '..
 // import { VirtualDice, VirtualDiceSummary } from './VirtualDice'; // Unused for now
 // import type { DiceRoll } from '../types/canvas'; // Unused for now
 import { DICE_GEOMETRIES } from './dice';
+import { PhysicsWorld, PhysicsGround } from './physics';
+import { useDiceInteraction, usePhysicsSync } from '../hooks';
 
 // Extend R3F with the geometry we need
 extend({ EdgesGeometry: THREE.EdgesGeometry });
@@ -85,276 +87,33 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
     const cameraRef = useRef<THREE.Camera | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-    // Update mesh position/rotation from physics body every frame
+    // Store camera and canvas references for use in event handlers
     useFrame((state) => {
-        // Store camera and canvas references for use in event handlers
         cameraRef.current = state.camera;
         canvasRef.current = state.gl.domElement;
-
-        if (meshRef.current && dice) {
-            // Sync with physics body
-            dice.updateMesh();
-
-            // Copy from the dice's internal Three.js object
-            meshRef.current.position.copy(dice.object.position);
-            meshRef.current.quaternion.copy(dice.object.quaternion);
-        }
     });
 
-    // Click and drag throwing system with mouse following
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragStart, setDragStart] = useState<{ x: number; y: number; time: number; worldPos: THREE.Vector3 } | null>(null);
-    const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(null);
-    const [isHovered, setIsHovered] = useState(false);
-    const [originalPosition, setOriginalPosition] = useState<THREE.Vector3 | null>(null);
-    const [targetPosition, setTargetPosition] = useState<THREE.Vector3 | null>(null);
-    const [velocity, setVelocity] = useState<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
-    const [positionHistory, setPositionHistory] = useState<Array<{ pos: THREE.Vector3; time: number }>>([]);
-
-    const handlePointerDown = useCallback((event: any) => {
-        // Only handle dice throwing if Shift key is held down
-        if (!event.shiftKey) {
-            return; // Let camera controls handle normal clicks
-        }
-
-        event.stopPropagation();
-
-        // Store original position for physics restoration
-        const currentPos = new THREE.Vector3(
-            dice.body.position.x,
-            dice.body.position.y,
-            dice.body.position.z
-        );
-        setOriginalPosition(currentPos);
-
-        // Get world position of the dice when drag starts
-        const worldPos = new THREE.Vector3();
-        if (meshRef.current) {
-            meshRef.current.getWorldPosition(worldPos);
-        }
-
-        setIsDragging(true);
-        setDragStart({
-            x: event.clientX,
-            y: event.clientY,
-            time: Date.now(),
-            worldPos: worldPos
-        });
-        setDragCurrent({ x: event.clientX, y: event.clientY });
-        setTargetPosition(worldPos.clone());
-        setVelocity(new THREE.Vector3(0, 0, 0));
-        setPositionHistory([{ pos: worldPos.clone(), time: Date.now() }]);
-
-        // Make dice kinematic (not affected by physics) during drag
-        dice.body.type = CANNON.Body.KINEMATIC;
-        dice.body.velocity.set(0, 0, 0);
-        dice.body.angularVelocity.set(0, 0, 0);
-
-        // Capture pointer for consistent drag behavior
-        if (event.target.setPointerCapture) {
-            event.target.setPointerCapture(event.pointerId);
-        }
-    }, [dice]);
-
-    const handlePointerMove = useCallback((event: any) => {
-        if (isDragging && dragStart && meshRef.current && cameraRef.current && canvasRef.current) {
-            setDragCurrent({ x: event.clientX, y: event.clientY });
-
-            // Get canvas and camera from stored refs
-            const camera = cameraRef.current;
-            const canvas = canvasRef.current;
-            const rect = canvas.getBoundingClientRect();
-
-            // Calculate mouse movement in pixels
-            const deltaX = event.clientX - dragStart.x;
-            const deltaY = event.clientY - dragStart.y;
-
-            // Convert pixel movement to normalized movement (-1 to 1 range)
-            const normalizedDeltaX = (deltaX / rect.width) * 2;
-            const normalizedDeltaY = -(deltaY / rect.height) * 2; // Negative because screen Y is inverted
-
-            // Get camera's right and up vectors (these define the camera's view plane)
-            const cameraDirection = new THREE.Vector3();
-            camera.getWorldDirection(cameraDirection);
-
-            // Calculate right vector (camera's local X axis) - FIXED: reversed for correct direction
-            const right = new THREE.Vector3();
-            right.crossVectors(cameraDirection, camera.up).normalize(); // Swapped order to fix left/right
-
-            // Calculate up vector (camera's local Y axis)
-            const up = new THREE.Vector3();
-            up.crossVectors(right, cameraDirection).normalize();
-
-            // Scale movement based on distance from camera for natural feel
-            const distanceFromCamera = camera.position.distanceTo(dragStart.worldPos);
-            const movementScale = distanceFromCamera * 0.5;
-
-            // Calculate target position in world space using camera's right and up vectors
-            const worldMovement = new THREE.Vector3();
-            worldMovement.addScaledVector(right, normalizedDeltaX * movementScale);
-            worldMovement.addScaledVector(up, normalizedDeltaY * movementScale);
-
-            // Calculate new target position
-            const newTargetPosition = dragStart.worldPos.clone();
-            newTargetPosition.add(worldMovement);
-
-            // Keep target above the table but remove restrictive bounds during dragging
-            newTargetPosition.y = Math.max(newTargetPosition.y, 0.5);
-            // Remove the X and Z constraints to allow free dragging
-
-            setTargetPosition(newTargetPosition);
-
-            // Update position history for velocity calculation
-            const currentTime = Date.now();
-            setPositionHistory(prev => {
-                const newHistory = [...prev, { pos: newTargetPosition.clone(), time: currentTime }];
-                // Keep only last 10 positions (for velocity calculation)
-                return newHistory.slice(-10);
-            });
-        }
-    }, [isDragging, dragStart, dice]);
-
-    // Update dice position with lag/momentum during drag
-    useFrame(() => {
-        if (isDragging && targetPosition && dice.body) {
-            const currentPos = new THREE.Vector3(
-                dice.body.position.x,
-                dice.body.position.y,
-                dice.body.position.z
-            );
-
-            // Calculate lag - dice follows target with some delay (like a heavy object)
-            const lagFactor = 0.15; // Lower = more lag, higher = more responsive
-            const newPos = currentPos.clone();
-            newPos.lerp(targetPosition, lagFactor);
-
-            // Calculate velocity for momentum
-            const newVelocity = new THREE.Vector3();
-            newVelocity.subVectors(newPos, currentPos);
-            newVelocity.multiplyScalar(60); // Convert to per-second velocity
-            setVelocity(newVelocity);
-
-            // Update physics body position
-            dice.body.position.set(newPos.x, newPos.y, newPos.z);
-
-            // Add rotation based on movement velocity for realistic feel
-            const movementSpeed = newVelocity.length();
-            if (movementSpeed > 0.1) {
-                const rotationAxis = new CANNON.Vec3(
-                    newVelocity.z,   // Z velocity affects X rotation
-                    0,               // No Y rotation during drag
-                    -newVelocity.x   // X velocity affects Z rotation
-                ).unit();
-                const rotationSpeed = movementSpeed * 0.02;
-                dice.body.quaternion.setFromAxisAngle(rotationAxis, rotationSpeed);
-            }
-        }
-
-        // Normal physics sync when not dragging
-        if (!isDragging && meshRef.current && dice) {
-            dice.updateMesh();
-            meshRef.current.position.copy(dice.object.position);
-            meshRef.current.quaternion.copy(dice.object.quaternion);
-        }
+    // Use the new dice interaction hook
+    const [interactionState, interactionHandlers] = useDiceInteraction({
+        diceBody: dice.body,
+        meshRef,
+        cameraRef,
+        canvasRef
     });
 
-    const handlePointerUp = useCallback((event: any) => {
-        if (isDragging && dragStart && dragCurrent && dice.body) {
-            // Restore physics body to dynamic
-            dice.body.type = CANNON.Body.DYNAMIC;
+    // Use the new physics sync hook
+    usePhysicsSync({
+        diceBody: dice.body,
+        meshRef,
+        targetPosition: interactionState.targetPosition,
+        isDragging: interactionState.isDragging
+    });
 
-            // Calculate throwing velocity based on recent movement history
-            let throwVelocity = new THREE.Vector3(0, 0, 0);
 
-            if (positionHistory.length >= 2) {
-                // Use position history to calculate average velocity over last few frames
-                const recentHistory = positionHistory.slice(-5); // Last 5 positions
-                const timeSpan = recentHistory[recentHistory.length - 1].time - recentHistory[0].time;
 
-                if (timeSpan > 0) {
-                    const positionDelta = new THREE.Vector3();
-                    positionDelta.subVectors(
-                        recentHistory[recentHistory.length - 1].pos,
-                        recentHistory[0].pos
-                    );
 
-                    // Convert to velocity (units per second)
-                    throwVelocity = positionDelta.multiplyScalar(1000 / timeSpan);
 
-                    // Reduce throwing force for more controlled behavior
-                    const throwMultiplier = 1.0; // Reduced from 2.0
-                    throwVelocity.multiplyScalar(throwMultiplier);
 
-                    // Add much less upward force to reduce the "jink" effect
-                    const horizontalSpeed = Math.sqrt(throwVelocity.x * throwVelocity.x + throwVelocity.z * throwVelocity.z);
-                    if (horizontalSpeed > 2) { // Only add upward force for faster horizontal movement
-                        throwVelocity.y += Math.min(horizontalSpeed * 0.15, 4); // Reduced from 0.3 and capped at 4
-                    }
-                }
-            }
-
-            // If no significant movement, just let it drop gently
-            if (throwVelocity.length() < 0.5) {
-                throwVelocity.set(0, -1, 0); // Gentler downward velocity
-            }
-
-            // Cap maximum throwing velocity to prevent dice from flying too far
-            const maxThrowSpeed = 12; // Reasonable maximum
-            if (throwVelocity.length() > maxThrowSpeed) {
-                throwVelocity.normalize().multiplyScalar(maxThrowSpeed);
-            }
-
-            // Apply the calculated velocity
-            dice.body.velocity.set(throwVelocity.x, throwVelocity.y, throwVelocity.z);
-
-            // Add rotational velocity based on throw direction and speed (reduced intensity)
-            const throwSpeed = throwVelocity.length();
-            const rotationIntensity = Math.min(throwSpeed * 0.3, 10); // Reduced from 0.5 and capped at 10
-
-            dice.body.angularVelocity.set(
-                (Math.random() - 0.5) * rotationIntensity + throwVelocity.z * 0.05, // Reduced influence
-                (Math.random() - 0.5) * rotationIntensity,
-                (Math.random() - 0.5) * rotationIntensity - throwVelocity.x * 0.05  // Reduced influence
-            );
-
-            dice.body.wakeUp();
-
-            console.log('🎲 Dice thrown with controlled physics:', {
-                throwVelocity: throwVelocity.toArray(),
-                throwSpeed: throwSpeed,
-                rotationIntensity: rotationIntensity
-            });
-        }
-
-        setIsDragging(false);
-        setDragStart(null);
-        setDragCurrent(null);
-        setOriginalPosition(null);
-        setTargetPosition(null);
-        setVelocity(new THREE.Vector3(0, 0, 0));
-        setPositionHistory([]);
-
-        // Release pointer capture
-        if (event.target.releasePointerCapture) {
-            event.target.releasePointerCapture(event.pointerId);
-        }
-    }, [isDragging, dragStart, dragCurrent, dice, positionHistory]);
-
-    const handlePointerEnter = useCallback(() => {
-        setIsHovered(true);
-    }, []);
-
-    const handlePointerLeave = useCallback(() => {
-        setIsHovered(false);
-        // If dragging is interrupted by leaving the mesh, clean up
-        if (isDragging && dice.body) {
-            dice.body.type = CANNON.Body.DYNAMIC;
-            setIsDragging(false);
-            setDragStart(null);
-            setDragCurrent(null);
-            setOriginalPosition(null);
-        }
-    }, [isDragging, dice]);
 
     // Get dice configuration for colors and geometry
     const diceConfig = DICE_CONFIG[dice.diceType as DiceType];
@@ -367,12 +126,12 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 key={`dice-${dice.diceType}`}
                 size={dice.options.size}
                 color={diceConfig.color}
-                isHovered={isHovered}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerEnter={handlePointerEnter}
-                onPointerLeave={handlePointerLeave}
+                isHovered={interactionState.isHovered}
+                onPointerDown={interactionHandlers.handlePointerDown}
+                onPointerMove={interactionHandlers.handlePointerMove}
+                onPointerUp={interactionHandlers.handlePointerUp}
+                onPointerEnter={interactionHandlers.handlePointerEnter}
+                onPointerLeave={interactionHandlers.handlePointerLeave}
                 meshRef={meshRef as React.RefObject<THREE.Mesh>}
             />
         );
@@ -384,27 +143,28 @@ const PhysicsDice: React.FC<{ dice: DiceInstance }> = ({ dice }) => {
                 ref={meshRef}
                 castShadow
                 receiveShadow
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerEnter={handlePointerEnter}
-                onPointerLeave={handlePointerLeave}
+                onPointerDown={interactionHandlers.handlePointerDown}
+                onPointerMove={interactionHandlers.handlePointerMove}
+                onPointerUp={interactionHandlers.handlePointerUp}
+                onPointerEnter={interactionHandlers.handlePointerEnter}
+                onPointerLeave={interactionHandlers.handlePointerLeave}
             >
                 <boxGeometry args={[1, 1, 1]} />
                 <meshStandardMaterial
                     color="#888888"
-                    roughness={isHovered ? 0.1 : 0.3}
-                    metalness={isHovered ? 0.3 : 0.1}
-                    emissive={isHovered ? '#888888' : '#000000'}
-                    emissiveIntensity={isHovered ? 0.1 : 0}
+                    roughness={interactionState.isHovered ? 0.1 : 0.3}
+                    metalness={interactionState.isHovered ? 0.3 : 0.1}
+                    emissive={interactionState.isHovered ? '#888888' : '#000000'}
+                    emissiveIntensity={interactionState.isHovered ? 0.1 : 0}
                 />
             </mesh>
         );
     }
 };
 
-// Ground plane component with physics
-const PhysicsGround: React.FC = () => {
+// Ground plane component with physics (Legacy - replaced by physics/PhysicsGround)
+// @ts-ignore - Keeping for reference but not used
+const LegacyPhysicsGround: React.FC = () => {
     useEffect(() => {
         // Create physics ground plane
         const groundShape = PhysicsUtils.createPlaneShape();
@@ -605,7 +365,8 @@ const PhysicsGround: React.FC = () => {
     );
 };
 
-// Physics simulation component
+// Physics simulation component (Legacy - replaced by PhysicsWorld)
+// @ts-ignore - Keeping for reference but not used
 const PhysicsSimulation: React.FC<{ dice: DiceInstance | null }> = ({ dice: _dice }) => {
     useFrame((_state, delta) => {
         // Step the physics simulation
@@ -838,48 +599,21 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
         }
     }, [isConnected, error]);
 
-    // Initialize physics world
+    // Physics initialization is now handled by PhysicsWorld component
+    const handlePhysicsInitialized = useCallback((initialized: boolean) => {
+        setIsInitialized(initialized);
+    }, []);
+
+    // Cleanup when component unmounts
     useEffect(() => {
-        const initPhysics = async () => {
-            try {
-                if (!DiceManager.isInitialized()) {
-                    DiceManager.setWorld();
-
-                    // Add air resistance/dampening to make dice behavior more controlled
-                    const world = DiceManager.getWorld();
-                    if (world) {
-                        // Set global dampening to simulate air resistance
-                        world.defaultContactMaterial.friction = 0.4; // Increase friction
-                        world.defaultContactMaterial.restitution = 0.3; // Reduce bounciness
-
-                        // Add linear and angular dampening to all bodies
-                        world.addEventListener('addBody', (event: any) => {
-                            const body = event.body;
-                            if (body) {
-                                body.linearDamping = 0.1;  // Air resistance for movement
-                                body.angularDamping = 0.1; // Air resistance for rotation
-                            }
-                        });
-                    }
-                }
-                setIsInitialized(true);
-                console.log('🎲 Physics world initialized with dampening');
-            } catch (error) {
-                console.error('❌ Failed to initialize physics:', error);
-            }
-        };
-
-        initPhysics();
-
         return () => {
-            // Cleanup when component unmounts
             dice.forEach(die => {
                 if (die.body) {
                     DiceManager.removeBody(die.body);
                 }
             });
         };
-    }, []);
+    }, [dice]);
 
     // Update OrbitControls when camera lock state changes
     useEffect(() => {
@@ -1093,21 +827,21 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                 <directionalLight position={[-5, 5, -5]} intensity={0.3} />
                 <pointLight position={[0, 5, 0]} intensity={0.5} />
 
-                {/* Physics Ground */}
-                <PhysicsGround />
+                {/* Physics World with Ground and Simulation */}
+                <PhysicsWorld onInitialized={handlePhysicsInitialized}>
+                    {/* Physics Ground */}
+                    <PhysicsGround />
 
-                {/* Physics Dice */}
-                {dice.map((die, index) => (
-                    <PhysicsDice key={`dice-${index}`} dice={die} />
-                ))}
+                    {/* Physics Dice */}
+                    {dice.map((die, index) => (
+                        <PhysicsDice key={`dice-${index}`} dice={die} />
+                    ))}
 
-                {/* Remote Dice */}
-                {Array.from(remoteDice.entries()).map(([diceId, die]) => (
-                    <PhysicsDice key={`remote-${diceId}`} dice={die} />
-                ))}
-
-                {/* Physics Simulation */}
-                <PhysicsSimulation dice={dice.length > 0 ? dice[0] : null} />
+                    {/* Remote Dice */}
+                    {Array.from(remoteDice.entries()).map(([diceId, die]) => (
+                        <PhysicsDice key={`remote-${diceId}`} dice={die} />
+                    ))}
+                </PhysicsWorld>
             </Canvas>
 
             {/* Canvas Controls */}
