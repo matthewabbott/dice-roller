@@ -198,6 +198,13 @@ export const useHighlighting = () => {
         return globalHighlightState.highlightedDiceIds.has(diceId);
     }, []);
 
+    /**
+     * Get the current activities
+     */
+    const getActivities = useCallback(() => {
+        return globalActivities;
+    }, []);
+
     return {
         highlightState,
         setActivities,
@@ -207,6 +214,7 @@ export const useHighlighting = () => {
         highlightFromDice,
         clearHighlight,
         isActivityHighlighted,
-        isDiceHighlighted
+        isDiceHighlighted,
+        getActivities
     };
 }; 

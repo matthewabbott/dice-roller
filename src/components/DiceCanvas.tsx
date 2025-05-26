@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Canvas, extend, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
+import { Html } from '@react-three/drei';
 
 import { DiceManager, DiceD6, DiceD4, DiceD8, DiceD10, DiceD12, DiceD20 } from '../physics';
 
@@ -191,6 +192,106 @@ const PhysicsDice: React.FC<{ dice: DiceInstance; canvasId?: string }> = ({ dice
     }
 };
 
+// Virtual Dice Renderer Component
+interface VirtualDiceData {
+    canvasId: string;
+    diceType: string;
+    position?: { x: number; y: number; z: number };
+    isVirtual: boolean;
+    virtualRolls?: number[];
+    result?: number;
+}
+
+interface VirtualDiceRendererProps {
+    virtualDice: VirtualDiceData[];
+    onVirtualDiceClick?: (diceId: string) => void;
+}
+
+const VirtualDiceRenderer: React.FC<VirtualDiceRendererProps> = ({
+    virtualDice,
+    onVirtualDiceClick
+}) => {
+    const { isHighlighted } = useHighlighting();
+
+    return (
+        <>
+            {virtualDice.map((dice) => {
+                const isHighlightedDice = isHighlighted(dice.canvasId);
+                const position = dice.position || { x: 0, y: 2, z: 0 };
+
+                return (
+                    <group key={dice.canvasId}>
+                        {/* Virtual Dice Placeholder */}
+                        <mesh
+                            position={[position.x, position.y, position.z]}
+                            onClick={() => onVirtualDiceClick?.(dice.canvasId)}
+                        >
+                            <boxGeometry args={[1, 1, 1]} />
+                            <meshStandardMaterial
+                                color={isHighlightedDice ? "#9333ea" : "#7c3aed"}
+                                roughness={0.2}
+                                metalness={0.1}
+                                emissive={isHighlightedDice ? "#7c3aed" : "#000000"}
+                                emissiveIntensity={isHighlightedDice ? 0.3 : 0}
+                                transparent
+                                opacity={0.8}
+                            />
+                        </mesh>
+
+                        {/* Virtual Dice Popup */}
+                        {isHighlightedDice && (
+                            <Html
+                                position={[position.x, position.y + 2, position.z]}
+                                center
+                                distanceFactor={10}
+                            >
+                                <div className="bg-purple-900 text-white rounded-lg p-3 shadow-xl border border-purple-400 min-w-48">
+                                    {/* Header */}
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-bold bg-purple-400 px-2 py-1 rounded">
+                                            VIRTUAL
+                                        </span>
+                                        <span className="text-sm font-semibold">
+                                            {dice.virtualRolls?.length || 0}×{dice.diceType}
+                                        </span>
+                                    </div>
+
+                                    {/* Main Result */}
+                                    <div className="text-center mb-2">
+                                        <div className="text-2xl font-bold text-purple-200">
+                                            {dice.result || 0}
+                                        </div>
+                                        <div className="text-xs text-purple-300">Total</div>
+                                    </div>
+
+                                    {/* Individual Rolls Preview */}
+                                    {dice.virtualRolls && dice.virtualRolls.length > 0 && (
+                                        <div className="text-xs">
+                                            <div className="text-purple-300 mb-1">Individual rolls:</div>
+                                            <div className="grid grid-cols-6 gap-1 max-h-16 overflow-y-auto">
+                                                {dice.virtualRolls.slice(0, 12).map((roll, i) => (
+                                                    <div key={i} className="bg-purple-700 text-center py-1 rounded">
+                                                        {roll}
+                                                    </div>
+                                                ))}
+                                                {dice.virtualRolls.length > 12 && (
+                                                    <div className="bg-purple-600 text-center py-1 rounded text-xs">
+                                                        +{dice.virtualRolls.length - 12}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </Html>
+                        )}
+                    </group>
+                );
+            })}
+        </>
+    );
+};
+
 const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const [isInitialized, setIsInitialized] = useState(false);
 
@@ -202,7 +303,31 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const { remoteDice, syncStatus, stats } = useCanvasSync({ isInitialized });
 
     // Setup highlighting with camera jump functionality
-    const { setCameraJumpCallback, setGetDicePositionCallback } = useHighlighting();
+    const { setCameraJumpCallback, setGetDicePositionCallback, getActivities } = useHighlighting();
+
+    // Extract virtual dice from activities
+    const virtualDice: VirtualDiceData[] = React.useMemo(() => {
+        const allVirtualDice: VirtualDiceData[] = [];
+        const activities = getActivities();
+
+        activities.forEach(activity => {
+            if (activity.roll?.canvasData?.dice) {
+                activity.roll.canvasData.dice.forEach(dice => {
+                    if (dice.isVirtual) {
+                        allVirtualDice.push(dice);
+                    }
+                });
+            }
+        });
+
+        return allVirtualDice;
+    }, [getActivities]);
+
+    // Handle virtual dice click
+    const handleVirtualDiceClick = useCallback((diceId: string) => {
+        console.log(`🎲 Virtual dice clicked: ${diceId}`);
+        // This will be handled by the highlighting system
+    }, []);
 
     // Setup camera jump callback
     useEffect(() => {
@@ -234,11 +359,17 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                 };
             }
 
+            // Finally check virtual dice
+            const virtualDie = virtualDice.find(die => die.canvasId === diceId);
+            if (virtualDie && virtualDie.position) {
+                return virtualDie.position;
+            }
+
             return null;
         };
 
         setGetDicePositionCallback(getDicePosition);
-    }, [setGetDicePositionCallback, diceState.dice, remoteDice]);
+    }, [setGetDicePositionCallback, diceState.dice, remoteDice, virtualDice]);
 
     // Physics initialization is now handled by PhysicsWorld component
     const handlePhysicsInitialized = useCallback((initialized: boolean) => {
@@ -288,7 +419,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                     {/* Physics Ground */}
                     <PhysicsGround />
 
-                    {/* Physics Dice */}
+                    {/* Physical Dice */}
                     {diceState.dice.map((die, index) => (
                         <PhysicsDice
                             key={`dice-${index}`}
@@ -302,6 +433,12 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                         remoteDice={remoteDice}
                         PhysicsDiceComponent={PhysicsDice}
                     />
+
+                    {/* Virtual Dice */}
+                    <VirtualDiceRenderer
+                        virtualDice={virtualDice}
+                        onVirtualDiceClick={handleVirtualDiceClick}
+                    />
                 </PhysicsWorld>
             </Canvas>
 
@@ -313,7 +450,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                 syncStatus={syncStatus.status}
                 stats={stats}
                 isCameraLocked={cameraState.isCameraLocked}
-                diceCount={diceState.dice.length}
+                diceCount={diceState.dice.length + virtualDice.length}
                 onRollAllDice={diceOperations.rollAllDice}
                 onToggleCameraLock={cameraOperations.toggleCameraLock}
                 onClearAllDice={diceOperations.clearAllDice}
@@ -323,7 +460,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
 
             {/* Instructions Panel */}
             <InstructionsPanel
-                diceCount={diceState.dice.length}
+                diceCount={diceState.dice.length + virtualDice.length}
                 isFullScreen={cameraState.isFullScreen}
             />
         </>
