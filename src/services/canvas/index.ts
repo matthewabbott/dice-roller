@@ -10,5 +10,6 @@ export type {
 } from './CanvasEventService';
 export type {
     RemoteDice,
-    RemotePlayer
+    RemotePlayer,
+    RemoteDiceOperations
 } from './RemoteDiceService'; 

@@ -3,9 +3,12 @@ export { useSyncStatus } from './useSyncStatus';
 export { useCanvasSync } from './useCanvasSync';
 
 export type {
-    UseRemoteDiceProps,
-    RemoteDiceOperations
+    UseRemoteDiceProps
 } from './useRemoteDice';
+
+export type {
+    RemoteDiceOperations
+} from '../../services/canvas/RemoteDiceService';
 
 export type {
     SyncStatus,
