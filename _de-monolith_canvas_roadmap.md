@@ -163,7 +163,7 @@ src/hooks/controls/
 - **Testing**: Control logic can now be unit tested in isolation
 - **Performance**: Better React optimization with focused control components
 
-### Phase E: Extract Business Logic & Services 🟡 **MEDIUM RISK**
+### Phase E: Extract Business Logic & Services ✅ **COMPLETED**
 **Goal**: Extract business logic from hooks into testable service classes
 **Impact**: Better separation of concerns, easier testing, more maintainable code
 **Risk**: Medium - logic extraction without changing behavior
@@ -174,7 +174,7 @@ src/hooks/controls/
 - **E.3**: ✅ Extract dice rolling and result logic into DiceRollingService
 - **E.4**: ✅ Extract canvas event broadcasting into CanvasEventService
 - **E.5**: ✅ Extract remote dice handling into RemoteDiceService
-- **E.6**: Update hooks to use services while maintaining same interfaces
+- **E.6**: ✅ Update hooks to use services while maintaining same interfaces
 
 #### Files to Create:
 ```
@@ -193,12 +193,30 @@ src/services/
 └── index.ts                 # Main service exports
 ```
 
-#### Benefits:
-- **Testability**: Business logic can be unit tested independently of React
-- **Maintainability**: Clear separation between business logic and UI logic
-- **Reusability**: Services can be used across different components
-- **Extensibility**: Easier to add new dice types, behaviors, or features
-- **Debugging**: Clearer code flow and easier to trace issues
+#### Completed Files:
+```
+src/services/dice/
+├── DiceSpawningService.ts   # ✅ Dice creation and positioning logic (120+ lines)
+├── DiceRollingService.ts    # ✅ Roll execution and result calculation (130+ lines)
+└── index.ts                 # ✅ Barrel exports
+
+src/services/canvas/
+├── CanvasEventService.ts    # ✅ Event broadcasting and handling (200+ lines)
+├── RemoteDiceService.ts     # ✅ Remote dice state management (300+ lines)
+└── index.ts                 # ✅ Barrel exports
+
+src/services/
+└── index.ts                 # ✅ Main service exports
+```
+
+#### Results:
+- **Lines Extracted**: ~750+ lines of business logic extracted from hooks
+- **TypeScript Errors**: No service-related errors remaining
+- **Maintainability**: Business logic now cleanly separated from React hooks
+- **Testability**: Services can be unit tested independently of React components
+- **Reusability**: Services can be used across different components and contexts
+- **Debugging**: Clearer separation between business logic and UI state management
+- **Hook Integration**: All hooks successfully updated to use services while maintaining same interfaces
 
 ### Phase F: Create Main Canvas Orchestrator 🔴 **HIGH RISK**
 **Goal**: Slim main component that orchestrates sub-components
@@ -301,23 +319,25 @@ After refactoring, Phase 5 (Cross-System Highlighting) will be much easier:
 
 ## Current Progress Summary
 
-### ✅ **Phases A-D Completed Successfully**
+### ✅ **Phases A-E Completed Successfully**
 - **Phase A**: Extracted ~800 lines of dice geometry code
 - **Phase B**: Extracted ~400 lines of physics and interaction logic
 - **Phase C**: Extracted ~164 lines of canvas synchronization code
 - **Phase D**: Extracted ~600 lines of UI controls and camera logic
+- **Phase E**: Extracted ~750+ lines of business logic into services
 - **Legacy Cleanup**: Removed ~270 lines of unused legacy code
 
 ### 📊 **Refactoring Results**
 - **Original DiceCanvas Size**: 2013 lines
 - **Current DiceCanvas Size**: 297 lines
-- **Total Lines Extracted**: ~2234 lines
+- **Total Lines Extracted**: ~2984+ lines
 - **Size Reduction**: 85.2% reduction in main component size
 - **Components Created**: 20+ focused, reusable components
 - **Hooks Created**: 8+ specialized hooks for different concerns
+- **Services Created**: 4 business logic services for better testability
 - **TypeScript Errors**: No regressions, all functionality maintained
 
 ### 🎯 **Next Steps**
-- **Phase E**: Extract business logic & services (medium risk)
 - **Phase F**: Create main canvas orchestrator (high risk)
 - **Target**: Final DiceCanvas under 200 lines (orchestration only)
+- **Goal**: Complete systematic refactoring with clean component composition

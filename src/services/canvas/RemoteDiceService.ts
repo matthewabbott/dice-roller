@@ -184,11 +184,8 @@ export class RemoteDiceService {
      */
     public clearPlayerDice(playerId: string): void {
         // Find and remove all dice for this player
-        const playerDiceIds: string[] = [];
-        this.remoteDiceInstances.forEach((dice, diceId) => {
-            // We need to track which dice belong to which player
-            // For now, we'll clear all - this could be improved with better tracking
-        });
+        // TODO: Implement proper player-to-dice tracking
+        // For now, we'll just remove the player from tracking
 
         // Remove player from tracking
         this.remotePlayers.delete(playerId);

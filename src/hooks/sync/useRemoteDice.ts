@@ -1,10 +1,7 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { DiceManager, DiceD4, DiceD6, DiceD8, DiceD10, DiceD12, DiceD20 } from '../../physics';
-import type { RemoteDiceData } from '../../services/CanvasSyncManager';
+import { useState, useRef, useEffect } from 'react';
+import { DiceD4, DiceD6, DiceD8, DiceD10, DiceD12, DiceD20 } from '../../physics';
 import { RemoteDiceService, type RemoteDiceOperations } from '../../services/canvas/RemoteDiceService';
 
-// Define available dice types
-type DiceType = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20';
 type DiceInstance = DiceD4 | DiceD6 | DiceD8 | DiceD10 | DiceD12 | DiceD20;
 
 export interface UseRemoteDiceProps {
