@@ -15,11 +15,14 @@ TODOs:
     - same code should also handle rolling too many dice (which will roll as a single die that produces a big result)
 
 
-- remove speed limit for dice rolling
+- remove speed limit for dice rolling (just mediate with modest air drag)
 - fix seams in the d10 faces
 - have color change system message show TO and FROM colors
 - fix anonymous user registry, or at least codify current behavior as intentional
 - initialized user color sometimes is different from ui listed color (might be a session persistence thing?)
+
+
+RESOLVED:
 
 Minor snag, grid texture tiling boundary issue
 - Orgiginal texture was 1024x1024 with 64px grid squares repeated 10 times
