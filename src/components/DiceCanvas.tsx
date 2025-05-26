@@ -311,65 +311,9 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     });
 
     // Setup highlighting with camera jump functionality
-    const { setCameraJumpCallback, setGetDicePositionCallback, getActivities } = useHighlighting();
+    const { setCameraJumpCallback, setGetDicePositionCallback, getActivities, isDiceHighlighted } = useHighlighting();
 
-    // Floating result numbers functionality
-    const {
-        overlays: resultOverlays,
-        showResultOverlay,
-        removeResultOverlay,
-        cleanupOldOverlays
-    } = useDiceResultOverlays();
-
-    // Monitor dice for settling and show result overlays
-    useEffect(() => {
-        if (!isInitialized) return;
-
-        const checkDiceSettling = () => {
-            // Check local dice
-            diceState.dice.forEach((dice, index) => {
-                const diceId = (dice as any).canvasId || `local-dice-${index}`;
-
-                // Check if dice has settled and we haven't shown overlay yet
-                if (dice.isFinished && dice.isFinished() && !resultOverlays.find(o => o.diceId === diceId)) {
-                    const result = dice.getUpperValue ? dice.getUpperValue() : 1;
-                    const position: [number, number, number] = [
-                        dice.body.position.x,
-                        dice.body.position.y,
-                        dice.body.position.z
-                    ];
-
-                    console.log(`🎲 Local dice ${diceId} settled with result ${result}`);
-                    showResultOverlay(diceId, result, position);
-                }
-            });
-
-            // Check remote dice
-            remoteDice.forEach((remoteDie, diceId) => {
-                // Check if remote dice has settled and we haven't shown overlay yet
-                if (remoteDie.isFinished && remoteDie.isFinished() && !resultOverlays.find(o => o.diceId === diceId)) {
-                    const result = remoteDie.getUpperValue ? remoteDie.getUpperValue() : 1;
-                    const position: [number, number, number] = [
-                        remoteDie.body.position.x,
-                        remoteDie.body.position.y,
-                        remoteDie.body.position.z
-                    ];
-
-                    console.log(`🎲 Remote dice ${diceId} settled with result ${result}`);
-                    showResultOverlay(diceId, result, position);
-                }
-            });
-        };
-
-        // Check every frame for dice settling
-        const interval = setInterval(checkDiceSettling, 100); // Check every 100ms
-
-        return () => clearInterval(interval);
-    }, [isInitialized, diceState.dice, remoteDice, resultOverlays, showResultOverlay]);
-
-
-
-    // Extract virtual dice from activities
+    // Extract virtual dice from activities (moved up to avoid dependency issues)
     const virtualDice: VirtualDiceData[] = React.useMemo(() => {
         const allVirtualDice: VirtualDiceData[] = [];
         const activities = getActivities();
@@ -386,6 +330,117 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
 
         return allVirtualDice;
     }, [getActivities]);
+
+    // Floating result numbers functionality
+    const {
+        overlays: resultOverlays,
+        showResultOverlay,
+        updateOverlayPosition,
+        checkDistanceAndHide,
+        removeResultOverlay
+    } = useDiceResultOverlays();
+
+    // Monitor highlighted dice and show/update overlays
+    useEffect(() => {
+        if (!isInitialized) return;
+
+        const updateHighlightedDiceOverlays = () => {
+            // Helper function to get dice result from chat data
+            const getDiceResultFromChat = (diceId: string): number | null => {
+                const activities = getActivities();
+                for (const activity of activities) {
+                    if (activity.roll?.canvasData?.dice) {
+                        for (const diceData of activity.roll.canvasData.dice) {
+                            if (diceData.canvasId === diceId && !diceData.isVirtual && diceData.result !== undefined) {
+                                return diceData.result;
+                            }
+                        }
+                    }
+                }
+                return null;
+            };
+
+            // Check local dice
+            diceState.dice.forEach((dice, index) => {
+                const diceId = (dice as any).canvasId || `local-dice-${index}`;
+                const isHighlighted = isDiceHighlighted(diceId);
+                const currentPosition: [number, number, number] = [
+                    dice.body.position.x,
+                    dice.body.position.y,
+                    dice.body.position.z
+                ];
+
+                if (isHighlighted) {
+                    // Get result from chat data
+                    const chatResult = getDiceResultFromChat(diceId);
+
+                    if (chatResult !== null) {
+                        // Always show/update overlay for highlighted dice with chat result
+                        showResultOverlay(diceId, chatResult, currentPosition);
+                    } else if (dice.isFinished && dice.isFinished()) {
+                        // Fallback to physics result if no chat result available
+                        const physicsResult = dice.getUpperValue ? dice.getUpperValue() : 1;
+                        showResultOverlay(diceId, physicsResult, currentPosition);
+                    }
+                } else {
+                    // If not highlighted, check if dice has moved too far and hide overlay
+                    checkDistanceAndHide(diceId, currentPosition, 4); // Increased distance threshold
+                }
+
+                // Always update position if overlay exists
+                updateOverlayPosition(diceId, currentPosition);
+            });
+
+            // Check remote dice
+            remoteDice.forEach((remoteDie, diceId) => {
+                const isHighlighted = isDiceHighlighted(diceId);
+                const currentPosition: [number, number, number] = [
+                    remoteDie.body.position.x,
+                    remoteDie.body.position.y,
+                    remoteDie.body.position.z
+                ];
+
+                if (isHighlighted) {
+                    // Get result from chat data
+                    const chatResult = getDiceResultFromChat(diceId);
+
+                    if (chatResult !== null) {
+                        // Always show/update overlay for highlighted dice with chat result
+                        showResultOverlay(diceId, chatResult, currentPosition);
+                    } else if (remoteDie.isFinished && remoteDie.isFinished()) {
+                        // Fallback to physics result if no chat result available
+                        const physicsResult = remoteDie.getUpperValue ? remoteDie.getUpperValue() : 1;
+                        showResultOverlay(diceId, physicsResult, currentPosition);
+                    }
+                } else {
+                    // If not highlighted, check if dice has moved too far and hide overlay
+                    checkDistanceAndHide(diceId, currentPosition, 4); // Increased distance threshold
+                }
+
+                // Always update position if overlay exists
+                updateOverlayPosition(diceId, currentPosition);
+            });
+
+            // Check virtual dice
+            virtualDice.forEach(dice => {
+                const isHighlighted = isDiceHighlighted(dice.canvasId);
+
+                if (isHighlighted && dice.result !== undefined && dice.position) {
+                    const position: [number, number, number] = [
+                        dice.position.x,
+                        dice.position.y,
+                        dice.position.z
+                    ];
+                    showResultOverlay(dice.canvasId, dice.result, position);
+                }
+            });
+        };
+
+        // Update overlays frequently to catch highlighting changes
+        const interval = setInterval(updateHighlightedDiceOverlays, 200); // Check every 200ms
+
+        return () => clearInterval(interval);
+    }, [isInitialized, diceState.dice, remoteDice, virtualDice, isDiceHighlighted, getActivities, showResultOverlay, updateOverlayPosition, checkDistanceAndHide]);
 
     // Handle virtual dice click
     const handleVirtualDiceClick = useCallback((diceId: string) => {

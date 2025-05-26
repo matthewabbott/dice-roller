@@ -6,6 +6,7 @@ export interface DiceResultOverlay {
     position: [number, number, number];
     isVisible: boolean;
     timestamp: number;
+    originalPosition?: [number, number, number]; // Store original position for distance checks
 }
 
 /**
@@ -30,12 +31,67 @@ export const useDiceResultOverlays = () => {
                 result,
                 position,
                 isVisible: true,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                originalPosition: [...position] as [number, number, number]
             });
             return newOverlays;
         });
 
         console.log(`🎲 Showing result overlay for dice ${diceId}: ${result}`);
+    }, []);
+
+    /**
+     * Update the position of an existing overlay (for following dice)
+     */
+    const updateOverlayPosition = useCallback((
+        diceId: string,
+        newPosition: [number, number, number]
+    ) => {
+        setOverlays(prev => {
+            const newOverlays = new Map(prev);
+            const overlay = newOverlays.get(diceId);
+            if (overlay && overlay.isVisible) {
+                newOverlays.set(diceId, {
+                    ...overlay,
+                    position: [newPosition[0], newPosition[1] + 2, newPosition[2]] // Keep 2 units above dice
+                });
+            }
+            return newOverlays;
+        });
+    }, []);
+
+    /**
+     * Check if dice has moved too far from original position and hide overlay
+     */
+    const checkDistanceAndHide = useCallback((
+        diceId: string,
+        currentPosition: [number, number, number],
+        maxDistance: number = 3
+    ) => {
+        setOverlays(prev => {
+            const overlay = prev.get(diceId);
+            if (!overlay || !overlay.originalPosition || !overlay.isVisible) {
+                return prev;
+            }
+
+            const [origX, origY, origZ] = overlay.originalPosition;
+            const [currX, currY, currZ] = currentPosition;
+
+            const distance = Math.sqrt(
+                Math.pow(currX - origX, 2) +
+                Math.pow(currY - origY, 2) +
+                Math.pow(currZ - origZ, 2)
+            );
+
+            if (distance > maxDistance) {
+                console.log(`🎲 Hiding overlay for dice ${diceId} - moved too far (${distance.toFixed(2)} > ${maxDistance})`);
+                const newOverlays = new Map(prev);
+                newOverlays.set(diceId, { ...overlay, isVisible: false });
+                return newOverlays;
+            }
+
+            return prev;
+        });
     }, []);
 
     /**
@@ -108,6 +164,8 @@ export const useDiceResultOverlays = () => {
     return {
         overlays: getOverlaysArray(),
         showResultOverlay,
+        updateOverlayPosition,
+        checkDistanceAndHide,
         hideResultOverlay,
         removeResultOverlay,
         clearAllOverlays,

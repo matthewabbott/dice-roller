@@ -158,13 +158,13 @@ export class RemoteDiceService {
             remoteDie.body.position.set(position.x, position.y, position.z);
             remoteDie.body.velocity.set(0, 0, 0);
             remoteDie.body.angularVelocity.set(0, 0, 0);
-            
+
             // Trigger floating result overlay callback
             if (this.onDiceSettleCallback) {
                 const overlayPosition: [number, number, number] = [position.x, position.y, position.z];
                 this.onDiceSettleCallback(diceId, result, overlayPosition);
             }
-            
+
             console.log(`📡 Settled remote dice ${diceId} at result ${result}`);
         }
     }
