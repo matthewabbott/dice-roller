@@ -120,7 +120,6 @@ const ChatInput = forwardRef<ChatInputRef>((props, ref) => {
                 if (parsed.diceExpression) {
                     rollDice({
                         variables: {
-                            user: currentUsername,
                             expression: parsed.diceExpression
                         }
                     });

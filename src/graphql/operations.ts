@@ -11,8 +11,8 @@ export const REGISTER_USERNAME_MUTATION = gql`
 `;
 
 export const ROLL_DICE_MUTATION = gql`
-  mutation RollDice($user: String!, $expression: String!) {
-    rollDice(user: $user, expression: $expression) {
+  mutation RollDice($expression: String!) {
+    rollDice(expression: $expression) {
       expression
       results
       total

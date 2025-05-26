@@ -1,14 +1,13 @@
 TODOs:
-- highlighting todos:
-  - make dice pulse with light
-  - camera jump to highlighted die
-  - unhighlight on clicking highlighted message/die again
-  - username color contrast in highlighted message
+
+- smoothly transition camera on highlight jump
+- have camera follow dice on initial roll
+- make dice fling a bit more on initial roll
 
 - rolling dice in chat now records the roll as anonymous instead of as the registered user
 - possible bug: when dice clip into eachother, they just freeze forever?
 - physics validation 'tests' should probably get ripped out and readjusted
-- hardcoded colors in canvas related stuff
+- turn hardcoded colors in canvas related stuff into constants
 - different kinds of dice (chat command vs. canvas UI)
 - credit to https://github.com/byWulf/threejs-dice. Package doesn't work for current ver three.js, but I used his vertex definitions and dicemanager structure.
 
@@ -16,8 +15,6 @@ TODOs:
 - will also have to broadcast all this info to everyone on the web-page so THEY can see the dice rolling too
 - and REALLY I'd like for multiple people to be rolling dice at the same time, having their dice bounce off eachother and stuff
 - also wanna move the dice canvas front and center
-  - replace roll chatbar with a /roll chat-bar command and canvas-associated dice buttons
-  - roll commands should automatically influence the canvas
   - nonstandard dice roll as d6, perhaps? 
     - same code should also handle rolling too many dice (which will roll as a single die that produces a big result)
 
@@ -31,8 +28,14 @@ TODOs:
 
 RESOLVED:
 
+Minor snag, roll commands were rolling as 'Anonymous'
+- rollDice mutation had a `user` parameter in its graphql schema and resolver
+- regular chat messages used context.getUsername()
+- rolls were passing a a hardcoded `user` parameter (always anonymous)
+- changed roll logic to use the context.getUsername(), and remove `user` from schema and resolver
+
 Minor snag, grid texture tiling boundary issue
-- Orgiginal texture was 1024x1024 with 64px grid squares repeated 10 times
+- Original texture was 1024x1024 with 64px grid squares repeated 10 times
 - but textures were overlapping, 
 - so the right edge (and major grid line) of one texture would be one grid square past the left edge of the next
 - fix: actually make the textures tileable (320px by 320px, tiling 5x into 1600px coverage)

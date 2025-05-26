@@ -6,7 +6,7 @@ export const typeDefs = `#graphql
 
   type Mutation {
     sendChatMessage(message: String!): Activity!
-    rollDice(user: String!, expression: String!): Roll!
+    rollDice(expression: String!): Roll!
     registerUsername(username: String!): UsernameRegistrationResult!
     setUserColor(color: String!): SetUserColorResult!
   }

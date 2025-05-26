@@ -226,8 +226,9 @@ const resolvers = {
         activeUsers: () => getActiveUsers(),
     },
     Mutation: {
-        rollDice: (_: any, { user, expression }: { user: string; expression: string }, context: UserContext) => {
-            let sanitizedUser = sanitizeUsername(user);
+        rollDice: (_: any, { expression }: { expression: string }, context: UserContext) => {
+            const username = context.getUsername() || 'Anonymous';
+            let sanitizedUser = sanitizeUsername(username);
 
             // Use RollProcessor to process the roll
             const processedRoll = rollProcessor.processRoll(expression);
