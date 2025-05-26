@@ -4,6 +4,9 @@ export { usePhysicsSync } from './usePhysicsSync';
 // Sync hooks
 export { useRemoteDice, useSyncStatus, useCanvasSync } from './sync';
 
+// Control hooks
+export { useDiceControls, useCameraControls } from './controls';
+
 export type {
     DiceInteractionState,
     DiceInteractionHandlers,
@@ -20,4 +23,15 @@ export type {
     SyncStatusState,
     UseSyncStatusProps,
     UseCanvasSyncProps
-} from './sync'; 
+} from './sync';
+
+// Control hook types
+export type {
+    DiceType,
+    DiceControlsState,
+    DiceControlsOperations,
+    UseDiceControlsProps,
+    CameraControlsState,
+    CameraControlsOperations,
+    UseCameraControlsProps
+} from './controls'; 
