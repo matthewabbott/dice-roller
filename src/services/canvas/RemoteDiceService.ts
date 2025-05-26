@@ -56,6 +56,14 @@ export class RemoteDiceService {
     public async spawnRemoteDice(diceData: RemoteDiceData): Promise<void> {
         if (!this.isInitialized) return;
 
+        // Skip physical dice creation for virtual dice
+        if (diceData.isVirtual) {
+            console.log(`📡 Skipping physical spawn for virtual ${diceData.diceType} from user ${diceData.userId}`);
+            // Update player data for tracking but don't create physical dice
+            this.updatePlayerDice(diceData);
+            return;
+        }
+
         try {
             let newDice: DiceInstance;
             const options = { size: 1 };

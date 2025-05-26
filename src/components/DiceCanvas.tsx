@@ -12,6 +12,8 @@ import { RemoteDiceRenderer } from './sync';
 import { DiceControlPanel, CanvasOverlay, InstructionsPanel, RollHistory } from './controls';
 import { useDiceInteraction, usePhysicsSync, useCanvasSync, useDiceControls, useCameraControls } from '../hooks';
 import { useHighlighting } from '../hooks/useHighlighting';
+import { useDiceResultOverlays } from '../hooks/canvas/useDiceResultOverlays';
+import { DiceResultOverlay } from './canvas/DiceResultOverlay';
 
 // Extend R3F with the geometry we need
 extend({ EdgesGeometry: THREE.EdgesGeometry });
@@ -305,6 +307,14 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     // Setup highlighting with camera jump functionality
     const { setCameraJumpCallback, setGetDicePositionCallback, getActivities } = useHighlighting();
 
+    // Floating result numbers functionality
+    const {
+        overlays: resultOverlays,
+        showResultOverlay,
+        removeResultOverlay,
+        cleanupOldOverlays
+    } = useDiceResultOverlays();
+
     // Extract virtual dice from activities
     const virtualDice: VirtualDiceData[] = React.useMemo(() => {
         const allVirtualDice: VirtualDiceData[] = [];
@@ -439,6 +449,18 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
                         virtualDice={virtualDice}
                         onVirtualDiceClick={handleVirtualDiceClick}
                     />
+
+                    {/* Floating Result Numbers */}
+                    {resultOverlays.map((overlay) => (
+                        <DiceResultOverlay
+                            key={overlay.diceId}
+                            diceId={overlay.diceId}
+                            result={overlay.result}
+                            position={overlay.position}
+                            isVisible={overlay.isVisible}
+                            onAnimationComplete={() => removeResultOverlay(overlay.diceId)}
+                        />
+                    ))}
                 </PhysicsWorld>
             </Canvas>
 
