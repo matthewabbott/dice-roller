@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { DiceManager, DiceD4, DiceD6, DiceD8, DiceD10, DiceD12, DiceD20 } from '../../physics';
 import { DiceSpawningService } from '../../services/dice/DiceSpawningService';
 import { DiceRollingService } from '../../services/dice/DiceRollingService';
+import { CanvasEventService } from '../../services/canvas/CanvasEventService';
 
 // Define available dice types
 export type DiceType = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20';
@@ -44,6 +45,7 @@ export const useDiceControls = ({ isInitialized }: UseDiceControlsProps): [
     // Initialize services
     const diceSpawningService = new DiceSpawningService();
     const diceRollingService = new DiceRollingService();
+    const canvasEventService = new CanvasEventService();
 
     // Spawn a new dice of the specified type
     const spawnDice = useCallback(async (diceType: DiceType = selectedDiceType) => {
@@ -63,10 +65,17 @@ export const useDiceControls = ({ isInitialized }: UseDiceControlsProps): [
             // Add to dice array
             setDice(prevDice => [...prevDice, spawnResult.dice]);
 
+            // Broadcast spawn event
+            canvasEventService.broadcastDiceSpawn(
+                diceType,
+                spawnResult.position,
+                canvasEventService.getCurrentPlayerId()
+            );
+
         } catch (error) {
             console.error(`❌ Failed to spawn ${diceType}:`, error);
         }
-    }, [isInitialized, selectedDiceType, dice.length, diceSpawningService]);
+    }, [isInitialized, selectedDiceType, dice.length, diceSpawningService, canvasEventService]);
 
     // Clear all dice from the scene
     const clearAllDice = useCallback(() => {
@@ -75,8 +84,14 @@ export const useDiceControls = ({ isInitialized }: UseDiceControlsProps): [
         });
         setDice([]);
         setRollResult(null);
+
+        // Broadcast clear event
+        canvasEventService.broadcastDiceClear(
+            canvasEventService.getCurrentPlayerId()
+        );
+
         console.log('🎲 Cleared all dice');
-    }, [dice]);
+    }, [dice, canvasEventService]);
 
     // Roll all dice simultaneously
     const rollAllDice = useCallback(async () => {
@@ -90,18 +105,32 @@ export const useDiceControls = ({ isInitialized }: UseDiceControlsProps): [
             const rollResult = await diceRollingService.rollAllDice(dice);
             setRollResult(rollResult.total);
 
+            // Broadcast roll event
+            canvasEventService.broadcastDiceRoll(
+                rollResult,
+                canvasEventService.getCurrentPlayerId(),
+                'Player' // TODO: Get actual player name
+            );
+
         } catch (error) {
             console.error('❌ Failed to roll dice:', error);
         } finally {
             setIsRolling(false);
         }
-    }, [dice, isRolling, diceRollingService]);
+    }, [dice, isRolling, diceRollingService, canvasEventService]);
 
     // Throw all dice with physics (alternative to rollAllDice)
     const throwAllDice = useCallback(() => {
         // Use the dice rolling service
         diceRollingService.throwAllDice(dice);
-    }, [dice, diceRollingService]);
+
+        // Broadcast throw event
+        const diceIds = dice.map((_, index) => `dice-${index}`); // Simple IDs for now
+        canvasEventService.broadcastDiceThrow(
+            diceIds,
+            canvasEventService.getCurrentPlayerId()
+        );
+    }, [dice, diceRollingService, canvasEventService]);
 
     const state: DiceControlsState = {
         selectedDiceType,

@@ -172,7 +172,7 @@ src/hooks/controls/
 - **E.1**: ✅ Create service infrastructure and directory structure
 - **E.2**: ✅ Extract dice spawning and physics logic into DiceSpawningService
 - **E.3**: ✅ Extract dice rolling and result logic into DiceRollingService
-- **E.4**: Extract canvas event broadcasting into CanvasEventService
+- **E.4**: ✅ Extract canvas event broadcasting into CanvasEventService
 - **E.5**: Extract remote dice handling into RemoteDiceService
 - **E.6**: Update hooks to use services while maintaining same interfaces
 

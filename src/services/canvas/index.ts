@@ -1,11 +1,12 @@
 export { CanvasEventService } from './CanvasEventService';
 export { RemoteDiceService } from './RemoteDiceService';
 export type {
-    CanvasEvent,
+    LocalCanvasEvent,
     DiceRollEvent,
     DiceSpawnEvent,
     DiceClearEvent,
-    CanvasEventType
+    DiceThrowEvent,
+    LocalCanvasEventType
 } from './CanvasEventService';
 export type {
     RemoteDice,
