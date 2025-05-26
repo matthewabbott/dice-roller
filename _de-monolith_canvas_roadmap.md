@@ -163,29 +163,42 @@ src/hooks/controls/
 - **Testing**: Control logic can now be unit tested in isolation
 - **Performance**: Better React optimization with focused control components
 
-### Phase E: Extract State Management 🔴 **HIGH RISK**
-**Goal**: Centralize and organize state management
-**Impact**: Better state organization, easier debugging
-**Risk**: High - state is core to component functionality
+### Phase E: Extract Business Logic & Services 🟡 **MEDIUM RISK**
+**Goal**: Extract business logic from hooks into testable service classes
+**Impact**: Better separation of concerns, easier testing, more maintainable code
+**Risk**: Medium - logic extraction without changing behavior
 
 #### Commits:
-- **E.1**: Create centralized state management with Context/Zustand
-- **E.2**: Extract dice state management
-- **E.3**: Extract UI state management
-- **E.4**: Implement state persistence and recovery
+- **E.1**: Create service infrastructure and directory structure
+- **E.2**: Extract dice spawning and physics logic into DiceSpawningService
+- **E.3**: Extract dice rolling and result logic into DiceRollingService
+- **E.4**: Extract canvas event broadcasting into CanvasEventService
+- **E.5**: Extract remote dice handling into RemoteDiceService
+- **E.6**: Update hooks to use services while maintaining same interfaces
 
 #### Files to Create:
 ```
-src/stores/
-├── diceStore.ts             # Dice state management
-├── canvasStore.ts           # Canvas state management
-├── uiStore.ts               # UI state management
+src/services/dice/
+├── DiceSpawningService.ts   # Dice creation and positioning logic
+├── DiceRollingService.ts    # Roll execution and result calculation
+├── DicePhysicsService.ts    # Physics body setup and management
 └── index.ts
 
-src/contexts/
-├── DiceCanvasContext.tsx    # Canvas context provider
+src/services/canvas/
+├── CanvasEventService.ts    # Event broadcasting and handling
+├── RemoteDiceService.ts     # Remote dice state management
 └── index.ts
+
+src/services/
+└── index.ts                 # Main service exports
 ```
+
+#### Benefits:
+- **Testability**: Business logic can be unit tested independently of React
+- **Maintainability**: Clear separation between business logic and UI logic
+- **Reusability**: Services can be used across different components
+- **Extensibility**: Easier to add new dice types, behaviors, or features
+- **Debugging**: Clearer code flow and easier to trace issues
 
 ### Phase F: Create Main Canvas Orchestrator 🔴 **HIGH RISK**
 **Goal**: Slim main component that orchestrates sub-components
@@ -305,6 +318,6 @@ After refactoring, Phase 5 (Cross-System Highlighting) will be much easier:
 - **TypeScript Errors**: No regressions, all functionality maintained
 
 ### 🎯 **Next Steps**
-- **Phase E**: Extract state management (high risk)
+- **Phase E**: Extract business logic & services (medium risk)
 - **Phase F**: Create main canvas orchestrator (high risk)
 - **Target**: Final DiceCanvas under 200 lines (orchestration only)
