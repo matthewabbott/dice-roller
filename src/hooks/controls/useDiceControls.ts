@@ -26,6 +26,7 @@ export interface DiceControlsOperations {
 
 export interface UseDiceControlsProps {
     isInitialized: boolean;
+    onDiceSettle?: (diceId: string, result: number, position: [number, number, number]) => void;
 }
 
 /**

@@ -18,10 +18,19 @@ export interface MultiRollResult {
  * Extracted from useDiceControls hook for better testability and separation of concerns
  */
 export class DiceRollingService {
+    private onDiceSettleCallback?: (diceId: string, result: number, position: [number, number, number]) => void;
+
+    /**
+     * Set callback for when individual dice settle
+     */
+    public setOnDiceSettleCallback(callback: (diceId: string, result: number, position: [number, number, number]) => void): void {
+        this.onDiceSettleCallback = callback;
+    }
+
     /**
      * Roll all dice simultaneously with physics forces
      */
-    public async rollAllDice(dice: DiceInstance[]): Promise<MultiRollResult> {
+    public async rollAllDice(dice: DiceInstance[], onDiceSettle?: (diceId: string, result: number, position: [number, number, number]) => void): Promise<MultiRollResult> {
         if (dice.length === 0) {
             return {
                 individual: [],
@@ -35,7 +44,7 @@ export class DiceRollingService {
             this.applyRollForces(dice);
 
             // Wait for all dice to settle and get their values
-            const results = await this.waitForDiceToSettle(dice);
+            const results = await this.waitForDiceToSettle(dice, onDiceSettle);
 
             // Calculate total result
             const totalResult = results.reduce((sum, result) => sum + result.value, 0);
@@ -123,17 +132,32 @@ export class DiceRollingService {
     /**
      * Wait for dice to settle and get their final values
      */
-    public async waitForDiceToSettle(dice: DiceInstance[]): Promise<RollResult[]> {
+    public async waitForDiceToSettle(dice: DiceInstance[], onDiceSettle?: (diceId: string, result: number, position: [number, number, number]) => void): Promise<RollResult[]> {
         // Wait for all dice to settle and get their values
         const diceValuePairs = dice.map(die => ({ dice: die, value: 1 })); // Initial values
         const results = await DiceManager.prepareValues(diceValuePairs);
 
-        // Convert to RollResult format
-        return results.map((result, index) => ({
-            diceId: `dice-${index}`, // Simple ID for now
-            value: result.value,
-            diceType: this.getDiceType(dice[index])
-        }));
+        // Convert to RollResult format and trigger settle callbacks
+        return results.map((result, index) => {
+            const diceId = `dice-${index}`; // Simple ID for now
+            const rollResult = {
+                diceId,
+                value: result.value,
+                diceType: this.getDiceType(dice[index])
+            };
+
+            // Trigger settle callback if provided
+            if (onDiceSettle && result.finalPosition) {
+                const position: [number, number, number] = [
+                    result.finalPosition.x,
+                    result.finalPosition.y,
+                    result.finalPosition.z
+                ];
+                onDiceSettle(diceId, result.value, position);
+            }
+
+            return rollResult;
+        });
     }
 
     /**

@@ -42,12 +42,20 @@ export class RemoteDiceService {
     private remotePlayers: Map<string, RemotePlayer> = new Map();
     private updateCallbacks: ((players: RemotePlayer[]) => void)[] = [];
     private isInitialized: boolean = false;
+    private onDiceSettleCallback?: (diceId: string, result: number, position: [number, number, number]) => void;
 
     /**
      * Initialize the service
      */
     public initialize(): void {
         this.isInitialized = true;
+    }
+
+    /**
+     * Set callback for when dice settle (for floating result overlays)
+     */
+    public setOnDiceSettleCallback(callback: (diceId: string, result: number, position: [number, number, number]) => void): void {
+        this.onDiceSettleCallback = callback;
     }
 
     /**
@@ -150,6 +158,13 @@ export class RemoteDiceService {
             remoteDie.body.position.set(position.x, position.y, position.z);
             remoteDie.body.velocity.set(0, 0, 0);
             remoteDie.body.angularVelocity.set(0, 0, 0);
+            
+            // Trigger floating result overlay callback
+            if (this.onDiceSettleCallback) {
+                const overlayPosition: [number, number, number] = [position.x, position.y, position.z];
+                this.onDiceSettleCallback(diceId, result, overlayPosition);
+            }
+            
             console.log(`📡 Settled remote dice ${diceId} at result ${result}`);
         }
     }

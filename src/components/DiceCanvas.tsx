@@ -302,7 +302,13 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const [cameraState, cameraOperations, controlsRef] = useCameraControls();
 
     // Canvas synchronization using new sync hooks
-    const { remoteDice, syncStatus, stats } = useCanvasSync({ isInitialized });
+    const { remoteDice, syncStatus, stats } = useCanvasSync({
+        isInitialized,
+        onDiceSettle: (diceId: string, result: number, position: [number, number, number]) => {
+            console.log(`🎲 Remote dice ${diceId} settled with result ${result}, showing overlay`);
+            showResultOverlay(diceId, result, position);
+        }
+    });
 
     // Setup highlighting with camera jump functionality
     const { setCameraJumpCallback, setGetDicePositionCallback, getActivities } = useHighlighting();
@@ -314,6 +320,54 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
         removeResultOverlay,
         cleanupOldOverlays
     } = useDiceResultOverlays();
+
+    // Monitor dice for settling and show result overlays
+    useEffect(() => {
+        if (!isInitialized) return;
+
+        const checkDiceSettling = () => {
+            // Check local dice
+            diceState.dice.forEach((dice, index) => {
+                const diceId = (dice as any).canvasId || `local-dice-${index}`;
+
+                // Check if dice has settled and we haven't shown overlay yet
+                if (dice.isFinished && dice.isFinished() && !resultOverlays.find(o => o.diceId === diceId)) {
+                    const result = dice.getUpperValue ? dice.getUpperValue() : 1;
+                    const position: [number, number, number] = [
+                        dice.body.position.x,
+                        dice.body.position.y,
+                        dice.body.position.z
+                    ];
+
+                    console.log(`🎲 Local dice ${diceId} settled with result ${result}`);
+                    showResultOverlay(diceId, result, position);
+                }
+            });
+
+            // Check remote dice
+            remoteDice.forEach((remoteDie, diceId) => {
+                // Check if remote dice has settled and we haven't shown overlay yet
+                if (remoteDie.isFinished && remoteDie.isFinished() && !resultOverlays.find(o => o.diceId === diceId)) {
+                    const result = remoteDie.getUpperValue ? remoteDie.getUpperValue() : 1;
+                    const position: [number, number, number] = [
+                        remoteDie.body.position.x,
+                        remoteDie.body.position.y,
+                        remoteDie.body.position.z
+                    ];
+
+                    console.log(`🎲 Remote dice ${diceId} settled with result ${result}`);
+                    showResultOverlay(diceId, result, position);
+                }
+            });
+        };
+
+        // Check every frame for dice settling
+        const interval = setInterval(checkDiceSettling, 100); // Check every 100ms
+
+        return () => clearInterval(interval);
+    }, [isInitialized, diceState.dice, remoteDice, resultOverlays, showResultOverlay]);
+
+
 
     // Extract virtual dice from activities
     const virtualDice: VirtualDiceData[] = React.useMemo(() => {
