@@ -7,7 +7,7 @@ import { DiceManager, DiceD6, DiceD4, DiceD8, DiceD10, DiceD12, DiceD20, Physics
 import * as CANNON from 'cannon-es';
 import { useCanvasSync, type CanvasSyncCallbacks, type RemoteDiceData } from '../services/CanvasSyncManager';
 // import { VirtualDice, VirtualDiceSummary } from './VirtualDice'; // Unused for now
-import type { DiceRoll } from '../types/canvas';
+// import type { DiceRoll } from '../types/canvas'; // Unused for now
 import { DICE_GEOMETRIES } from './dice';
 
 // Extend R3F with the geometry we need
@@ -437,7 +437,7 @@ const PhysicsGround: React.FC = () => {
         ];
 
         const wallBodies: CANNON.Body[] = [];
-        walls.forEach((wall, index) => {
+        walls.forEach((wall) => {
             const wallShape = new CANNON.Box(new CANNON.Vec3(wall.size[0] / 2, wall.size[1] / 2, wall.size[2] / 2));
             const wallBody = new CANNON.Body({ mass: 0 });
             wallBody.addShape(wallShape);
@@ -624,7 +624,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const [dice, setDice] = useState<DiceInstance[]>([]);
     const [isRolling, setIsRolling] = useState(false);
     const [rollResult, setRollResult] = useState<number | null>(null);
-    const [rollHistory, setRollHistory] = useState<{ type: DiceType; value: number; timestamp: number }[]>([]);
+    const [rollHistory] = useState<{ type: DiceType; value: number; timestamp: number }[]>([]);
     const [isInitialized, setIsInitialized] = useState(false);
     const [isCameraLocked, setIsCameraLocked] = useState(false);
 
@@ -825,7 +825,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     };
 
     // Initialize canvas synchronization
-    const { syncManager, isConnected, error, stats } = useCanvasSync(canvasSyncCallbacks);
+    const { isConnected, error, stats } = useCanvasSync(canvasSyncCallbacks);
 
     // Update sync status
     useEffect(() => {
