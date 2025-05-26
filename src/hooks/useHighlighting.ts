@@ -57,9 +57,19 @@ export const useHighlighting = () => {
     }, []);
 
     /**
-     * Highlight an activity and all its associated dice
+     * Highlight an activity and all its associated dice (or clear if already highlighted)
      */
     const highlightFromActivity = useCallback((activityId: string, activities?: ActivityData[]) => {
+        // Check if this activity is already highlighted - if so, clear it
+        if (globalHighlightState.highlightedActivityId === activityId) {
+            updateGlobalState({
+                highlightedActivityId: null,
+                highlightedDiceIds: new Set()
+            });
+            console.log(`🎯 Cleared highlight for activity ${activityId}`);
+            return;
+        }
+
         const activitiesToSearch = activities || globalActivities;
         const activity = activitiesToSearch.find(a => a.id === activityId);
 
@@ -84,9 +94,19 @@ export const useHighlighting = () => {
     }, [updateGlobalState]);
 
     /**
-     * Highlight a dice and its associated activity + all dice from that roll
+     * Highlight a dice and its associated activity + all dice from that roll (or clear if already highlighted)
      */
     const highlightFromDice = useCallback((diceId: string, activities?: ActivityData[]) => {
+        // Check if this dice is already highlighted - if so, clear all highlights
+        if (globalHighlightState.highlightedDiceIds.has(diceId)) {
+            updateGlobalState({
+                highlightedActivityId: null,
+                highlightedDiceIds: new Set()
+            });
+            console.log(`🎯 Cleared highlight for dice ${diceId}`);
+            return;
+        }
+
         const activitiesToSearch = activities || globalActivities;
 
         console.log(`🔍 Looking for dice ${diceId} in ${activitiesToSearch.length} activities`);
