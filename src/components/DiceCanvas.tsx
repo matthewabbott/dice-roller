@@ -201,6 +201,45 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     // Canvas synchronization using new sync hooks
     const { remoteDice, syncStatus, stats } = useCanvasSync({ isInitialized });
 
+    // Setup highlighting with camera jump functionality
+    const { setCameraJumpCallback, setGetDicePositionCallback } = useHighlighting();
+
+    // Setup camera jump callback
+    useEffect(() => {
+        setCameraJumpCallback(cameraOperations.jumpToPosition);
+    }, [setCameraJumpCallback, cameraOperations.jumpToPosition]);
+
+    // Setup dice position getter callback
+    useEffect(() => {
+        const getDicePosition = (diceId: string): { x: number; y: number; z: number } | null => {
+            // First check local dice
+            const localDice = diceState.dice.find((die, index) => 
+                (die as any).canvasId === diceId || `local-dice-${index}` === diceId
+            );
+            if (localDice && localDice.body) {
+                return {
+                    x: localDice.body.position.x,
+                    y: localDice.body.position.y,
+                    z: localDice.body.position.z
+                };
+            }
+
+            // Then check remote dice
+            const remoteDie = remoteDice.get(diceId);
+            if (remoteDie && remoteDie.body) {
+                return {
+                    x: remoteDie.body.position.x,
+                    y: remoteDie.body.position.y,
+                    z: remoteDie.body.position.z
+                };
+            }
+
+            return null;
+        };
+
+        setGetDicePositionCallback(getDicePosition);
+    }, [setGetDicePositionCallback, diceState.dice, remoteDice]);
+
     // Physics initialization is now handled by PhysicsWorld component
     const handlePhysicsInitialized = useCallback((initialized: boolean) => {
         setIsInitialized(initialized);

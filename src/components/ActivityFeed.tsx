@@ -133,7 +133,7 @@ const ActivityFeed: React.FC = () => {
                         : 'bg-brand-surface hover:bg-brand-background'
                         }`}
                     onClick={() => handleActivityClick(activity)}
-                    title="Click to highlight dice on canvas"
+                    title="Click to highlight dice and jump camera to them"
                 >
                     <div className="flex justify-between items-start">
                         <div className="flex-grow">

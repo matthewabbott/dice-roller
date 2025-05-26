@@ -28,6 +28,12 @@ let globalHighlightState: HighlightState = {
 let globalActivities: ActivityData[] = [];
 let stateUpdateCallbacks: Set<(state: HighlightState) => void> = new Set();
 
+// Global camera jump callback
+let globalCameraJumpCallback: ((position: { x: number; y: number; z: number }, target?: { x: number; y: number; z: number }) => void) | null = null;
+
+// Global dice position getter callback
+let globalGetDicePositionCallback: ((diceId: string) => { x: number; y: number; z: number } | null) | null = null;
+
 /**
  * Client-side highlighting hook that manages global highlight state
  * and provides correlation between activities and dice
@@ -54,6 +60,20 @@ export const useHighlighting = () => {
      */
     const setActivities = useCallback((activities: ActivityData[]) => {
         globalActivities = activities;
+    }, []);
+
+    /**
+     * Set the camera jump callback
+     */
+    const setCameraJumpCallback = useCallback((callback: (position: { x: number; y: number; z: number }, target?: { x: number; y: number; z: number }) => void) => {
+        globalCameraJumpCallback = callback;
+    }, []);
+
+    /**
+     * Set the dice position getter callback
+     */
+    const setGetDicePositionCallback = useCallback((callback: (diceId: string) => { x: number; y: number; z: number } | null) => {
+        globalGetDicePositionCallback = callback;
     }, []);
 
     /**
@@ -91,6 +111,16 @@ export const useHighlighting = () => {
         });
 
         console.log(`🎯 Highlighted activity ${activityId} with ${diceIds.length} dice:`, diceIds);
+
+        // Jump camera to the first dice if available
+        if (diceIds.length > 0 && globalCameraJumpCallback && globalGetDicePositionCallback) {
+            const firstDiceId = diceIds[0];
+            const dicePosition = globalGetDicePositionCallback(firstDiceId);
+            if (dicePosition) {
+                globalCameraJumpCallback(dicePosition);
+                console.log(`📷 Camera jumped to dice ${firstDiceId} at position:`, dicePosition);
+            }
+        }
     }, [updateGlobalState]);
 
     /**
@@ -171,6 +201,8 @@ export const useHighlighting = () => {
     return {
         highlightState,
         setActivities,
+        setCameraJumpCallback,
+        setGetDicePositionCallback,
         highlightFromActivity,
         highlightFromDice,
         clearHighlight,

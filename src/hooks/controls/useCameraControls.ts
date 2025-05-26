@@ -9,6 +9,7 @@ export interface CameraControlsOperations {
     toggleFullScreen: () => void;
     toggleCameraLock: () => void;
     resetCamera: () => void;
+    jumpToPosition: (position: { x: number; y: number; z: number }, target?: { x: number; y: number; z: number }) => void;
 }
 
 export interface UseCameraControlsProps {
@@ -53,6 +54,40 @@ export const useCameraControls = (_props?: UseCameraControlsProps): [
         setIsFullScreen(prev => !prev);
     }, []);
 
+    // Jump camera to a specific position with smooth animation
+    const jumpToPosition = useCallback((position: { x: number; y: number; z: number }, target?: { x: number; y: number; z: number }) => {
+        if (controlsRef.current) {
+            const controls = controlsRef.current;
+
+            // Calculate camera position (offset from target for good viewing angle)
+            const cameraOffset = { x: 3, y: 4, z: 3 }; // Offset for good dice viewing angle
+            const cameraPosition = {
+                x: position.x + cameraOffset.x,
+                y: position.y + cameraOffset.y,
+                z: position.z + cameraOffset.z
+            };
+
+            // Set target (where camera looks at) - use provided target or the dice position
+            const lookAtTarget = target || position;
+
+            // Smoothly animate to the new position
+            // Note: This requires the controls to support smooth transitions
+            // For OrbitControls, we can set the target and position directly
+            controls.target.set(lookAtTarget.x, lookAtTarget.y, lookAtTarget.z);
+
+            // Set camera position
+            if (controls.object) {
+                controls.object.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+                controls.object.lookAt(lookAtTarget.x, lookAtTarget.y, lookAtTarget.z);
+            }
+
+            // Update controls
+            controls.update();
+
+            console.log(`📷 Camera jumped to position:`, cameraPosition, `looking at:`, lookAtTarget);
+        }
+    }, []);
+
     const state: CameraControlsState = {
         isFullScreen,
         isCameraLocked
@@ -61,8 +96,9 @@ export const useCameraControls = (_props?: UseCameraControlsProps): [
     const operations: CameraControlsOperations = {
         toggleFullScreen,
         toggleCameraLock,
-        resetCamera
+        resetCamera,
+        jumpToPosition
     };
 
     return [state, operations, controlsRef];
-}; 
+};
