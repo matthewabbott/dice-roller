@@ -3,6 +3,8 @@ import { useQuery, useSubscription } from '@apollo/client';
 import { ACTIVITY_ADDED_SUBSCRIPTION, GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
 import { useHighlighting } from '../hooks/useHighlighting';
 import { CollapsibleSection } from './controls/CollapsibleSection';
+import ChatInput from './ChatInput';
+import type { ChatInputRef } from './ChatInput';
 
 interface Roll {
     expression: string;
@@ -43,7 +45,12 @@ interface User {
     isActive: boolean;
 }
 
-const ActivityFeed: React.FC = () => {
+interface ActivityFeedProps {
+    onQuickRoll?: (command: string) => void;
+    chatInputRef?: React.RefObject<ChatInputRef | null>;
+}
+
+const ActivityFeed: React.FC<ActivityFeedProps> = ({ onQuickRoll, chatInputRef }) => {
     const [activities, setActivitiesState] = useState<Activity[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [showRolls, setShowRolls] = useState(true);
@@ -220,97 +227,116 @@ const ActivityFeed: React.FC = () => {
         return true;
     });
 
+    const handleDieButtonClick = (dieType: number) => {
+        const command = `/roll 1d${dieType}`;
+        if (onQuickRoll) {
+            onQuickRoll(command);
+        }
+    };
+
+    const commonDice = [4, 6, 8, 10, 12, 20];
+
     return (
-        <div className="space-y-4">
-            {/* Lobby Section */}
-            <CollapsibleSection
-                title="Lobby"
-                icon="👥"
-                tooltip="View active players and session information"
-                defaultCollapsed={false}
-                className="card"
-            >
-                <div className="space-y-3">
-                    <h3 className="text-sm font-medium text-brand-text-muted">Active Players ({users.length})</h3>
-                    <div className="space-y-2">
-                        {users.map((user) => (
-                            <div key={user.sessionId} className="flex items-center gap-2 p-2 bg-brand-surface rounded">
-                                <div
-                                    className="w-3 h-3 rounded-full border border-gray-400"
-                                    style={{ backgroundColor: user.color || '#888888' }}
-                                    title={`${user.username}'s color`}
-                                />
-                                <span className="text-brand-text text-sm">{user.username}</span>
-                                {user.isActive && (
-                                    <span className="text-xs text-green-400 bg-green-900/30 px-2 py-1 rounded">
-                                        Online
-                                    </span>
-                                )}
-                            </div>
-                        ))}
-                        {users.length === 0 && (
-                            <div className="text-center text-brand-text-muted text-sm py-4">
-                                No players connected
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </CollapsibleSection>
+        <div className="h-full flex flex-col space-y-4">
+            {/* Activity Feed Section - Takes most space */}
+            <div className="flex-grow min-h-0">
+                <CollapsibleSection
+                    title="Activity Feed"
+                    icon="📜"
+                    tooltip="View dice rolls, chat messages, and system notifications"
+                    defaultCollapsed={false}
+                    className="card h-full"
+                    contentClassName="h-80 overflow-y-auto"
+                >
+                    <div className="space-y-3">
+                        {/* Filter Toggle Buttons */}
+                        <div className="flex space-x-2">
+                            <button
+                                className={`px-3 py-1 rounded text-sm transition-colors ${showRolls
+                                    ? 'bg-brand-primary text-white'
+                                    : 'bg-brand-surface text-brand-text-muted hover:bg-brand-background'
+                                    }`}
+                                onClick={() => setShowRolls(!showRolls)}
+                                title="Toggle dice rolls"
+                            >
+                                🎲 Rolls
+                            </button>
+                            <button
+                                className={`px-3 py-1 rounded text-sm transition-colors ${showChatMessages
+                                    ? 'bg-brand-primary text-white'
+                                    : 'bg-brand-surface text-brand-text-muted hover:bg-brand-background'
+                                    }`}
+                                onClick={() => setShowChatMessages(!showChatMessages)}
+                                title="Toggle chat messages"
+                            >
+                                💬 Chat
+                            </button>
+                            <button
+                                className={`px-3 py-1 rounded text-sm transition-colors ${showSystemMessages
+                                    ? 'bg-brand-primary text-white'
+                                    : 'bg-brand-surface text-brand-text-muted hover:bg-brand-background'
+                                    }`}
+                                onClick={() => setShowSystemMessages(!showSystemMessages)}
+                                title="Toggle system messages"
+                            >
+                                ℹ️ System
+                            </button>
+                        </div>
 
-            {/* Activity Feed Section */}
-            <CollapsibleSection
-                title="Activity Feed"
-                icon="📜"
-                tooltip="View dice rolls, chat messages, and system notifications"
-                defaultCollapsed={false}
-                className="card"
-                contentClassName="h-80 overflow-y-auto"
-            >
-                <div className="space-y-3">
-                    {/* Filter Toggle Buttons */}
-                    <div className="flex space-x-2">
-                        <button
-                            className={`px-3 py-1 rounded text-sm transition-colors ${showRolls
-                                ? 'bg-brand-primary text-white'
-                                : 'bg-brand-surface text-brand-text-muted hover:bg-brand-background'
-                                }`}
-                            onClick={() => setShowRolls(!showRolls)}
-                            title="Toggle dice rolls"
-                        >
-                            🎲 Rolls
-                        </button>
-                        <button
-                            className={`px-3 py-1 rounded text-sm transition-colors ${showChatMessages
-                                ? 'bg-brand-primary text-white'
-                                : 'bg-brand-surface text-brand-text-muted hover:bg-brand-background'
-                                }`}
-                            onClick={() => setShowChatMessages(!showChatMessages)}
-                            title="Toggle chat messages"
-                        >
-                            💬 Chat
-                        </button>
-                        <button
-                            className={`px-3 py-1 rounded text-sm transition-colors ${showSystemMessages
-                                ? 'bg-brand-primary text-white'
-                                : 'bg-brand-surface text-brand-text-muted hover:bg-brand-background'
-                                }`}
-                            onClick={() => setShowSystemMessages(!showSystemMessages)}
-                            title="Toggle system messages"
-                        >
-                            ℹ️ System
-                        </button>
+                        <ul className="space-y-2 text-brand-text-muted">
+                            {filteredActivities.map(renderActivity)}
+                            {filteredActivities.length === 0 && (
+                                <li className="text-center text-brand-text-muted">
+                                    {activities.length === 0 ? 'No activity yet.' : 'No activities match current filters.'}
+                                </li>
+                            )}
+                        </ul>
                     </div>
+                </CollapsibleSection>
+            </div>
 
-                    <ul className="space-y-2 text-brand-text-muted">
-                        {filteredActivities.map(renderActivity)}
-                        {filteredActivities.length === 0 && (
-                            <li className="text-center text-brand-text-muted">
-                                {activities.length === 0 ? 'No activity yet.' : 'No activities match current filters.'}
-                            </li>
-                        )}
-                    </ul>
-                </div>
-            </CollapsibleSection>
+            {/* Quick Roll Commands - Above chat input */}
+            <div className="flex-shrink-0">
+                <CollapsibleSection
+                    title="Quick Roll Commands"
+                    icon="🎲"
+                    tooltip="Quick roll commands that generate shared dice visible to all players"
+                    defaultCollapsed={false}
+                    className="card"
+                >
+                    <div className="space-y-3">
+                        {/* Professional Notice */}
+                        <div className="p-3 bg-blue-900/20 rounded border-l-4 border-blue-500">
+                            <div className="flex items-start gap-2">
+                                <span className="text-blue-400 text-sm">🎲</span>
+                                <div className="text-xs text-blue-300">
+                                    <strong>Shared Dice Commands:</strong> These buttons generate <code>/roll</code> commands
+                                    that create dice visible to all players in the session.
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Quick Roll Buttons */}
+                        <div className="grid grid-cols-3 gap-2">
+                            {commonDice.map((die) => (
+                                <button
+                                    key={die}
+                                    className="btn-primary px-3 py-2 text-sm"
+                                    onClick={() => handleDieButtonClick(die)}
+                                    title={`Roll 1d${die} - creates shared dice visible to all players`}
+                                >
+                                    🎲 d{die}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </CollapsibleSection>
+            </div>
+
+            {/* Chat Input - Fixed at bottom */}
+            <div className="flex-shrink-0">
+                <ChatInput ref={chatInputRef} hideHeader={true} />
+            </div>
         </div>
     );
 };

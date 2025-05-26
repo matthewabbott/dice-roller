@@ -15,7 +15,11 @@ export interface ChatInputRef {
     populateCommand: (command: string) => void;
 }
 
-const ChatInput = forwardRef<ChatInputRef>((props, ref) => {
+interface ChatInputProps {
+    hideHeader?: boolean;
+}
+
+const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({ hideHeader = false }, ref) => {
     const [message, setMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [commandPreview, setCommandPreview] = useState<string | null>(null);
@@ -173,7 +177,9 @@ const ChatInput = forwardRef<ChatInputRef>((props, ref) => {
 
     return (
         <div className="card">
-            <h3 className="text-lg font-semibold text-brand-text mb-3">Send Message</h3>
+            {!hideHeader && (
+                <h3 className="text-lg font-semibold text-brand-text mb-3">Send Message</h3>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-2">
                 <div className="flex space-x-2">

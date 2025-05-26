@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useSubscription } from '@apollo/client';
 import { REGISTER_USERNAME_MUTATION, GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
 import ColorPicker from './ColorPicker';
-import { CollapsibleSection } from './controls/CollapsibleSection';
 import { PRESET_COLORS } from '../constants/colors';
 import { getSessionId } from '../utils/sessionId';
 
@@ -15,9 +14,10 @@ interface User {
 
 interface DiceRollerProps {
     onQuickRoll?: (command: string) => void;
+    hideQuickRollCommands?: boolean;
 }
 
-const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll }) => {
+const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll, hideQuickRollCommands = false }) => {
     const [username, setUsername] = useState('Anonymous');
     const [pendingUsername, setPendingUsername] = useState('');
     const [isUsernameRegistered, setIsUsernameRegistered] = useState(true); // Anonymous is always registered
@@ -157,8 +157,10 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll }) => {
     const commonDice = [4, 6, 8, 10, 12, 20];
 
     return (
-        <div className="card">
-            <h2 className="text-xl font-semibold text-brand-text mb-3">User Settings</h2>
+        <div className={hideQuickRollCommands ? '' : 'card'}>
+            {!hideQuickRollCommands && (
+                <h2 className="text-xl font-semibold text-brand-text mb-3">User Settings</h2>
+            )}
 
             {/* Username Input */}
             <div className="mb-3">
@@ -185,63 +187,94 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll }) => {
             </div>
 
             {/* Color Picker */}
-            <div className="mb-4">
+            <div className={hideQuickRollCommands ? '' : 'mb-4'}>
                 <ColorPicker currentColor={userColor} onColorChange={setUserColor} />
             </div>
 
-            {/* Quick Roll Commands - Collapsible Section */}
-            <div className="border-t border-brand-surface pt-3">
-                <button
-                    onClick={() => setIsLocalDiceExpanded(!isLocalDiceExpanded)}
-                    className="w-full flex items-center justify-between p-2 hover:bg-brand-surface rounded transition-colors"
-                    title="Quick roll commands that generate shared dice visible to all players"
-                >
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-brand-text-muted">Quick Roll Commands</span>
-                        <span className="text-xs bg-blue-900/30 text-blue-300 px-2 py-1 rounded border border-blue-500/30">
-                            Shared Dice
-                        </span>
+            {/* Active Players List - Only show when in lobby */}
+            {hideQuickRollCommands && (
+                <div className="mt-4">
+                    <h4 className="text-sm font-medium text-brand-text-muted mb-3">Active Players ({users.length})</h4>
+                    <div className="space-y-2">
+                        {users.map((user) => (
+                            <div key={user.sessionId} className="flex items-center gap-2 p-2 bg-brand-surface rounded">
+                                <div
+                                    className="w-3 h-3 rounded-full border border-gray-400"
+                                    style={{ backgroundColor: user.color || '#888888' }}
+                                    title={`${user.username}'s color`}
+                                />
+                                <span className="text-brand-text text-sm">{user.username}</span>
+                                {user.isActive && (
+                                    <span className="text-xs text-green-400 bg-green-900/30 px-2 py-1 rounded">
+                                        Online
+                                    </span>
+                                )}
+                            </div>
+                        ))}
+                        {users.length === 0 && (
+                            <div className="text-center text-brand-text-muted text-sm py-4">
+                                No players connected
+                            </div>
+                        )}
                     </div>
-                    <span className="text-brand-text-muted">
-                        {isLocalDiceExpanded ? '▼' : '▶'}
-                    </span>
-                </button>
+                </div>
+            )}
 
-                {isLocalDiceExpanded && (
-                    <div className="mt-3 space-y-3">
-                        {/* Professional Notice */}
-                        <div className="p-3 bg-blue-900/20 rounded border-l-4 border-blue-500">
-                            <div className="flex items-start gap-2">
-                                <span className="text-blue-400 text-sm">🎲</span>
-                                <div className="text-xs text-blue-300">
-                                    <strong>Shared Dice Commands:</strong> These buttons generate <code>/roll</code> commands
-                                    that create dice visible to all players in the session. Results appear in chat and on the canvas.
+            {/* Quick Roll Commands - Only show when not hidden */}
+            {!hideQuickRollCommands && (
+                <div className="border-t border-brand-surface pt-3">
+                    <button
+                        onClick={() => setIsLocalDiceExpanded(!isLocalDiceExpanded)}
+                        className="w-full flex items-center justify-between p-2 hover:bg-brand-surface rounded transition-colors"
+                        title="Quick roll commands that generate shared dice visible to all players"
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-brand-text-muted">Quick Roll Commands</span>
+                            <span className="text-xs bg-blue-900/30 text-blue-300 px-2 py-1 rounded border border-blue-500/30">
+                                Shared Dice
+                            </span>
+                        </div>
+                        <span className="text-brand-text-muted">
+                            {isLocalDiceExpanded ? '▼' : '▶'}
+                        </span>
+                    </button>
+
+                    {isLocalDiceExpanded && (
+                        <div className="mt-3 space-y-3">
+                            {/* Professional Notice */}
+                            <div className="p-3 bg-blue-900/20 rounded border-l-4 border-blue-500">
+                                <div className="flex items-start gap-2">
+                                    <span className="text-blue-400 text-sm">🎲</span>
+                                    <div className="text-xs text-blue-300">
+                                        <strong>Shared Dice Commands:</strong> These buttons generate <code>/roll</code> commands
+                                        that create dice visible to all players in the session. Results appear in chat and on the canvas.
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Quick Roll Buttons */}
-                        <div>
-                            <h3 className="text-sm font-medium text-brand-text-muted mb-2">Quick Roll Commands</h3>
-                            <div className="grid grid-cols-3 gap-2">
-                                {commonDice.map((die) => (
-                                    <button
-                                        key={die}
-                                        className="btn-primary px-3 py-2 text-sm"
-                                        onClick={() => handleDieButtonClick(die)}
-                                        title={`Roll 1d${die} - creates shared dice visible to all players`}
-                                    >
-                                        🎲 d{die}
-                                    </button>
-                                ))}
+                            {/* Quick Roll Buttons */}
+                            <div>
+                                <h3 className="text-sm font-medium text-brand-text-muted mb-2">Quick Roll Commands</h3>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {commonDice.map((die) => (
+                                        <button
+                                            key={die}
+                                            className="btn-primary px-3 py-2 text-sm"
+                                            onClick={() => handleDieButtonClick(die)}
+                                            title={`Roll 1d${die} - creates shared dice visible to all players`}
+                                        >
+                                            🎲 d{die}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-brand-text-muted mt-2">
+                                    💡 These create <code>/roll</code> commands for dice shared with all players
+                                </p>
                             </div>
-                            <p className="text-xs text-brand-text-muted mt-2">
-                                💡 These create <code>/roll</code> commands for dice shared with all players
-                            </p>
                         </div>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
