@@ -60,7 +60,7 @@ export const useCameraControls = (_props?: UseCameraControlsProps): [
             const controls = controlsRef.current;
 
             // Calculate camera position (offset from target for good viewing angle)
-            const cameraOffset = { x: 3, y: 4, z: 3 }; // Offset for good dice viewing angle
+            const cameraOffset = { x: 8, y: 10, z: 8 }; // Offset for good dice viewing angle (zoomed out)
             const cameraPosition = {
                 x: position.x + cameraOffset.x,
                 y: position.y + cameraOffset.y,

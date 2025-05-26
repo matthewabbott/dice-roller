@@ -213,7 +213,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     useEffect(() => {
         const getDicePosition = (diceId: string): { x: number; y: number; z: number } | null => {
             // First check local dice
-            const localDice = diceState.dice.find((die, index) => 
+            const localDice = diceState.dice.find((die, index) =>
                 (die as any).canvasId === diceId || `local-dice-${index}` === diceId
             );
             if (localDice && localDice.body) {
@@ -260,7 +260,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
         <>
             <Canvas
                 className={cameraState.isFullScreen ? "h-screen w-screen" : "w-full aspect-square"}
-                camera={{ position: [0, 5, 5], fov: 50 }}
+                camera={{ position: [0, 12, 12], fov: 50 }}
                 gl={{ antialias: true, alpha: false }}
                 shadows
             >
