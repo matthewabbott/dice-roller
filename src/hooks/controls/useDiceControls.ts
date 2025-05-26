@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { DiceManager, DiceD4, DiceD6, DiceD8, DiceD10, DiceD12, DiceD20 } from '../../physics';
+import { DiceSpawningService } from '../../services/dice/DiceSpawningService';
 
 // Define available dice types
 export type DiceType = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20';
@@ -39,81 +40,31 @@ export const useDiceControls = ({ isInitialized }: UseDiceControlsProps): [
     const [rollResult, setRollResult] = useState<number | null>(null);
     const [rollHistory] = useState<{ type: DiceType; value: number; timestamp: number }[]>([]);
 
+    // Initialize dice spawning service
+    const diceSpawningService = new DiceSpawningService();
+
     // Spawn a new dice of the specified type
     const spawnDice = useCallback(async (diceType: DiceType = selectedDiceType) => {
         if (!isInitialized) return;
 
         try {
-            let newDice: DiceInstance;
             const options = { size: 1 };
-
-            // Create dice based on type
-            switch (diceType) {
-                case 'd4':
-                    newDice = new DiceD4(options);
-                    break;
-                case 'd6':
-                    newDice = new DiceD6(options);
-                    break;
-                case 'd8':
-                    newDice = new DiceD8(options);
-                    break;
-                case 'd10':
-                    newDice = new DiceD10(options);
-                    break;
-                case 'd12':
-                    newDice = new DiceD12(options);
-                    break;
-                case 'd20':
-                    newDice = new DiceD20(options);
-                    break;
-                default:
-                    newDice = new DiceD6(options);
-            }
-
-            // Position dice above table with some randomization to prevent stacking
             const existingDiceCount = dice.length;
-            const spacing = 1.5;
-            const gridSize = Math.ceil(Math.sqrt(existingDiceCount + 1));
-            const row = Math.floor(existingDiceCount / gridSize);
-            const col = existingDiceCount % gridSize;
 
-            const offsetX = (col - gridSize / 2) * spacing + (Math.random() - 0.5) * 0.5;
-            const offsetZ = (row - gridSize / 2) * spacing + (Math.random() - 0.5) * 0.5;
-
-            // Higher starting position for larger dice
-            const startY = diceType === 'd12' ? 4 : 3;
-
-            newDice.body.position.set(offsetX, startY, offsetZ);
-            newDice.body.quaternion.set(
-                Math.random() * 0.5,
-                Math.random() * 0.5,
-                Math.random() * 0.5,
-                Math.random() * 0.5
+            // Use the dice spawning service
+            const spawnResult = await diceSpawningService.spawnDice(
+                diceType,
+                options,
+                existingDiceCount
             );
-            newDice.body.quaternion.normalize();
-
-            // Add to physics world
-            DiceManager.addBody(newDice.body);
-
-            // Apply dampening for controlled behavior
-            newDice.body.linearDamping = 0.1;  // Air resistance for movement
-            newDice.body.angularDamping = 0.1; // Air resistance for rotation
 
             // Add to dice array
-            setDice(prevDice => [...prevDice, newDice]);
-
-            console.log(`🎲 Spawned ${diceType} at position:`, {
-                x: offsetX,
-                y: startY,
-                z: offsetZ,
-                totalDice: existingDiceCount + 1
-            });
+            setDice(prevDice => [...prevDice, spawnResult.dice]);
 
         } catch (error) {
             console.error(`❌ Failed to spawn ${diceType}:`, error);
         }
-    }, [isInitialized, selectedDiceType, dice.length]);
+    }, [isInitialized, selectedDiceType, dice.length, diceSpawningService]);
 
     // Clear all dice from the scene
     const clearAllDice = useCallback(() => {
