@@ -46,7 +46,7 @@ export const ROLL_DICE_MUTATION = gql`
               y
               z
             }
-            result
+      result
             diceType
             isVirtual
             virtualRolls
@@ -104,7 +104,7 @@ export const GET_ACTIVITIES_QUERY = gql`
             }
             isVirtual
             virtualRolls
-            result
+        result
           }
           events {
             id
@@ -142,7 +142,7 @@ export const ACTIVITY_ADDED_SUBSCRIPTION = gql`
             }
             isVirtual
             virtualRolls
-            result
+        result
           }
           events {
             id

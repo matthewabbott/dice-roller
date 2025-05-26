@@ -6,6 +6,12 @@ import { DICE_COLORS } from '../constants/colors';
 import { DiceManager, DiceD6, DiceD4, DiceD8, DiceD10, DiceD12, DiceD20, PhysicsUtils } from '../physics';
 import * as CANNON from 'cannon-es';
 import { useCanvasSync, type CanvasSyncCallbacks, type RemoteDiceData } from '../services/CanvasSyncManager';
+import { VirtualDice, VirtualDiceSummary } from './VirtualDice';
+import type { DiceRoll } from '../types/canvas';
+import { VirtualDice, VirtualDiceSummary } from './VirtualDice';
+import type { DiceRoll } from '../types/canvas';
+import { VirtualDice, VirtualDiceSummary } from './VirtualDice';
+import type { DiceRoll } from '../types/canvas';
 
 // Extend R3F with the geometry we need
 extend({ EdgesGeometry: THREE.EdgesGeometry });
@@ -1239,6 +1245,52 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     // Canvas synchronization state
     const [remoteDice, setRemoteDice] = useState<Map<string, DiceInstance>>(new Map());
     const [syncStatus, setSyncStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
+
+    // Virtual dice state (Phase 4.4)
+    const [virtualDice, setVirtualDice] = useState<DiceRoll[]>([]);
+    const [expandedVirtualDice, setExpandedVirtualDice] = useState<Set<string>>(new Set());
+    const [highlightedVirtualDice, setHighlightedVirtualDice] = useState<Set<string>>(new Set());
+
+    // Virtual dice interaction handlers (Phase 4.4)
+    const handleVirtualDiceExpand = useCallback((diceId: string) => {
+        setExpandedVirtualDice(prev => new Set(prev.add(diceId)));
+        console.log(`🎲 Expanded virtual dice: ${diceId}`);
+    }, []);
+
+    const handleVirtualDiceCollapse = useCallback((diceId: string) => {
+        setExpandedVirtualDice(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(diceId);
+            return newSet;
+        });
+        console.log(`🎲 Collapsed virtual dice: ${diceId}`);
+    }, []);
+
+    const handleVirtualDiceHighlight = useCallback((diceId: string) => {
+        setHighlightedVirtualDice(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(diceId)) {
+                newSet.delete(diceId);
+            } else {
+                newSet.add(diceId);
+            }
+            return newSet;
+        });
+        console.log(`🎲 Toggled highlight for virtual dice: ${diceId}`);
+    }, []);
+
+    const handleVirtualDiceReroll = useCallback((diceId: string) => {
+        // TODO: Implement virtual dice rerolling
+        console.log(`🎲 Rerolling virtual dice: ${diceId}`);
+        // This would trigger a new roll with the same parameters
+    }, []);
+
+    const clearVirtualDice = useCallback(() => {
+        setVirtualDice([]);
+        setExpandedVirtualDice(new Set());
+        setHighlightedVirtualDice(new Set());
+        console.log('🎲 Cleared all virtual dice');
+    }, []);
 
     // Remote dice handling functions for canvas synchronization
     const spawnRemoteDice = useCallback(async (diceData: RemoteDiceData) => {

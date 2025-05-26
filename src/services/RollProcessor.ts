@@ -31,6 +31,11 @@ export interface RollConfig {
     maxTotalDice: number;
     supportedDiceTypes: string[];
     virtualDiceThreshold: number;
+    massiveRollThreshold: number;
+    nonStandardDiceThreshold: number;
+    complexityThreshold: number;
+    enableSmartClustering: boolean;
+    maxPhysicalDicePerType: number;
 }
 
 export class RollProcessor {
@@ -38,7 +43,12 @@ export class RollProcessor {
         maxPhysicalDice: 10,
         maxTotalDice: 10000,
         supportedDiceTypes: ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'],
-        virtualDiceThreshold: 100
+        virtualDiceThreshold: 100,
+        massiveRollThreshold: 50,
+        nonStandardDiceThreshold: 100,
+        complexityThreshold: 200,
+        enableSmartClustering: true,
+        maxPhysicalDicePerType: 5
     };
 
     private config: RollConfig;
@@ -143,7 +153,7 @@ export class RollProcessor {
     }
 
     /**
-     * Generate canvas data based on roll parameters
+     * Generate canvas data based on roll parameters (Enhanced for Phase 4.3: Smart Clustering)
      * @param numDice - Number of dice rolled
      * @param dieType - Type of die
      * @param rolls - Individual roll results
@@ -154,21 +164,68 @@ export class RollProcessor {
 
         // Determine if this should be virtual or physical representation
         const shouldBeVirtual = this.shouldUseVirtualRepresentation(numDice, dieType);
-        const physicalDiceType = this.getPhysicalDiceType(dieType);
 
         if (shouldBeVirtual) {
-            // Create single virtual dice representing the entire roll
-            const virtualDice: DiceRoll = {
-                canvasId: uuidv4(),
-                diceType: physicalDiceType,
-                position: this.generateSpawnPosition(0, 1),
-                isVirtual: true,
-                virtualRolls: rolls,
-                result: rolls.reduce((sum, roll) => sum + roll, 0)
-            };
-            diceRolls.push(virtualDice);
+            // Get virtual representation strategy
+            const strategy = this.getVirtualRepresentationStrategy(numDice, dieType);
+
+            console.log(`🎲 Using virtual strategy: ${strategy.strategy} for ${numDice}d${dieType}`);
+
+            switch (strategy.strategy) {
+                case 'single':
+                    // Single representative dice with all virtual rolls
+                    const singleVirtualDice: DiceRoll = {
+                        canvasId: uuidv4(),
+                        diceType: strategy.representativeDiceType,
+                        position: this.generateSpawnPosition(0, 1),
+                        isVirtual: true,
+                        virtualRolls: rolls,
+                        result: rolls.reduce((sum, roll) => sum + roll, 0)
+                    };
+                    diceRolls.push(singleVirtualDice);
+                    break;
+
+                case 'cluster':
+                    // Multiple representative dice with clustered virtual rolls
+                    const clusterSize = Math.ceil(numDice / strategy.physicalDiceCount);
+
+                    for (let i = 0; i < strategy.physicalDiceCount; i++) {
+                        const startIndex = i * clusterSize;
+                        const endIndex = Math.min(startIndex + clusterSize, numDice);
+                        const clusterRolls = rolls.slice(startIndex, endIndex);
+
+                        if (clusterRolls.length > 0) {
+                            const clusterDice: DiceRoll = {
+                                canvasId: uuidv4(),
+                                diceType: strategy.representativeDiceType,
+                                position: this.generateSpawnPosition(i, strategy.physicalDiceCount),
+                                isVirtual: true,
+                                virtualRolls: clusterRolls,
+                                result: clusterRolls.reduce((sum, roll) => sum + roll, 0)
+                            };
+                            diceRolls.push(clusterDice);
+                        }
+                    }
+                    break;
+
+                case 'hybrid':
+                    // Hybrid approach: mix of physical and virtual dice
+                    // For now, fall back to single strategy
+                    const hybridDice: DiceRoll = {
+                        canvasId: uuidv4(),
+                        diceType: strategy.representativeDiceType,
+                        position: this.generateSpawnPosition(0, 1),
+                        isVirtual: true,
+                        virtualRolls: rolls,
+                        result: rolls.reduce((sum, roll) => sum + roll, 0)
+                    };
+                    diceRolls.push(hybridDice);
+                    break;
+            }
         } else {
             // Create individual physical dice
+            const physicalDiceType = this.getPhysicalDiceType(dieType);
+
             for (let i = 0; i < numDice; i++) {
                 const physicalDice: DiceRoll = {
                     canvasId: uuidv4(),
@@ -185,30 +242,131 @@ export class RollProcessor {
     }
 
     /**
-     * Determine if a roll should use virtual representation
+     * Determine if a roll should use virtual representation (Enhanced for Phase 4.1)
      * @param numDice - Number of dice
      * @param dieType - Type of die
      * @returns True if should be virtual
      */
     private shouldUseVirtualRepresentation(numDice: number, dieType: number): boolean {
-        // Use virtual if:
-        // 1. Too many dice for physical representation
-        // 2. Non-standard die type
-        // 3. Total result count exceeds threshold
+        // Enhanced virtual dice detection logic
 
-        if (numDice > this.config.maxPhysicalDice) {
+        // 1. Massive roll detection
+        if (numDice >= this.config.massiveRollThreshold) {
+            console.log(`🎲 Virtual dice: Massive roll detected (${numDice} dice >= ${this.config.massiveRollThreshold})`);
             return true;
         }
 
+        // 2. Non-standard dice detection
+        if (dieType > this.config.nonStandardDiceThreshold) {
+            console.log(`🎲 Virtual dice: Non-standard die detected (d${dieType} > d${this.config.nonStandardDiceThreshold})`);
+            return true;
+        }
+
+        // 3. Unsupported dice type detection
         if (!this.config.supportedDiceTypes.includes(`d${dieType}`)) {
+            console.log(`🎲 Virtual dice: Unsupported die type (d${dieType} not in supported types)`);
             return true;
         }
 
+        // 4. Total physical dice limit
+        if (numDice > this.config.maxPhysicalDice) {
+            console.log(`🎲 Virtual dice: Too many dice (${numDice} > ${this.config.maxPhysicalDice})`);
+            return true;
+        }
+
+        // 5. Complexity threshold (numDice * dieType as complexity score)
+        const complexityScore = numDice * dieType;
+        if (complexityScore > this.config.complexityThreshold) {
+            console.log(`🎲 Virtual dice: Complexity threshold exceeded (${complexityScore} > ${this.config.complexityThreshold})`);
+            return true;
+        }
+
+        // 6. Virtual dice threshold (legacy check)
         if (numDice * dieType > this.config.virtualDiceThreshold) {
+            console.log(`🎲 Virtual dice: Virtual threshold exceeded (${numDice * dieType} > ${this.config.virtualDiceThreshold})`);
             return true;
         }
 
+        console.log(`🎲 Physical dice: Using physical representation for ${numDice}d${dieType}`);
         return false;
+    }
+
+    /**
+     * Calculate complexity score for a dice roll
+     * @param numDice - Number of dice
+     * @param dieType - Type of die
+     * @returns Complexity score
+     */
+    private calculateComplexityScore(numDice: number, dieType: number): number {
+        let score = numDice * dieType;
+
+        // Add penalty for non-standard dice
+        if (!this.config.supportedDiceTypes.includes(`d${dieType}`)) {
+            score += 50;
+        }
+
+        // Add penalty for very large dice
+        if (dieType > this.config.nonStandardDiceThreshold) {
+            score += (dieType - this.config.nonStandardDiceThreshold) * 2;
+        }
+
+        return score;
+    }
+
+    /**
+     * Determine the best virtual representation strategy
+     * @param numDice - Number of dice
+     * @param dieType - Type of die
+     * @returns Virtual representation strategy
+     */
+    private getVirtualRepresentationStrategy(numDice: number, dieType: number): {
+        strategy: 'single' | 'cluster' | 'hybrid';
+        physicalDiceCount: number;
+        virtualDiceCount: number;
+        representativeDiceType: string;
+    } {
+        const isSupported = this.config.supportedDiceTypes.includes(`d${dieType}`);
+        const isMassive = numDice >= this.config.massiveRollThreshold;
+        const isNonStandard = dieType > this.config.nonStandardDiceThreshold;
+
+        if (isNonStandard || !isSupported) {
+            // Non-standard dice: single representative dice
+            return {
+                strategy: 'single',
+                physicalDiceCount: 1,
+                virtualDiceCount: numDice,
+                representativeDiceType: this.getPhysicalDiceType(dieType)
+            };
+        }
+
+        if (isMassive) {
+            // Massive rolls: single representative dice
+            return {
+                strategy: 'single',
+                physicalDiceCount: 1,
+                virtualDiceCount: numDice,
+                representativeDiceType: `d${dieType}`
+            };
+        }
+
+        if (this.config.enableSmartClustering && numDice > this.config.maxPhysicalDicePerType) {
+            // Smart clustering: multiple representative dice
+            const clusterSize = Math.ceil(numDice / this.config.maxPhysicalDicePerType);
+            return {
+                strategy: 'cluster',
+                physicalDiceCount: Math.min(this.config.maxPhysicalDicePerType, numDice),
+                virtualDiceCount: numDice,
+                representativeDiceType: `d${dieType}`
+            };
+        }
+
+        // Fallback to single representation
+        return {
+            strategy: 'single',
+            physicalDiceCount: 1,
+            virtualDiceCount: numDice,
+            representativeDiceType: this.getPhysicalDiceType(dieType)
+        };
     }
 
     /**
@@ -265,16 +423,71 @@ export class RollProcessor {
     }
 
     /**
-     * Get configuration for testing/debugging
+     * Update configuration at runtime
+     * @param newConfig - Partial configuration to merge
+     */
+    public updateConfig(newConfig: Partial<RollConfig>): void {
+        this.config = { ...this.config, ...newConfig };
+        console.log('🎲 RollProcessor configuration updated:', this.config);
+    }
+
+    /**
+     * Get current configuration
+     * @returns Current configuration
      */
     public getConfig(): RollConfig {
         return { ...this.config };
     }
 
     /**
-     * Update configuration
+     * Get virtual dice statistics for a roll
+     * @param expression - Dice expression
+     * @returns Virtual dice statistics
      */
-    public updateConfig(newConfig: Partial<RollConfig>): void {
-        this.config = { ...this.config, ...newConfig };
+    public getVirtualDiceStats(expression: string): {
+        isVirtual: boolean;
+        strategy?: string;
+        physicalDiceCount?: number;
+        virtualDiceCount?: number;
+        complexityScore?: number;
+        reasons?: string[];
+    } {
+        const parseResult = this.parseExpression(expression);
+        if (!parseResult.isValid) {
+            return { isVirtual: false };
+        }
+
+        const { numDice, dieType } = parseResult;
+        const isVirtual = this.shouldUseVirtualRepresentation(numDice, dieType);
+
+        if (!isVirtual) {
+            return { isVirtual: false };
+        }
+
+        const strategy = this.getVirtualRepresentationStrategy(numDice, dieType);
+        const complexityScore = this.calculateComplexityScore(numDice, dieType);
+
+        const reasons: string[] = [];
+        if (numDice >= this.config.massiveRollThreshold) {
+            reasons.push(`Massive roll (${numDice} dice)`);
+        }
+        if (dieType > this.config.nonStandardDiceThreshold) {
+            reasons.push(`Non-standard die (d${dieType})`);
+        }
+        if (!this.config.supportedDiceTypes.includes(`d${dieType}`)) {
+            reasons.push(`Unsupported die type (d${dieType})`);
+        }
+        if (complexityScore > this.config.complexityThreshold) {
+            reasons.push(`High complexity (${complexityScore})`);
+        }
+
+        return {
+            isVirtual: true,
+            strategy: strategy.strategy,
+            physicalDiceCount: strategy.physicalDiceCount,
+            virtualDiceCount: strategy.virtualDiceCount,
+            complexityScore,
+            reasons
+        };
     }
 } 
