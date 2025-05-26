@@ -211,12 +211,12 @@ const VirtualDiceRenderer: React.FC<VirtualDiceRendererProps> = ({
     virtualDice,
     onVirtualDiceClick
 }) => {
-    const { isHighlighted } = useHighlighting();
+    const { isDiceHighlighted } = useHighlighting();
 
     return (
         <>
             {virtualDice.map((dice) => {
-                const isHighlightedDice = isHighlighted(dice.canvasId);
+                const isHighlightedDice = isDiceHighlighted(dice.canvasId);
                 const position = dice.position || { x: 0, y: 2, z: 0 };
 
                 return (
