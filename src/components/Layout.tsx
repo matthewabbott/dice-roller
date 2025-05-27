@@ -19,7 +19,7 @@ const Layout: React.FC = () => {
     return (
         <div className="min-h-screen bg-brand-background text-brand-text flex flex-col">
             <Header />
-            <main className="flex-grow flex">
+            <main className="flex-grow flex h-0">
                 {/* Left Sidebar - Activity Feed (30% width) */}
                 <div className="w-[30%] min-w-0 border-r border-brand-surface">
                     <div className="h-full flex flex-col p-4">

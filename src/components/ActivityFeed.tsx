@@ -237,20 +237,20 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ onQuickRoll, chatInputRef }
     const commonDice = [4, 6, 8, 10, 12, 20];
 
     return (
-        <div className="h-full flex flex-col space-y-4">
-            {/* Activity Feed Section - Takes most space */}
-            <div className="flex-grow min-h-0">
+        <div className="h-full flex flex-col">
+            {/* Activity Feed Section - Responsive height with scrollable content */}
+            <div className="flex-grow min-h-0 mb-4">
                 <CollapsibleSection
                     title="Activity Feed"
                     icon="📜"
                     tooltip="View dice rolls, chat messages, and system notifications"
                     defaultCollapsed={false}
-                    className="card h-full"
-                    contentClassName="h-80 overflow-y-auto"
+                    className="card h-full flex flex-col"
+                    contentClassName="flex-grow min-h-0 flex flex-col"
                 >
-                    <div className="space-y-3">
-                        {/* Filter Toggle Buttons */}
-                        <div className="flex space-x-2">
+                    <div className="flex flex-col h-full">
+                        {/* Filter Toggle Buttons - Fixed at top */}
+                        <div className="flex space-x-2 mb-3 flex-shrink-0">
                             <button
                                 className={`px-3 py-1 rounded text-sm transition-colors ${showRolls
                                     ? 'bg-brand-primary text-white'
@@ -283,20 +283,23 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ onQuickRoll, chatInputRef }
                             </button>
                         </div>
 
-                        <ul className="space-y-2 text-brand-text-muted">
-                            {filteredActivities.map(renderActivity)}
-                            {filteredActivities.length === 0 && (
-                                <li className="text-center text-brand-text-muted">
-                                    {activities.length === 0 ? 'No activity yet.' : 'No activities match current filters.'}
-                                </li>
-                            )}
-                        </ul>
+                        {/* Scrollable Activity List - Takes remaining space */}
+                        <div className="flex-grow min-h-0 overflow-y-auto">
+                            <ul className="space-y-2 text-brand-text-muted">
+                                {filteredActivities.map(renderActivity)}
+                                {filteredActivities.length === 0 && (
+                                    <li className="text-center text-brand-text-muted">
+                                        {activities.length === 0 ? 'No activity yet.' : 'No activities match current filters.'}
+                                    </li>
+                                )}
+                            </ul>
+                        </div>
                     </div>
                 </CollapsibleSection>
             </div>
 
-            {/* Quick Roll Commands - Above chat input */}
-            <div className="flex-shrink-0">
+            {/* Quick Roll Commands - Fixed height above chat */}
+            <div className="flex-shrink-0 mb-4">
                 <CollapsibleSection
                     title="Quick Roll Commands"
                     icon="🎲"
@@ -333,7 +336,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ onQuickRoll, chatInputRef }
                 </CollapsibleSection>
             </div>
 
-            {/* Chat Input - Fixed at bottom */}
+            {/* Chat Input - Always visible at bottom */}
             <div className="flex-shrink-0">
                 <ChatInput ref={chatInputRef} hideHeader={true} />
             </div>
