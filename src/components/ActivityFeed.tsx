@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useSubscription } from '@apollo/client';
 import { ACTIVITY_ADDED_SUBSCRIPTION, GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
 import { useHighlighting } from '../hooks/useHighlighting';
@@ -58,6 +58,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ onQuickRoll, chatInputRef }
     const [showSystemMessages, setShowSystemMessages] = useState(true);
     const [showChatMessages, setShowChatMessages] = useState(true);
     const [isQuickRollModalOpen, setIsQuickRollModalOpen] = useState(false);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     // Add highlighting functionality
     const { highlightFromActivity, isActivityHighlighted, setActivities } = useHighlighting();
@@ -66,6 +67,13 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ onQuickRoll, chatInputRef }
     useEffect(() => {
         setActivities(activities);
     }, [activities, setActivities]);
+
+    // Auto-scroll to bottom when new activities are added
+    useEffect(() => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        }
+    }, [activities]);
 
     const { data: usersData } = useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY, {
         onCompleted: (data) => {
@@ -290,9 +298,12 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ onQuickRoll, chatInputRef }
             </div>
 
             {/* Scrollable Activity List - Takes all remaining space */}
-            <div className="flex-grow min-h-0 overflow-y-auto bg-brand-surface rounded-lg p-3 mb-4">
+            <div
+                ref={scrollContainerRef}
+                className="flex-grow min-h-0 overflow-y-auto bg-brand-surface rounded-lg p-3 mb-4"
+            >
                 <ul className="space-y-2 text-brand-text-muted">
-                    {filteredActivities.map(renderActivity)}
+                    {filteredActivities.slice().reverse().map(renderActivity)}
                     {filteredActivities.length === 0 && (
                         <li className="text-center text-brand-text-muted py-8">
                             {activities.length === 0 ? 'No activity yet.' : 'No activities match current filters.'}
