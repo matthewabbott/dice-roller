@@ -84,8 +84,8 @@ export const PhysicsGround: React.FC<PhysicsGroundProps> = ({
         canvas.height = 320;
         const ctx = canvas.getContext('2d')!;
 
-        // Dark cyberspace background
-        ctx.fillStyle = '#0a0a0a';
+        // Brand background color to match app theme
+        ctx.fillStyle = '#1a1f2c';
         ctx.fillRect(0, 0, 320, 320);
 
         const gridSize = 64; // Each grid square is 64px

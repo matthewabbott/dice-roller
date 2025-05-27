@@ -528,10 +528,14 @@ const DiceCanvas: React.FC<DiceCanvasProps> = () => {
     const canvasContent = (
         <>
             <Canvas
-                className={cameraState.isFullScreen ? "h-screen w-screen" : "w-full aspect-square"}
+                className={cameraState.isFullScreen ? "h-screen w-screen" : "w-full h-full"}
                 camera={{ position: [0, 12, 12], fov: 50 }}
                 gl={{ antialias: true, alpha: false }}
+                style={{ backgroundColor: '#1a1f2c' }}
                 shadows
+                onCreated={({ scene }) => {
+                    scene.background = new THREE.Color('#1a1f2c');
+                }}
             >
                 <OrbitControls ref={controlsRef} enabled={!cameraState.isCameraLocked} />
 
