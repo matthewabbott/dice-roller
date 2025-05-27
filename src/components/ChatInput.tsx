@@ -17,9 +17,10 @@ export interface ChatInputRef {
 
 interface ChatInputProps {
     hideHeader?: boolean;
+    onDiceButtonClick?: () => void;
 }
 
-const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({ hideHeader = false }, ref) => {
+const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({ hideHeader = false, onDiceButtonClick }, ref) => {
     const [message, setMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [commandPreview, setCommandPreview] = useState<string | null>(null);
@@ -193,6 +194,17 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({ hideHeader = false
                         disabled={isLoading}
                         maxLength={1000}
                     />
+                    {onDiceButtonClick && (
+                        <button
+                            type="button"
+                            className="btn-secondary px-3 py-2 text-lg"
+                            onClick={onDiceButtonClick}
+                            disabled={isLoading}
+                            title="Quick dice roll commands"
+                        >
+                            🎲
+                        </button>
+                    )}
                     <button
                         type="submit"
                         className="btn-primary px-4 py-2"
