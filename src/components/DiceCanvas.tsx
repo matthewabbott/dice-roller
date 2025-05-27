@@ -10,17 +10,21 @@ import { DICE_GEOMETRIES } from './dice';
 import { PhysicsWorld, PhysicsGround } from './physics';
 import { RemoteDiceRenderer } from './sync';
 import { DiceControlPanel, CanvasOverlay, InstructionsPanel, RollHistory } from './controls';
-import { useDiceInteraction, usePhysicsSync, useCanvasSync, useDiceControls, useCameraControls } from '../hooks';
+import { useDiceInteraction, usePhysicsSync, useCanvasSync, useDiceControls } from '../hooks';
 import { useHighlighting } from '../hooks/useHighlighting';
 import { useDiceResultOverlays } from '../hooks/canvas/useDiceResultOverlays';
 import { useGlobalHotkeys, type HotkeyActions } from '../hooks/useGlobalHotkeys';
 import { DiceResultOverlay } from './canvas/DiceResultOverlay';
+import type { CameraControlsState, CameraControlsOperations } from '../hooks/controls/useCameraControls';
 
 // Extend R3F with the geometry we need
 extend({ EdgesGeometry: THREE.EdgesGeometry });
 
 interface DiceCanvasProps {
-    // TODO
+    // Camera controls passed from parent
+    cameraState: CameraControlsState;
+    cameraOperations: CameraControlsOperations;
+    controlsRef: React.RefObject<any>;
 }
 
 // Define available dice types (now imported from hooks)
@@ -295,12 +299,15 @@ const VirtualDiceRenderer: React.FC<VirtualDiceRendererProps> = ({
     );
 };
 
-const DiceCanvas: React.FC<DiceCanvasProps> = () => {
+const DiceCanvas: React.FC<DiceCanvasProps> = ({
+    cameraState,
+    cameraOperations,
+    controlsRef
+}) => {
     const [isInitialized, setIsInitialized] = useState(false);
 
     // Use the new control hooks
     const [diceState, diceOperations] = useDiceControls({ isInitialized });
-    const [cameraState, cameraOperations, controlsRef] = useCameraControls();
 
     // Canvas synchronization using new sync hooks
     const { remoteDice, syncStatus, stats } = useCanvasSync({

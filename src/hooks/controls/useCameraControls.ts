@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 
 export interface CameraControlsState {
     isFullScreen: boolean;
@@ -38,9 +38,12 @@ export const useCameraControls = (_props?: UseCameraControlsProps): [
 
     // Toggle camera lock
     const toggleCameraLock = useCallback(() => {
-        setIsCameraLocked(prev => !prev);
-        console.log(`📷 Camera ${!isCameraLocked ? 'locked' : 'unlocked'}`);
-    }, [isCameraLocked]);
+        setIsCameraLocked(prev => {
+            const newValue = !prev;
+            console.log(`📷 Camera ${newValue ? 'locked' : 'unlocked'}`);
+            return newValue;
+        });
+    }, []);
 
     // Reset camera to default position
     const resetCamera = useCallback(() => {
@@ -88,17 +91,17 @@ export const useCameraControls = (_props?: UseCameraControlsProps): [
         }
     }, []);
 
-    const state: CameraControlsState = {
+    const state: CameraControlsState = useMemo(() => ({
         isFullScreen,
         isCameraLocked
-    };
+    }), [isFullScreen, isCameraLocked]);
 
-    const operations: CameraControlsOperations = {
+    const operations: CameraControlsOperations = useMemo(() => ({
         toggleFullScreen,
         toggleCameraLock,
         resetCamera,
         jumpToPosition
-    };
+    }), [toggleFullScreen, toggleCameraLock, resetCamera, jumpToPosition]);
 
     return [state, operations, controlsRef];
 };

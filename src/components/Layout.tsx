@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import Header from './Header';
 import DiceRoller from './DiceRoller';
@@ -8,27 +8,18 @@ import DiceCanvas from './DiceCanvas';
 import TranslucentSidebar from './TranslucentSidebar';
 import UnifiedBottomControls from './UnifiedBottomControls';
 import TabbedPanel from './TabbedPanel';
+import { useCameraControls } from '../hooks/controls/useCameraControls';
 
 const Layout: React.FC = () => {
     const chatInputRef = useRef<ChatInputRef>(null);
+
+    // Camera controls managed at Layout level for sharing between components
+    const [cameraState, cameraOperations, controlsRef] = useCameraControls();
 
     const handleQuickRoll = (command: string) => {
         if (chatInputRef.current) {
             chatInputRef.current.populateCommand(command);
         }
-    };
-
-    // Placeholder camera control functions - these will be replaced with proper integration later
-    const handleToggleCameraLock = () => {
-        console.log('Camera lock toggle - TODO: integrate with DiceCanvas');
-    };
-
-    const handleResetCamera = () => {
-        console.log('Camera reset - TODO: integrate with DiceCanvas');
-    };
-
-    const handleToggleFullScreen = () => {
-        console.log('Fullscreen toggle - TODO: integrate with DiceCanvas');
     };
 
     return (
@@ -37,7 +28,11 @@ const Layout: React.FC = () => {
             <main className="flex-grow h-0 relative">
                 {/* Full-screen Canvas Background */}
                 <div className="absolute inset-0">
-                    <DiceCanvas />
+                    <DiceCanvas
+                        cameraState={cameraState}
+                        cameraOperations={cameraOperations}
+                        controlsRef={controlsRef}
+                    />
                 </div>
 
                 {/* Resizable Panel Overlay System */}
@@ -72,10 +67,10 @@ const Layout: React.FC = () => {
                                 <div className="absolute bottom-0 left-0 right-0" style={{ pointerEvents: 'auto' }}>
                                     <UnifiedBottomControls
                                         onQuickRoll={handleQuickRoll}
-                                        isCameraLocked={false}
-                                        onToggleCameraLock={handleToggleCameraLock}
-                                        onResetCamera={handleResetCamera}
-                                        onToggleFullScreen={handleToggleFullScreen}
+                                        isCameraLocked={cameraState.isCameraLocked}
+                                        onToggleCameraLock={cameraOperations.toggleCameraLock}
+                                        onResetCamera={cameraOperations.resetCamera}
+                                        onToggleFullScreen={cameraOperations.toggleFullScreen}
                                     />
                                 </div>
                             </div>

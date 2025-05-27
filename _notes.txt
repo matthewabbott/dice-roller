@@ -28,6 +28,15 @@ TODOs:
 
 RESOLVED:
 
+Minor snag, camera control render loop
+- Moved camera controls from DiceCanvas to Layout level
+- ActivityFeed subscription started to repeatedly re-load
+- Root cause: unstable callback dependencies in useCameraControls hook
+- toggleCameraLock callback had isCameraLocked as dependency, recreating function on every state change
+- state and operations objects were recreated on every render
+- Meant Layout had to re-render frequently, triggering ActivityFeed re-mounts/subscription reloads
+- Fixed by: removing unstable dependencies from callbacks, memoizing state/operations objects
+
 Minor snag, pointer events blocked to background threejs canvas
 - After moving canvas to background, couldn't click on it.
 - Tried to fix with `pointer-events-none` Tailwind class to PanelGroup container

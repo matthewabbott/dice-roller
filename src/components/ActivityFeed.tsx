@@ -110,7 +110,6 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ onQuickRoll, chatInputRef }
         }
     });
 
-    if (loading) console.log('Activity subscription loading...');
     if (error) console.error('Activity subscription hook error object:', error);
 
     const formatTimestamp = (timestamp: string) => {
