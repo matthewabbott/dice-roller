@@ -191,7 +191,7 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({ hideHeader = false
                                 error ? 'border-red-500 bg-red-900/10' :
                                     commandPreview ? 'border-blue-500 bg-blue-900/10' : ''
                                 }`}
-                            placeholder="Chat or /roll here"
+                            placeholder="Chat or /roll"
                             value={message}
                             onChange={handleMessageChange}
                             onKeyPress={handleKeyPress}

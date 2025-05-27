@@ -7,6 +7,8 @@ import type { ChatInputRef } from './ChatInput';
 import DiceCanvas from './DiceCanvas';
 import { CollapsibleSection } from './controls/CollapsibleSection';
 import TranslucentSidebar from './TranslucentSidebar';
+import BottomExpandablePanel from './BottomExpandablePanel';
+import LocalSandboxControls from './LocalSandboxControls';
 
 const Layout: React.FC = () => {
     const chatInputRef = useRef<ChatInputRef>(null);
@@ -57,6 +59,17 @@ const Layout: React.FC = () => {
                                 {/* Canvas controls positioned over the transparent center */}
                                 <div className="absolute bottom-4 left-4 z-10" style={{ pointerEvents: 'auto' }}>
                                     <HelpButton />
+                                </div>
+
+                                {/* Bottom Expandable Panel for Local Sandbox Controls */}
+                                <div className="absolute bottom-0 left-0 right-0" style={{ pointerEvents: 'auto' }}>
+                                    <BottomExpandablePanel
+                                        title="Local Sandbox"
+                                        icon="🛝"
+                                        defaultExpanded={false}
+                                    >
+                                        <LocalSandboxControls onQuickRoll={handleQuickRoll} />
+                                    </BottomExpandablePanel>
                                 </div>
                             </div>
                         </Panel>
