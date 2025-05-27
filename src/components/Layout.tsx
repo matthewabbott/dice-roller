@@ -27,51 +27,59 @@ const Layout: React.FC = () => {
                 </div>
 
                 {/* Resizable Panel Overlay System */}
-                <PanelGroup
-                    direction="horizontal"
-                    autoSaveId="dice-roller-layout"
-                    className="h-full relative z-10"
-                >
-                    {/* Left Sidebar - Activity Feed (Translucent Overlay) */}
-                    <Panel
-                        id="activity-feed"
-                        defaultSize={25}
-                        minSize={20}
-                        maxSize={40}
-                        order={1}
+                <div className="h-full relative z-10" style={{ pointerEvents: 'none' }}>
+                    <PanelGroup
+                        direction="horizontal"
+                        autoSaveId="dice-roller-layout"
+                        className="h-full"
                     >
-                        <TranslucentSidebar side="left" className="p-4">
-                            <ActivityFeed onQuickRoll={handleQuickRoll} chatInputRef={chatInputRef} />
-                        </TranslucentSidebar>
-                    </Panel>
+                        {/* Left Sidebar - Activity Feed (Translucent Overlay) */}
+                        <Panel
+                            id="activity-feed"
+                            defaultSize={25}
+                            minSize={20}
+                            maxSize={40}
+                            order={1}
+                        >
+                            <TranslucentSidebar side="left" className="p-4">
+                                <ActivityFeed onQuickRoll={handleQuickRoll} chatInputRef={chatInputRef} />
+                            </TranslucentSidebar>
+                        </Panel>
 
-                    <PanelResizeHandle className="w-1 bg-white/20 hover:bg-white/40 transition-colors relative z-20" />
+                        <PanelResizeHandle
+                            className="w-1 bg-white/20 hover:bg-white/40 transition-colors relative z-20"
+                            style={{ pointerEvents: 'auto' }}
+                        />
 
-                    {/* Center - Transparent spacer to allow canvas to show through */}
-                    <Panel id="canvas-spacer" order={2}>
-                        <div className="h-full relative">
-                            {/* Canvas controls positioned over the transparent center */}
-                            <div className="absolute bottom-4 left-4 z-10">
-                                <HelpButton />
+                        {/* Center - Transparent spacer to allow canvas to show through */}
+                        <Panel id="canvas-spacer" order={2}>
+                            <div className="h-full relative" style={{ pointerEvents: 'none' }}>
+                                {/* Canvas controls positioned over the transparent center */}
+                                <div className="absolute bottom-4 left-4 z-10" style={{ pointerEvents: 'auto' }}>
+                                    <HelpButton />
+                                </div>
                             </div>
-                        </div>
-                    </Panel>
+                        </Panel>
 
-                    <PanelResizeHandle className="w-1 bg-white/20 hover:bg-white/40 transition-colors relative z-20" />
+                        <PanelResizeHandle
+                            className="w-1 bg-white/20 hover:bg-white/40 transition-colors relative z-20"
+                            style={{ pointerEvents: 'auto' }}
+                        />
 
-                    {/* Right Sidebar - Lobby (Translucent Overlay) */}
-                    <Panel
-                        id="lobby"
-                        defaultSize={25}
-                        minSize={20}
-                        maxSize={40}
-                        order={3}
-                    >
-                        <TranslucentSidebar side="right" className="p-4">
-                            <LobbyPanel />
-                        </TranslucentSidebar>
-                    </Panel>
-                </PanelGroup>
+                        {/* Right Sidebar - Lobby (Translucent Overlay) */}
+                        <Panel
+                            id="lobby"
+                            defaultSize={25}
+                            minSize={20}
+                            maxSize={40}
+                            order={3}
+                        >
+                            <TranslucentSidebar side="right" className="p-4">
+                                <LobbyPanel />
+                            </TranslucentSidebar>
+                        </Panel>
+                    </PanelGroup>
+                </div>
             </main>
         </div>
     );

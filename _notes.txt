@@ -28,6 +28,12 @@ TODOs:
 
 RESOLVED:
 
+Minor snag, pointer events blocked to background threejs canvas
+- After moving canvas to background, couldn't click on it.
+- Tried to fix with `pointer-events-none` Tailwind class to PanelGroup container
+- react-resizable-panels library styles have higher specificity than that tailwind class
+- Solution: Wrapper div with inline `style={{ pointerEvents: 'none' }}` (higher specificity)
+
 Minor snag, roll commands were rolling as 'Anonymous'
 - rollDice mutation had a `user` parameter in its graphql schema and resolver
 - regular chat messages used context.getUsername()

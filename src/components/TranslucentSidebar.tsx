@@ -24,6 +24,7 @@ const TranslucentSidebar: React.FC<TranslucentSidebarProps> = ({
                 backdrop-blur-sm 
                 ${side === 'left' ? 'border-r' : 'border-l'} 
                 border-white/10
+                pointer-events-auto
                 ${className}
             `}
         >
