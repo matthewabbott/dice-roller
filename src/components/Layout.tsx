@@ -7,8 +7,7 @@ import type { ChatInputRef } from './ChatInput';
 import DiceCanvas from './DiceCanvas';
 import { CollapsibleSection } from './controls/CollapsibleSection';
 import TranslucentSidebar from './TranslucentSidebar';
-import BottomExpandablePanel from './BottomExpandablePanel';
-import LocalSandboxControls from './LocalSandboxControls';
+import UnifiedBottomControls from './UnifiedBottomControls';
 
 const Layout: React.FC = () => {
     const chatInputRef = useRef<ChatInputRef>(null);
@@ -17,6 +16,19 @@ const Layout: React.FC = () => {
         if (chatInputRef.current) {
             chatInputRef.current.populateCommand(command);
         }
+    };
+
+    // Placeholder camera control functions - these will be replaced with proper integration later
+    const handleToggleCameraLock = () => {
+        console.log('Camera lock toggle - TODO: integrate with DiceCanvas');
+    };
+
+    const handleResetCamera = () => {
+        console.log('Camera reset - TODO: integrate with DiceCanvas');
+    };
+
+    const handleToggleFullScreen = () => {
+        console.log('Fullscreen toggle - TODO: integrate with DiceCanvas');
     };
 
     return (
@@ -56,20 +68,15 @@ const Layout: React.FC = () => {
                         {/* Center - Transparent spacer to allow canvas to show through */}
                         <Panel id="canvas-spacer" order={2}>
                             <div className="h-full relative" style={{ pointerEvents: 'none' }}>
-                                {/* Canvas controls positioned over the transparent center */}
-                                <div className="absolute bottom-4 left-4 z-10" style={{ pointerEvents: 'auto' }}>
-                                    <HelpButton />
-                                </div>
-
-                                {/* Bottom Expandable Panel for Local Sandbox Controls */}
+                                {/* Unified Bottom Controls - Sandbox + Camera */}
                                 <div className="absolute bottom-0 left-0 right-0" style={{ pointerEvents: 'auto' }}>
-                                    <BottomExpandablePanel
-                                        title="Local Sandbox"
-                                        icon="🛝"
-                                        defaultExpanded={false}
-                                    >
-                                        <LocalSandboxControls onQuickRoll={handleQuickRoll} />
-                                    </BottomExpandablePanel>
+                                    <UnifiedBottomControls
+                                        onQuickRoll={handleQuickRoll}
+                                        isCameraLocked={false}
+                                        onToggleCameraLock={handleToggleCameraLock}
+                                        onResetCamera={handleResetCamera}
+                                        onToggleFullScreen={handleToggleFullScreen}
+                                    />
                                 </div>
                             </div>
                         </Panel>
@@ -94,46 +101,6 @@ const Layout: React.FC = () => {
                     </PanelGroup>
                 </div>
             </main>
-        </div>
-    );
-};
-
-// Help Button Component
-const HelpButton: React.FC = () => {
-    const [isExpanded, setIsExpanded] = useState(true); // Start expanded as requested
-
-    return (
-        <div className="relative">
-            <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="bg-blue-600 hover:bg-blue-500 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg transition-colors"
-                title="Camera controls help"
-            >
-                <span className="text-lg">?</span>
-            </button>
-
-            {isExpanded && (
-                <div className="absolute bottom-12 left-0 bg-black bg-opacity-90 text-white p-4 rounded-lg shadow-xl min-w-80 max-w-96">
-                    <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-medium text-sm">Camera Controls</h4>
-                        <button
-                            onClick={() => setIsExpanded(false)}
-                            className="text-gray-400 hover:text-white ml-2"
-                        >
-                            ×
-                        </button>
-                    </div>
-                    <div className="text-xs space-y-1 text-gray-300">
-                        <div>• <strong>Left Click & Drag:</strong> Rotate camera view</div>
-                        <div>• <strong>Right Click & Drag:</strong> Pan camera</div>
-                        <div>• <strong>Mouse Wheel:</strong> Zoom in/out</div>
-                        <div>• <strong>Space:</strong> Toggle camera lock</div>
-                        <div>• <strong>V:</strong> Reset camera view</div>
-                        <div>• <strong>F:</strong> Toggle fullscreen</div>
-                        <div>• <strong>Shift + Click & Drag dice:</strong> Throw dice</div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
