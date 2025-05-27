@@ -15,9 +15,10 @@ interface User {
 interface DiceRollerProps {
     onQuickRoll?: (command: string) => void;
     hideQuickRollCommands?: boolean;
+    showOnlyUserSettings?: boolean;
 }
 
-const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll, hideQuickRollCommands = false }) => {
+const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll, hideQuickRollCommands = false, showOnlyUserSettings = false }) => {
     const [username, setUsername] = useState('Anonymous');
     const [pendingUsername, setPendingUsername] = useState('');
     const [isUsernameRegistered, setIsUsernameRegistered] = useState(true); // Anonymous is always registered
@@ -158,7 +159,7 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll, hideQuickRollComma
 
     return (
         <div className={hideQuickRollCommands ? '' : 'card'}>
-            {!hideQuickRollCommands && (
+            {!hideQuickRollCommands && !showOnlyUserSettings && (
                 <h2 className="text-xl font-semibold text-brand-text mb-3">User Settings</h2>
             )}
 
@@ -191,8 +192,8 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll, hideQuickRollComma
                 <ColorPicker currentColor={userColor} onColorChange={setUserColor} />
             </div>
 
-            {/* Active Players List - Only show when in lobby */}
-            {hideQuickRollCommands && (
+            {/* Active Players List - Only show when in lobby and not user settings only */}
+            {hideQuickRollCommands && !showOnlyUserSettings && (
                 <div className="mt-4">
                     <h4 className="text-sm font-medium text-brand-text-muted mb-3">Active Players ({users.length})</h4>
                     <div className="space-y-2">
@@ -220,8 +221,8 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll, hideQuickRollComma
                 </div>
             )}
 
-            {/* Quick Roll Commands - Only show when not hidden */}
-            {!hideQuickRollCommands && (
+            {/* Quick Roll Commands - Only show when not hidden and not user settings only */}
+            {!hideQuickRollCommands && !showOnlyUserSettings && (
                 <div className="border-t border-brand-surface pt-3">
                     <button
                         onClick={() => setIsLocalDiceExpanded(!isLocalDiceExpanded)}

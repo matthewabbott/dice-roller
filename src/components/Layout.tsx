@@ -5,9 +5,9 @@ import DiceRoller from './DiceRoller';
 import ActivityFeed from './ActivityFeed';
 import type { ChatInputRef } from './ChatInput';
 import DiceCanvas from './DiceCanvas';
-import { CollapsibleSection } from './controls/CollapsibleSection';
 import TranslucentSidebar from './TranslucentSidebar';
 import UnifiedBottomControls from './UnifiedBottomControls';
+import TabbedPanel from './TabbedPanel';
 
 const Layout: React.FC = () => {
     const chatInputRef = useRef<ChatInputRef>(null);
@@ -105,25 +105,104 @@ const Layout: React.FC = () => {
     );
 };
 
-// Lobby Panel Component (extracted user settings from DiceRoller)
+// Lobby Panel Component (now tabbed with Lobby and User Settings)
 const LobbyPanel: React.FC = () => {
+    const tabs = [
+        {
+            id: 'lobby',
+            label: 'Lobby',
+            icon: '👥',
+            content: <LobbyTab />
+        },
+        {
+            id: 'settings',
+            label: 'Settings',
+            icon: '⚙️',
+            content: <UserSettingsTab />
+        }
+    ];
+
     return (
-        <div className="space-y-4">
-            <CollapsibleSection
-                title="Lobby"
-                icon="👥"
-                tooltip="Player lobby and user settings"
-                defaultCollapsed={false}
-                className="card"
-            >
-                <div className="space-y-4">
-                    {/* User Settings (extracted from DiceRoller) */}
-                    <div>
-                        <h4 className="text-sm font-medium text-brand-text-muted mb-3">User Settings</h4>
-                        <DiceRoller onQuickRoll={() => { }} hideQuickRollCommands={true} />
+        <TabbedPanel
+            tabs={tabs}
+            defaultTab="lobby"
+            className="h-full"
+        />
+    );
+};
+
+// Lobby Tab - Player list and room information
+const LobbyTab: React.FC = () => {
+    return (
+        <div className="p-4 space-y-4">
+            {/* Room Info */}
+            <div className="bg-brand-surface/50 rounded-lg p-3 border border-white/10">
+                <h3 className="text-sm font-medium text-brand-text mb-2 flex items-center gap-2">
+                    🏠 Room Information
+                </h3>
+                <div className="space-y-1 text-xs text-brand-text-muted">
+                    <div className="flex justify-between">
+                        <span>Status:</span>
+                        <span className="text-green-400">🟢 Connected</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span>Room ID:</span>
+                        <span className="font-mono">dice-lobby</span>
                     </div>
                 </div>
-            </CollapsibleSection>
+            </div>
+
+            {/* Active Players */}
+            <div>
+                <DiceRoller onQuickRoll={() => { }} hideQuickRollCommands={true} />
+            </div>
+        </div>
+    );
+};
+
+// User Settings Tab - Username, color picker, preferences
+const UserSettingsTab: React.FC = () => {
+    return (
+        <div className="p-4 space-y-4">
+            {/* User Settings */}
+            <div>
+                <h3 className="text-sm font-medium text-brand-text mb-3 flex items-center gap-2">
+                    👤 User Profile
+                </h3>
+                <DiceRoller onQuickRoll={() => { }} hideQuickRollCommands={true} showOnlyUserSettings={true} />
+            </div>
+
+            {/* Additional Settings */}
+            <div className="bg-brand-surface/50 rounded-lg p-3 border border-white/10">
+                <h4 className="text-sm font-medium text-brand-text mb-3 flex items-center gap-2">
+                    🎛️ Preferences
+                </h4>
+                <div className="space-y-3">
+                    <label className="flex items-center gap-2 text-sm">
+                        <input
+                            type="checkbox"
+                            className="rounded border-gray-600 bg-brand-background text-brand-primary focus:ring-brand-primary focus:ring-offset-0"
+                            defaultChecked
+                        />
+                        <span className="text-brand-text-muted">Show dice result overlays</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                        <input
+                            type="checkbox"
+                            className="rounded border-gray-600 bg-brand-background text-brand-primary focus:ring-brand-primary focus:ring-offset-0"
+                            defaultChecked
+                        />
+                        <span className="text-brand-text-muted">Auto-scroll chat to bottom</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                        <input
+                            type="checkbox"
+                            className="rounded border-gray-600 bg-brand-background text-brand-primary focus:ring-brand-primary focus:ring-offset-0"
+                        />
+                        <span className="text-brand-text-muted">Enable sound effects</span>
+                    </label>
+                </div>
+            </div>
         </div>
     );
 };
