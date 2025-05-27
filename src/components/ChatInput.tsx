@@ -184,16 +184,81 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({ hideHeader = false
 
             <form onSubmit={handleSubmit} className="space-y-2">
                 <div className="flex space-x-2">
-                    <input
-                        type="text"
-                        className="input-field flex-grow"
-                        placeholder="Type your message or /roll 2d6..."
-                        value={message}
-                        onChange={handleMessageChange}
-                        onKeyPress={handleKeyPress}
-                        disabled={isLoading}
-                        maxLength={1000}
-                    />
+                    <div className="relative flex-grow">
+                        <input
+                            type="text"
+                            className={`input-field w-full pr-8 transition-colors ${commandError ? 'border-orange-500 bg-orange-900/10' :
+                                error ? 'border-red-500 bg-red-900/10' :
+                                    commandPreview ? 'border-blue-500 bg-blue-900/10' : ''
+                                }`}
+                            placeholder="Chat or /roll here"
+                            value={message}
+                            onChange={handleMessageChange}
+                            onKeyPress={handleKeyPress}
+                            disabled={isLoading}
+                            maxLength={1000}
+                        />
+
+                        {/* Status Icons - Positioned in top-right corner of input */}
+                        <div className="absolute top-1 right-1 flex items-center space-x-1">
+                            {/* Command Preview Icon */}
+                            {commandPreview && (
+                                <div className="relative group">
+                                    <div className="text-sm cursor-help">
+                                        🎲
+                                    </div>
+                                    <div className="absolute bottom-6 right-0 bg-brand-surface border border-brand-primary rounded-lg p-3 text-sm text-brand-text-muted opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 min-w-48 max-w-80">
+                                        <div className="break-words">
+                                            <span className="font-medium">Preview:</span> {commandPreview}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Command Error Icon */}
+                            {commandError && (
+                                <div className="relative group">
+                                    <div className="text-sm cursor-help animate-pulse">
+                                        ⚠️
+                                    </div>
+                                    <div className="absolute bottom-6 right-0 bg-orange-900/90 border border-orange-500 rounded-lg p-3 text-sm text-orange-300 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 min-w-48 max-w-80">
+                                        <div className="break-words">
+                                            <span className="font-medium">Warning:</span> {commandError}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* GraphQL Error Icon */}
+                            {error && (
+                                <div className="relative group">
+                                    <div className="text-sm cursor-help animate-pulse">
+                                        ❌
+                                    </div>
+                                    <div className="absolute bottom-6 right-0 bg-red-900/90 border border-red-500 rounded-lg p-3 text-sm text-red-300 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 min-w-48 max-w-80">
+                                        <div className="break-words">
+                                            <span className="font-medium">Error:</span> {error.message}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Help Icon - only show when no other status and no message */}
+                            {!message && !commandPreview && !commandError && !error && (
+                                <div className="relative group">
+                                    <div className="text-sm cursor-help opacity-60">
+                                        💡
+                                    </div>
+                                    <div className="absolute bottom-6 right-0 bg-brand-surface border border-brand-primary rounded-lg p-3 text-xs text-brand-text-muted opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 min-w-48 max-w-80">
+                                        <div className="break-words">
+                                            Try <code>/roll 2d6</code>, <code>/r d20</code>, or <code>/help</code> for commands
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     {onDiceButtonClick && (
                         <button
                             type="button"
@@ -213,34 +278,6 @@ const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({ hideHeader = false
                         {isLoading ? 'Sending...' : 'Send'}
                     </button>
                 </div>
-
-                {/* Command Preview */}
-                {commandPreview && (
-                    <div className="text-sm text-brand-text-muted bg-brand-surface p-2 rounded border-l-2 border-brand-primary">
-                        <span className="font-medium">Preview:</span> {commandPreview}
-                    </div>
-                )}
-
-                {/* Command Error */}
-                {commandError && (
-                    <div className="text-sm text-orange-300 bg-orange-900/20 p-2 rounded border-l-2 border-orange-500">
-                        <span className="font-medium">Warning:</span> {commandError}
-                    </div>
-                )}
-
-                {/* GraphQL Error */}
-                {error && (
-                    <p className="text-sm text-brand-primary">
-                        Error: {error.message}
-                    </p>
-                )}
-
-                {/* Help Hint */}
-                {!message && (
-                    <div className="text-xs text-brand-text-muted">
-                        💡 Try <code>/roll 2d6</code>, <code>/r d20</code>, or <code>/help</code> for commands
-                    </div>
-                )}
             </form>
         </div>
     );
