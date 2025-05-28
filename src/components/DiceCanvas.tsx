@@ -9,8 +9,8 @@ import { DiceManager, DiceD6, DiceD4, DiceD8, DiceD10, DiceD12, DiceD20 } from '
 import { DICE_GEOMETRIES } from './dice';
 import { PhysicsWorld, PhysicsGround } from './physics';
 import { RemoteDiceRenderer } from './sync';
-import { DiceControlPanel, CanvasOverlay, InstructionsPanel, RollHistory } from './controls';
-import { useDiceInteraction, usePhysicsSync, useCanvasSync, useDiceControls } from '../hooks';
+import { CanvasOverlay, InstructionsPanel } from './controls';
+import { useDiceInteraction, usePhysicsSync, useCanvasSync } from '../hooks';
 import { useHighlighting } from '../hooks/useHighlighting';
 import { useDiceResultOverlays } from '../hooks/canvas/useDiceResultOverlays';
 import { useGlobalHotkeys, type HotkeyActions } from '../hooks/useGlobalHotkeys';
@@ -28,7 +28,7 @@ interface DiceCanvasProps {
 }
 
 // Define available dice types (now imported from hooks)
-import type { DiceType } from '../hooks/controls/useDiceControls';
+type DiceType = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20';
 type DiceInstance = (DiceD4 | DiceD6 | DiceD8 | DiceD10 | DiceD12 | DiceD20) & { canvasId?: string };
 
 // Dice configuration
@@ -138,8 +138,8 @@ const PhysicsDice: React.FC<{ dice: DiceInstance; canvasId?: string }> = ({ dice
     const normalizedDiceType = dice.diceType.toLowerCase() as DiceType;
 
     // Get dice configuration for colors and geometry
-    const diceConfig = DICE_CONFIG[normalizedDiceType];
-    const GeometryComponent = DICE_GEOMETRIES[normalizedDiceType];
+    const diceConfig = DICE_CONFIG[normalizedDiceType as keyof typeof DICE_CONFIG];
+    const GeometryComponent = DICE_GEOMETRIES[normalizedDiceType as keyof typeof DICE_GEOMETRIES];
 
     // Debug unknown dice types
     if (!diceConfig) {
@@ -306,9 +306,6 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
 }) => {
     const [isInitialized, setIsInitialized] = useState(false);
 
-    // Use the new control hooks
-    const [diceState, diceOperations] = useDiceControls({ isInitialized });
-
     // Canvas synchronization using new sync hooks
     const { remoteDice, syncStatus, stats } = useCanvasSync({
         isInitialized,
@@ -321,7 +318,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
     // Setup highlighting with camera jump functionality
     const { setCameraJumpCallback, setGetDicePositionCallback, getActivities, isDiceHighlighted } = useHighlighting();
 
-    // Extract virtual dice from activities (moved up to avoid dependency issues)
+    // Extract virtual dice from activities
     const virtualDice: VirtualDiceData[] = React.useMemo(() => {
         const allVirtualDice: VirtualDiceData[] = [];
         const activities = getActivities();
@@ -368,14 +365,6 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
         const updateHighlightedDiceOverlays = () => {
             // Helper function to get dice position
             const getDicePosition = (diceId: string): [number, number, number] | null => {
-                // Check local dice
-                const localDice = diceState.dice.find((die, index) =>
-                    (die as any).canvasId === diceId || `local-dice-${index}` === diceId
-                );
-                if (localDice && localDice.body) {
-                    return [localDice.body.position.x, localDice.body.position.y, localDice.body.position.z];
-                }
-
                 // Check remote dice
                 const remoteDie = remoteDice.get(diceId);
                 if (remoteDie && remoteDie.body) {
@@ -442,7 +431,6 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
 
             // Remove overlays for unhighlighted dice
             const allDiceIds = [
-                ...diceState.dice.map((die, index) => (die as any).canvasId || `local-dice-${index}`),
                 ...Array.from(remoteDice.keys()),
                 ...virtualDice.map(die => die.canvasId)
             ];
@@ -466,7 +454,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
         const interval = setInterval(updateHighlightedDiceOverlays, 200); // Check every 200ms
 
         return () => clearInterval(interval);
-    }, [isInitialized, diceState.dice, remoteDice, virtualDice, isDiceHighlighted, getActivities, showResultOverlay, showGroupSumOverlay, updateOverlayPosition, removeResultOverlay, hasVisibleOverlay, resultOverlays]);
+    }, [isInitialized, remoteDice, virtualDice, isDiceHighlighted, getActivities, showResultOverlay, showGroupSumOverlay, updateOverlayPosition, removeResultOverlay, hasVisibleOverlay, resultOverlays]);
 
     // Handle virtual dice click
     const handleVirtualDiceClick = useCallback((diceId: string) => {
@@ -482,19 +470,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
     // Setup dice position getter callback
     useEffect(() => {
         const getDicePosition = (diceId: string): { x: number; y: number; z: number } | null => {
-            // First check local dice
-            const localDice = diceState.dice.find((die, index) =>
-                (die as any).canvasId === diceId || `local-dice-${index}` === diceId
-            );
-            if (localDice && localDice.body) {
-                return {
-                    x: localDice.body.position.x,
-                    y: localDice.body.position.y,
-                    z: localDice.body.position.z
-                };
-            }
-
-            // Then check remote dice
+            // Check remote dice
             const remoteDie = remoteDice.get(diceId);
             if (remoteDie && remoteDie.body) {
                 return {
@@ -504,7 +480,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
                 };
             }
 
-            // Finally check virtual dice
+            // Check virtual dice
             const virtualDie = virtualDice.find(die => die.canvasId === diceId);
             if (virtualDie && virtualDie.position) {
                 return virtualDie.position;
@@ -514,23 +490,12 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
         };
 
         setGetDicePositionCallback(getDicePosition);
-    }, [setGetDicePositionCallback, diceState.dice, remoteDice, virtualDice]);
+    }, [setGetDicePositionCallback, remoteDice, virtualDice]);
 
     // Physics initialization is now handled by PhysicsWorld component
     const handlePhysicsInitialized = useCallback((initialized: boolean) => {
         setIsInitialized(initialized);
     }, []);
-
-    // Cleanup when component unmounts
-    useEffect(() => {
-        return () => {
-            diceState.dice.forEach(die => {
-                if (die.body) {
-                    DiceManager.removeBody(die.body);
-                }
-            });
-        };
-    }, [diceState.dice]);
 
     const canvasContent = (
         <>
@@ -568,15 +533,6 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
                     {/* Physics Ground */}
                     <PhysicsGround />
 
-                    {/* Physical Dice */}
-                    {diceState.dice.map((die, index) => (
-                        <PhysicsDice
-                            key={`dice-${index}`}
-                            dice={die}
-                            canvasId={(die as any).canvasId || `local-dice-${index}`}
-                        />
-                    ))}
-
                     {/* Remote Dice */}
                     <RemoteDiceRenderer
                         remoteDice={remoteDice}
@@ -606,12 +562,12 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
             {/* Canvas Overlay Controls */}
             <CanvasOverlay
                 isFullScreen={cameraState.isFullScreen}
-                isRolling={diceState.isRolling}
-                rollResult={diceState.rollResult}
+                isRolling={false}
+                rollResult={null}
                 syncStatus={syncStatus.status}
                 stats={stats}
                 isCameraLocked={cameraState.isCameraLocked}
-                diceCount={diceState.dice.length + virtualDice.length}
+                diceCount={remoteDice.size + virtualDice.length}
                 onToggleCameraLock={cameraOperations.toggleCameraLock}
                 onResetCamera={cameraOperations.resetCamera}
                 onToggleFullScreen={cameraOperations.toggleFullScreen}
@@ -619,7 +575,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
 
             {/* Instructions Panel */}
             <InstructionsPanel
-                diceCount={diceState.dice.length + virtualDice.length}
+                diceCount={remoteDice.size + virtualDice.length}
                 isFullScreen={cameraState.isFullScreen}
             />
         </>
@@ -649,21 +605,6 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
                     </div>
                 )}
             </div>
-
-            {/* Dice Controls Panel */}
-            <DiceControlPanel
-                diceState={diceState}
-                diceOperations={diceOperations}
-                cameraState={cameraState}
-                cameraOperations={cameraOperations}
-                remoteDiceCount={remoteDice.size}
-                syncStatus={syncStatus.status}
-                stats={stats}
-                isInitialized={isInitialized}
-            />
-
-            {/* Roll History */}
-            <RollHistory rollHistory={diceState.rollHistory} />
         </div>
     );
 };
