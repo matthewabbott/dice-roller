@@ -8,11 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "tsx server.ts --watch",
-    "test": "tsx tests/run-tests.ts",
-    "test:phase1": "tsx tests/phase1-rollprocessor.test.ts",
-    "test:phase2": "tsx tests/phase2-chat-commands.test.ts",
-    "test:phase3": "tsx tests/phase3-canvas-sync.test.ts"
+    "server": "tsx server.ts --watch"
   },
   "dependencies": {
     "@apollo/client": "^3.13.8",
