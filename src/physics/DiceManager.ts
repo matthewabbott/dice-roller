@@ -1,5 +1,6 @@
 import * as CANNON from 'cannon-es';
 import type { PhysicsWorld, PhysicsMaterials, ContactMaterialConfig, PhysicsConfig, DiceValuePair, DiceRollResult } from './types/DiceTypes';
+import type { DiceObject } from './DiceObject';
 
 /**
  * Manages the physics world and coordinates dice interactions
@@ -413,7 +414,7 @@ export class DiceManagerClass {
      * @param timeoutMs - Maximum time to wait for dice to settle
      * @returns Promise that resolves with the roll result
      */
-    public async rollSingle(dice: any, targetValue: number, timeoutMs: number = 10000): Promise<DiceRollResult> {
+    public async rollSingle(dice: DiceObject, targetValue: number, timeoutMs: number = 10000): Promise<DiceRollResult> {
         const results = await this.prepareValues([{ dice, value: targetValue }], timeoutMs);
         return results[0];
     }
@@ -424,10 +425,10 @@ export class DiceManagerClass {
      * @param timeoutMs - Maximum time to wait for dice to settle
      * @returns Promise that resolves with roll results
      */
-    public async rollRandom(dice: any[], timeoutMs: number = 10000): Promise<DiceRollResult[]> {
+    public async rollRandom(dice: DiceObject[], timeoutMs: number = 10000): Promise<DiceRollResult[]> {
         const diceValues: DiceValuePair[] = dice.map(d => ({
             dice: d,
-            value: Math.floor(Math.random() * d.values) + 1
+            value: Math.floor(Math.random() * d.getValueCount()) + 1
         }));
 
         return this.prepareValues(diceValues, timeoutMs);
@@ -438,7 +439,7 @@ export class DiceManagerClass {
      * @param dice - The dice object to check
      * @returns True if the dice is stable
      */
-    public isDiceStable(dice: any): boolean {
+    public isDiceStable(dice: DiceObject): boolean {
         if (!dice || !dice.body) {
             console.log('🎲 isDiceStable: No dice or body found');
             return false;

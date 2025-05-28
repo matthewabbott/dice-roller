@@ -286,7 +286,7 @@ export class CanvasStateManager {
 
         const events: CanvasEvent[] = [];
         const userDice = Array.from(room.activeDice.entries())
-            .filter(([_, dice]) => dice.userId === userId);
+            .filter(([_diceId, dice]) => dice.userId === userId);
 
         // Remove all dice belonging to disconnected user
         userDice.forEach(([diceId, dice]) => {
@@ -320,7 +320,7 @@ export class CanvasStateManager {
         const now = Date.now();
         const events: CanvasEvent[] = [];
         const oldDice = Array.from(room.activeDice.entries())
-            .filter(([_, dice]) => {
+            .filter(([_diceId, dice]) => {
                 const diceAge = now - new Date(dice.timestamp).getTime();
                 return diceAge > maxAgeMs;
             });

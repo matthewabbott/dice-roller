@@ -1,4 +1,14 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import * as THREE from 'three';
+
+// Define a minimal interface for OrbitControls to avoid type issues
+interface OrbitControlsLike {
+    enabled: boolean;
+    reset(): void;
+    target: THREE.Vector3;
+    object: THREE.Camera;
+    update(): void;
+}
 
 export interface CameraControlsState {
     isFullScreen: boolean;
@@ -9,24 +19,26 @@ export interface CameraControlsOperations {
     toggleFullScreen: () => void;
     toggleCameraLock: () => void;
     resetCamera: () => void;
-    jumpToPosition: (position: { x: number; y: number; z: number }, target?: { x: number; y: number; z: number }) => void;
+    jumpToPosition: (position: { x: number; y: number; z: number }) => void;
 }
 
-export interface UseCameraControlsProps {
+export interface CameraControlsProps {
+    // Currently no props needed, but interface kept for future extensibility
+    [key: string]: unknown;
 }
 
 /**
  * Custom hook for managing camera controls and fullscreen state
  * Extracted from DiceCanvas for better separation of concerns
  */
-export const useCameraControls = (_props?: UseCameraControlsProps): [
+export function useCameraControls(_props: CameraControlsProps = {}): [
     CameraControlsState,
     CameraControlsOperations,
-    React.RefObject<any>
-] => {
-    const controlsRef = useRef<any>(null);
-    const [isFullScreen, setIsFullScreen] = useState(false);
+    React.RefObject<OrbitControlsLike | null>
+] {
     const [isCameraLocked, setIsCameraLocked] = useState(false);
+    const [isFullScreen, setIsFullScreen] = useState(false);
+    const controlsRef = useRef<OrbitControlsLike | null>(null);
 
     useEffect(() => {
         if (controlsRef.current) {
@@ -52,7 +64,7 @@ export const useCameraControls = (_props?: UseCameraControlsProps): [
         setIsFullScreen(prev => !prev);
     }, []);
 
-    const jumpToPosition = useCallback((position: { x: number; y: number; z: number }, target?: { x: number; y: number; z: number }) => {
+    const jumpToPosition = useCallback((position: { x: number; y: number; z: number }) => {
         if (controlsRef.current) {
             const controls = controlsRef.current;
 
@@ -63,7 +75,7 @@ export const useCameraControls = (_props?: UseCameraControlsProps): [
                 z: position.z + cameraOffset.z
             };
 
-            const lookAtTarget = target || position;
+            const lookAtTarget = position;
 
             controls.target.set(lookAtTarget.x, lookAtTarget.y, lookAtTarget.z);
 
@@ -91,4 +103,4 @@ export const useCameraControls = (_props?: UseCameraControlsProps): [
     }), [toggleFullScreen, toggleCameraLock, resetCamera, jumpToPosition]);
 
     return [state, operations, controlsRef];
-};
+}

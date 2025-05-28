@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
+import type { DiceObject } from '../DiceObject';
 
 /**
  * Configuration options for creating a dice instance
@@ -20,7 +21,7 @@ export interface DiceOptions {
  */
 export interface DiceValuePair {
     /** The dice object to roll */
-    dice: any; // Will be DiceObject when implemented
+    dice: DiceObject;
     /** The target value the dice should land on (1-sided based on dice type) */
     value: number;
     /** Internal: Current physics vectors for state management */
@@ -103,7 +104,7 @@ export interface DiceGeometry {
  */
 export interface DiceRollResult {
     /** The dice that was rolled */
-    dice: any; // Will be DiceObject when implemented
+    dice: DiceObject;
     /** The final value that the dice landed on */
     value: number;
     /** Time taken for the dice to settle (in seconds) */
@@ -137,9 +138,26 @@ export interface DicePhysicsEvent {
     /** Type of event */
     type: 'roll-start' | 'roll-complete' | 'collision' | 'settled';
     /** The dice involved in the event */
-    dice: any; // Will be DiceObject when implemented
+    dice: DiceObject;
     /** Event-specific data */
-    data?: any;
+    data?: {
+        value?: number;
+        position?: THREE.Vector3;
+        rotation?: THREE.Quaternion;
+        velocity?: THREE.Vector3;
+        [key: string]: unknown;
+    };
     /** Timestamp of the event */
     timestamp: number;
+}
+
+export interface DiceThrowEvent {
+    type: 'throw';
+    dice: DiceObject;
+    data?: {
+        targetValue?: number;
+        force?: THREE.Vector3;
+        torque?: THREE.Vector3;
+        [key: string]: unknown;
+    };
 } 

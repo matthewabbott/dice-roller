@@ -410,6 +410,14 @@ export abstract class DiceObject {
     }
 
     /**
+     * Gets the number of sides/values for this dice type
+     * @returns The number of possible values (e.g., 6 for a d6)
+     */
+    public getValueCount(): number {
+        return this.geometry.values;
+    }
+
+    /**
      * Abstract method to calculate which face is currently facing up
      * Must be implemented by subclasses based on their geometry
      * @returns The value of the face currently facing up

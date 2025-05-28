@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Canvas, extend, useFrame } from '@react-three/fiber';
+import type { ThreeEvent } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
@@ -123,7 +124,7 @@ const PhysicsDice: React.FC<{ dice: DiceInstance; canvasId?: string }> = ({ dice
     const isHighlighted = canvasId ? isDiceHighlighted(canvasId) : false;
 
     // Handle dice click for highlighting
-    const handleDiceClick = useCallback((event: any) => {
+    const handleDiceClick = useCallback((event: ThreeEvent<MouseEvent>) => {
         event.stopPropagation();
         console.log(`🎲 Dice clicked with canvasId: "${canvasId}"`);
         if (canvasId) {
@@ -146,7 +147,7 @@ const PhysicsDice: React.FC<{ dice: DiceInstance; canvasId?: string }> = ({ dice
 
     const diceColor = diceConfig?.color || '#888888';
 
-    const enhancedPointerDown = useCallback((event: any) => {
+    const enhancedPointerDown = useCallback((event: ThreeEvent<PointerEvent>) => {
         interactionHandlers.handlePointerDown(event);
         handleDiceClick(event);
     }, [interactionHandlers.handlePointerDown, handleDiceClick]);

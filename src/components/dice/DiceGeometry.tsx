@@ -1,17 +1,18 @@
 import React from 'react';
 import * as THREE from 'three';
 import { AnimatedMaterial } from './AnimatedMaterial';
+import { ThreeEvent } from '@react-three/fiber';
 
 export interface DiceGeometryProps {
     size: number;
     color: string;
     isHovered?: boolean;
     isHighlighted?: boolean;
-    onPointerDown?: (event: any) => void;
-    onPointerMove?: (event: any) => void;
-    onPointerUp?: (event: any) => void;
-    onPointerEnter?: (event: any) => void;
-    onPointerLeave?: (event: any) => void;
+    onPointerDown?: (event: ThreeEvent<PointerEvent>) => void;
+    onPointerMove?: (event: ThreeEvent<PointerEvent>) => void;
+    onPointerUp?: (event: ThreeEvent<PointerEvent>) => void;
+    onPointerEnter?: (event: ThreeEvent<PointerEvent>) => void;
+    onPointerLeave?: (event: ThreeEvent<PointerEvent>) => void;
     meshRef?: React.RefObject<THREE.Mesh>;
 }
 

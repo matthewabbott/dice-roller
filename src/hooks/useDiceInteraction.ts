@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import type { ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 
@@ -14,9 +15,9 @@ export interface DiceInteractionState {
 }
 
 export interface DiceInteractionHandlers {
-    handlePointerDown: (event: any) => void;
-    handlePointerMove: (event: any) => void;
-    handlePointerUp: (event: any) => void;
+    handlePointerDown: (event: ThreeEvent<PointerEvent>) => void;
+    handlePointerMove: (event: ThreeEvent<PointerEvent>) => void;
+    handlePointerUp: (event: ThreeEvent<PointerEvent>) => void;
     handlePointerEnter: () => void;
     handlePointerLeave: () => void;
 }
@@ -48,13 +49,18 @@ export const useDiceInteraction = ({
     const [velocity, setVelocity] = useState<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
     const [positionHistory, setPositionHistory] = useState<Array<{ pos: THREE.Vector3; time: number }>>([]);
 
-    const handlePointerDown = useCallback((event: any) => {
+    const handlePointerDown = useCallback((event: ThreeEvent<PointerEvent>) => {
         // Only handle dice throwing if Shift key is held down
         if (!event.shiftKey) {
-            return; // Let camera controls handle normal clicks
+            return;
         }
 
         event.stopPropagation();
+
+        // Capture pointer for smooth dragging
+        if (event.target && 'setPointerCapture' in event.target) {
+            (event.target as Element).setPointerCapture(event.pointerId);
+        }
 
         // Store original position for physics restoration
         const currentPos = new THREE.Vector3(
@@ -86,14 +92,9 @@ export const useDiceInteraction = ({
         diceBody.type = CANNON.Body.KINEMATIC;
         diceBody.velocity.set(0, 0, 0);
         diceBody.angularVelocity.set(0, 0, 0);
-
-        // Capture pointer for consistent drag behavior
-        if (event.target.setPointerCapture) {
-            event.target.setPointerCapture(event.pointerId);
-        }
     }, [diceBody, meshRef]);
 
-    const handlePointerMove = useCallback((event: any) => {
+    const handlePointerMove = useCallback((event: ThreeEvent<PointerEvent>) => {
         if (isDragging && dragStart && meshRef.current && cameraRef.current && canvasRef.current) {
             setDragCurrent({ x: event.clientX, y: event.clientY });
 
@@ -162,10 +163,18 @@ export const useDiceInteraction = ({
         }
     }, [isDragging, dragStart, meshRef, cameraRef, canvasRef]);
 
-    const handlePointerUp = useCallback((event: any) => {
+    const handlePointerUp = useCallback((event: ThreeEvent<PointerEvent>) => {
         if (isDragging && dragStart && dragCurrent) {
             // Restore physics body to dynamic
-            diceBody.type = CANNON.Body.DYNAMIC;
+            if (diceBody) {
+                diceBody.type = CANNON.Body.DYNAMIC;
+                diceBody.wakeUp();
+            }
+
+            // Release pointer capture
+            if (event.target && 'releasePointerCapture' in event.target) {
+                (event.target as Element).releasePointerCapture(event.pointerId);
+            }
 
             // Calculate throwing velocity based on recent movement history
             let throwVelocity = new THREE.Vector3(0, 0, 0);
@@ -215,8 +224,6 @@ export const useDiceInteraction = ({
                 (Math.random() - 0.5) * rotationIntensity - throwVelocity.x * 0.05  // Reduced influence
             );
 
-            diceBody.wakeUp();
-
             console.log('🎲 Dice thrown with controlled physics:', {
                 throwVelocity: throwVelocity.toArray(),
                 throwSpeed: throwSpeed,
@@ -231,11 +238,6 @@ export const useDiceInteraction = ({
         setTargetPosition(null);
         setVelocity(new THREE.Vector3(0, 0, 0));
         setPositionHistory([]);
-
-        // Release pointer capture
-        if (event.target.releasePointerCapture) {
-            event.target.releasePointerCapture(event.pointerId);
-        }
     }, [isDragging, dragStart, dragCurrent, diceBody, positionHistory]);
 
     const handlePointerEnter = useCallback(() => {

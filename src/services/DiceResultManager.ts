@@ -19,12 +19,18 @@ export interface HighlightState {
     timestamp: string;
 }
 
+export interface Position {
+    x: number;
+    y: number;
+    z: number;
+}
+
 export class DiceResultManager {
     private diceStates = new Map<string, DiceState>();
     private activityToDice = new Map<string, string[]>(); // activityId -> canvasIds[]
     private canvasToActivity = new Map<string, string>(); // canvasId -> activityId
     private highlightState: HighlightState | null = null;
-    private eventListeners = new Map<string, Function[]>();
+    private eventListeners: Map<string, Array<(diceId: string, result: number, position: Position) => void>> = new Map();
 
     /**
      * Register a new dice roll with canvas correlation
@@ -284,14 +290,14 @@ export class DiceResultManager {
         this.emit('highlightChanged', highlight);
     }
 
-    public on(event: string, callback: Function): void {
+    public on(event: 'diceSettled', callback: (diceId: string, result: number, position: Position) => void): void {
         if (!this.eventListeners.has(event)) {
             this.eventListeners.set(event, []);
         }
         this.eventListeners.get(event)!.push(callback);
     }
 
-    public off(event: string, callback: Function): void {
+    public off(event: 'diceSettled', callback: (diceId: string, result: number, position: Position) => void): void {
         const listeners = this.eventListeners.get(event);
         if (listeners) {
             const index = listeners.indexOf(callback);
@@ -301,15 +307,19 @@ export class DiceResultManager {
         }
     }
 
-    private emit(event: string, data: any): void {
-        const listeners = this.eventListeners.get(event) || [];
-        listeners.forEach(callback => {
-            try {
-                callback(data);
-            } catch (error) {
-                console.error(`Error in DiceResultManager event listener for ${event}:`, error);
-            }
-        });
+    private emit(event: string, ...args: unknown[]): void {
+        if (event === 'diceSettled' && args.length >= 3) {
+            const listeners = this.eventListeners.get(event) || [];
+            const [diceId, result, position] = args as [string, number, Position];
+            listeners.forEach(callback => {
+                try {
+                    callback(diceId, result, position);
+                } catch (error) {
+                    console.error(`Error in DiceResultManager event listener for ${event}:`, error);
+                }
+            });
+        }
+        // For other events, we can add more specific handling as needed
     }
 
     /**

@@ -1,4 +1,5 @@
 import { getSessionId } from '../../utils/sessionId';
+import type { CanvasEventData } from '../../types/canvas';
 
 // Local type definition since DiceRollingService was removed
 export interface MultiRollResult {
@@ -10,7 +11,14 @@ export interface MultiRollResult {
 export interface LocalCanvasEvent {
     type: string;
     timestamp: number;
-    data: any;
+    data: {
+        rollResult?: MultiRollResult;
+        playerId: string;
+        playerName?: string;
+        diceType?: string;
+        position?: { x: number; y: number; z: number };
+        diceIds?: string[];
+    };
 }
 
 export interface DiceRollEvent extends LocalCanvasEvent {
@@ -47,6 +55,15 @@ export interface DiceThrowEvent extends LocalCanvasEvent {
 }
 
 export type LocalCanvasEventType = DiceRollEvent | DiceSpawnEvent | DiceClearEvent | DiceThrowEvent;
+
+export interface CanvasEventPayload {
+    id: string;
+    type: string;
+    diceId: string;
+    userId: string;
+    timestamp: string;
+    data: CanvasEventData | Record<string, unknown>;
+}
 
 /**
  * Service for handling canvas event broadcasting and synchronization

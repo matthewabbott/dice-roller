@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { DiceManager } from '../../physics';
+import * as CANNON from 'cannon-es';
 
 export interface PhysicsWorldProps {
     onInitialized?: (initialized: boolean) => void;
@@ -14,6 +15,7 @@ export interface PhysicsWorldProps {
  */
 export const PhysicsWorld: React.FC<PhysicsWorldProps> = ({ onInitialized, children }) => {
     const [isInitialized, setIsInitialized] = useState(false);
+    const worldRef = useRef<CANNON.World | null>(null);
 
     // Initialize physics world
     useEffect(() => {
@@ -51,6 +53,23 @@ export const PhysicsWorld: React.FC<PhysicsWorldProps> = ({ onInitialized, child
 
         initPhysics();
     }, []); // Remove onInitialized from dependencies to prevent re-runs
+
+    useEffect(() => {
+        const world = DiceManager.getWorld();
+        worldRef.current = world;
+
+        if (!world) return;
+
+        const handleBodyAdded = (event: { body: CANNON.Body }) => {
+            console.log('🌍 Body added to physics world:', event.body.id);
+        };
+
+        world.addEventListener('addBody', handleBodyAdded);
+
+        return () => {
+            world.removeEventListener('addBody', handleBodyAdded);
+        };
+    }, []);
 
     // Step the physics simulation every frame
     useFrame((_state, delta) => {
