@@ -32,7 +32,7 @@ export const usePhysicsSync = ({
             );
 
             // Calculate lag - dice follows target with some delay (like a heavy object)
-            const lagFactor = 0.15; // Lower = more lag, higher = more responsive
+            const lagFactor = 0.08; // Lower = more lag/weight feel, higher = more responsive
             const newPos = currentPos.clone();
             newPos.lerp(targetPosition, lagFactor);
 

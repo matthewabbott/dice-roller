@@ -67,7 +67,6 @@ export const D12Geometry: DiceGeometry = {
 
     /**
      * Scale factor for adjusting the geometry size
-     * Using a smaller scale factor than the original threejs-dice for better proportion
      */
     scaleFactor: 0.75,
 

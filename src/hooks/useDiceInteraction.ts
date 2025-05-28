@@ -98,7 +98,7 @@ export const useDiceInteraction = ({
             setDragCurrent({ x: event.clientX, y: event.clientY });
 
             // Get canvas and camera from stored refs
-            const camera = cameraRef.current;
+            const camera = cameraRef.current as THREE.PerspectiveCamera;
             const canvas = canvasRef.current;
             const rect = canvas.getBoundingClientRect();
 
@@ -122,14 +122,25 @@ export const useDiceInteraction = ({
             const up = new THREE.Vector3();
             up.crossVectors(right, cameraDirection).normalize();
 
-            // Scale movement based on distance from camera for natural feel
+            // Scale movement based on camera's field of view and distance for natural feel
+            // Use a more stable scaling that doesn't amplify movement with camera tilt
+            const fov = camera.fov || 75; // Default FOV if not available
+            const aspect = camera.aspect || 1;
+
+            // Calculate movement scale based on camera's view frustum at the dice's distance
+            // This provides consistent movement regardless of camera angle
             const distanceFromCamera = camera.position.distanceTo(dragStart.worldPos);
-            const movementScale = distanceFromCamera * 0.5;
+            const viewHeight = 2 * Math.tan((fov * Math.PI / 180) / 2) * distanceFromCamera;
+            const viewWidth = viewHeight * aspect;
+
+            // Scale movement to match screen space - this gives 1:1 mouse-to-world movement
+            const movementScaleX = viewWidth / 2;  // Half view width for normalized coordinates
+            const movementScaleY = viewHeight / 2; // Half view height for normalized coordinates
 
             // Calculate target position in world space using camera's right and up vectors
             const worldMovement = new THREE.Vector3();
-            worldMovement.addScaledVector(right, normalizedDeltaX * movementScale);
-            worldMovement.addScaledVector(up, normalizedDeltaY * movementScale);
+            worldMovement.addScaledVector(right, normalizedDeltaX * movementScaleX);
+            worldMovement.addScaledVector(up, normalizedDeltaY * movementScaleY);
 
             // Calculate new target position
             const newTargetPosition = dragStart.worldPos.clone();
