@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import LocalSandboxControls from './LocalSandboxControls';
 import CameraControlsPanel from './CameraControlsPanel';
+import DiceControlsPanel from './DiceControlsPanel';
 
 interface UnifiedBottomControlsProps {
-    // Sandbox controls
+    // Dice controls
     onQuickRoll?: (command: string) => void;
 
     // Camera controls
@@ -15,8 +15,7 @@ interface UnifiedBottomControlsProps {
 
 /**
  * UnifiedBottomControls Component
- * Provides a unified bottom bar with both sandbox and camera controls
- * Features hover expansion and click-to-expand functionality
+ * Provides both dice and camera controls with hover-to-peek and click-to-expand functionality
  */
 const UnifiedBottomControls: React.FC<UnifiedBottomControlsProps> = ({
     onQuickRoll,
@@ -25,26 +24,52 @@ const UnifiedBottomControls: React.FC<UnifiedBottomControlsProps> = ({
     onResetCamera,
     onToggleFullScreen
 }) => {
-    const [expandedPanel, setExpandedPanel] = useState<'sandbox' | 'camera' | null>(null);
+    const [expandedPanel, setExpandedPanel] = useState<'dice' | 'camera' | null>(null);
+    const [hoveredPanel, setHoveredPanel] = useState<'dice' | 'camera' | null>(null);
 
-    const togglePanel = (panel: 'sandbox' | 'camera') => {
+    const togglePanel = (panel: 'dice' | 'camera') => {
         setExpandedPanel(expandedPanel === panel ? null : panel);
     };
+
+    // Determine which panel should be shown (expanded takes priority over hovered)
+    const activePanel = expandedPanel || hoveredPanel;
+    const isExpanded = expandedPanel !== null;
+    const isPeeking = !isExpanded && hoveredPanel !== null;
 
     return (
         <div className="absolute bottom-0 left-0 right-0 z-20">
             {/* Control Buttons Bar */}
             <div className="flex bg-brand-surface/90 backdrop-blur-sm border-t border-white/10">
-                {/* Sandbox Controls Button */}
+                {/* Dice Controls Button */}
                 <button
-                    onClick={() => togglePanel('sandbox')}
-                    className="flex-1 px-4 py-3 flex items-center justify-center gap-2 text-left hover:bg-brand-surface transition-colors border-r border-white/10"
-                    title={`${expandedPanel === 'sandbox' ? 'Collapse' : 'Expand'} Local Sandbox Controls`}
+                    onClick={() => togglePanel('dice')}
+                    onMouseEnter={() => setHoveredPanel('dice')}
+                    onMouseLeave={() => setHoveredPanel(null)}
+                    className={`
+                        flex-1 px-4 py-3 flex items-center justify-center gap-2 text-left 
+                        transition-all duration-200 border-r border-white/10
+                        ${activePanel === 'dice'
+                            ? 'bg-brand-surface text-brand-text shadow-lg'
+                            : 'hover:bg-brand-surface/50 text-brand-text-muted hover:text-brand-text'
+                        }
+                    `}
+                    title={expandedPanel === 'dice'
+                        ? 'Collapse Dice Controls'
+                        : isPeeking && hoveredPanel === 'dice'
+                            ? 'Click to expand Dice Controls'
+                            : 'Dice Controls (hover to peek)'
+                    }
                 >
-                    <span className="text-lg">🛝</span>
-                    <span className="font-medium text-brand-text">Local Controls</span>
+                    <span className="text-lg">🎲</span>
+                    <span className="font-medium">
+                        {isPeeking && hoveredPanel === 'dice' ? 'Dice Controls (Click to expand)' : 'Dice Controls'}
+                    </span>
                     <span
-                        className={`text-brand-text-muted transition-transform duration-200 ml-auto ${expandedPanel === 'sandbox' ? 'rotate-180' : 'rotate-0'
+                        className={`transition-all duration-300 ml-auto ${expandedPanel === 'dice'
+                            ? 'rotate-180 text-brand-text'
+                            : isPeeking && hoveredPanel === 'dice'
+                                ? 'rotate-90 text-brand-text-muted'
+                                : 'rotate-0 text-brand-text-muted'
                             }`}
                     >
                         ▲
@@ -54,13 +79,33 @@ const UnifiedBottomControls: React.FC<UnifiedBottomControlsProps> = ({
                 {/* Camera Controls Button */}
                 <button
                     onClick={() => togglePanel('camera')}
-                    className="flex-1 px-4 py-3 flex items-center justify-center gap-2 text-left hover:bg-brand-surface transition-colors"
-                    title={`${expandedPanel === 'camera' ? 'Collapse' : 'Expand'} Camera Controls`}
+                    onMouseEnter={() => setHoveredPanel('camera')}
+                    onMouseLeave={() => setHoveredPanel(null)}
+                    className={`
+                        flex-1 px-4 py-3 flex items-center justify-center gap-2 text-left 
+                        transition-all duration-200
+                        ${activePanel === 'camera'
+                            ? 'bg-brand-surface text-brand-text shadow-lg'
+                            : 'hover:bg-brand-surface/50 text-brand-text-muted hover:text-brand-text'
+                        }
+                    `}
+                    title={expandedPanel === 'camera'
+                        ? 'Collapse Camera Controls'
+                        : isPeeking && hoveredPanel === 'camera'
+                            ? 'Click to expand Camera Controls'
+                            : 'Camera Controls (hover to peek)'
+                    }
                 >
                     <span className="text-lg">📷</span>
-                    <span className="font-medium text-brand-text">Camera Controls</span>
+                    <span className="font-medium">
+                        {isPeeking && hoveredPanel === 'camera' ? 'Camera Controls (Click to expand)' : 'Camera Controls'}
+                    </span>
                     <span
-                        className={`text-brand-text-muted transition-transform duration-200 ml-auto ${expandedPanel === 'camera' ? 'rotate-180' : 'rotate-0'
+                        className={`transition-all duration-300 ml-auto ${expandedPanel === 'camera'
+                            ? 'rotate-180 text-brand-text'
+                            : isPeeking && hoveredPanel === 'camera'
+                                ? 'rotate-90 text-brand-text-muted'
+                                : 'rotate-0 text-brand-text-muted'
                             }`}
                     >
                         ▲
@@ -68,31 +113,66 @@ const UnifiedBottomControls: React.FC<UnifiedBottomControlsProps> = ({
                 </button>
             </div>
 
-            {/* Expandable Content */}
+            {/* Expandable Content with improved animations */}
             <div
                 className={`
                     overflow-hidden 
                     transition-all 
-                    duration-300 
-                    ease-in-out 
+                    duration-500
+                    ease-out
                     bg-brand-surface/90 
                     backdrop-blur-sm 
                     border-t 
                     border-white/10
-                    ${expandedPanel ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
+                    ${activePanel
+                        ? isExpanded
+                            ? 'max-h-96 opacity-100 shadow-2xl'
+                            : 'max-h-32 opacity-75 shadow-lg'
+                        : 'max-h-0 opacity-0'
+                    }
                 `}
+                onMouseEnter={() => {
+                    // Keep hover state when mouse enters the content area
+                    if (isPeeking) {
+                        setHoveredPanel(activePanel);
+                    }
+                }}
+                onMouseLeave={() => {
+                    // Clear hover state when mouse leaves the content area
+                    if (isPeeking) {
+                        setHoveredPanel(null);
+                    }
+                }}
             >
-                <div className="p-4">
-                    {expandedPanel === 'sandbox' && (
-                        <LocalSandboxControls onQuickRoll={onQuickRoll} />
+                <div className={`p-4 transition-all duration-300 ${isPeeking ? 'scale-95 opacity-80' : 'scale-100 opacity-100'}`}>
+                    {activePanel === 'dice' && (
+                        <div>
+                            {isPeeking && (
+                                <div className="mb-2 text-xs text-brand-text-muted italic">
+                                    💡 Click "Dice Controls" to expand fully
+                                </div>
+                            )}
+                            <DiceControlsPanel
+                                onQuickRoll={onQuickRoll}
+                                isPeeking={isPeeking}
+                            />
+                        </div>
                     )}
-                    {expandedPanel === 'camera' && (
-                        <CameraControlsPanel
-                            isCameraLocked={isCameraLocked}
-                            onToggleCameraLock={onToggleCameraLock}
-                            onResetCamera={onResetCamera}
-                            onToggleFullScreen={onToggleFullScreen}
-                        />
+                    {activePanel === 'camera' && (
+                        <div>
+                            {isPeeking && (
+                                <div className="mb-2 text-xs text-brand-text-muted italic">
+                                    💡 Click "Camera Controls" to expand fully
+                                </div>
+                            )}
+                            <CameraControlsPanel
+                                isCameraLocked={isCameraLocked}
+                                onToggleCameraLock={onToggleCameraLock}
+                                onResetCamera={onResetCamera}
+                                onToggleFullScreen={onToggleFullScreen}
+                                isPeeking={isPeeking}
+                            />
+                        </div>
                     )}
                 </div>
             </div>

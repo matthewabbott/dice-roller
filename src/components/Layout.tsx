@@ -63,7 +63,7 @@ const Layout: React.FC = () => {
                         {/* Center - Transparent spacer to allow canvas to show through */}
                         <Panel id="canvas-spacer" order={2}>
                             <div className="h-full relative" style={{ pointerEvents: 'none' }}>
-                                {/* Unified Bottom Controls - Sandbox + Camera */}
+                                {/* Unified Bottom Controls - Dice + Camera */}
                                 <div className="absolute bottom-0 left-0 right-0" style={{ pointerEvents: 'auto' }}>
                                     <UnifiedBottomControls
                                         onQuickRoll={handleQuickRoll}
