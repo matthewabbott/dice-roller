@@ -97,25 +97,23 @@ canvasStateManager.subscribe((canvasEvent) => {
 });
 
 function sanitizeUsername(username: string): string {
-    let sanitizedUser = username.trim();
+    const sanitizedUser = username.trim();
     if (sanitizedUser === '') {
         return 'Anonymous';
     }
 
-    const allowedCharsRegex = /[^a-zA-Z0-9 _'.\-]/g; // Escaped hyphen
-    sanitizedUser = sanitizedUser.replace(allowedCharsRegex, '');
+    const allowedCharsRegex = /[^a-zA-Z0-9 _'.-]/g; // Fixed: removed unnecessary escape for hyphen
+    const cleanedUser = sanitizedUser.replace(allowedCharsRegex, '');
 
     const maxLength = 60;
-    if (sanitizedUser.length > maxLength) {
-        sanitizedUser = sanitizedUser.slice(0, maxLength);
-    }
+    const finalUser = cleanedUser.length > maxLength ? cleanedUser.slice(0, maxLength) : cleanedUser;
 
     // If after all sanitization, username is empty, default to Anonymous
-    if (sanitizedUser.trim() === '') {
+    if (finalUser.trim() === '') {
         return 'Anonymous';
     }
 
-    return sanitizedUser;
+    return finalUser;
 }
 
 function validateColor(color: string): boolean {
@@ -203,21 +201,31 @@ function removeUsernameSafely(username: string, sessionId: string): boolean {
     }
 }
 
+// Add type definitions for GraphQL resolvers
+interface DiceRollData {
+    canvasId: string;
+    diceType: string;
+    position?: Position;
+    isVirtual: boolean;
+    virtualRolls?: number[];
+    result?: number;
+}
+
 const resolvers = {
     Query: {
         activities: () => activities,
         activeUsers: () => getActiveUsers(),
     },
     Mutation: {
-        rollDice: (_: any, { expression }: { expression: string }, context: UserContext) => {
+        rollDice: (_parent: unknown, { expression }: { expression: string }, context: UserContext) => {
             const username = context.getUsername() || 'Anonymous';
-            let sanitizedUser = sanitizeUsername(username);
+            const sanitizedUser = sanitizeUsername(username);
 
             const processedRoll = rollProcessor.processRoll(expression);
 
             const canvasEvents: CanvasEvent[] = [];
             if (processedRoll.canvasData && processedRoll.canvasData.diceRolls.length > 0) {
-                processedRoll.canvasData.diceRolls.forEach((diceRoll: any) => {
+                processedRoll.canvasData.diceRolls.forEach((diceRoll: DiceRollData) => {
                     diceResultManager.registerDiceRoll(
                         diceRoll.canvasId,
                         uuidv4(),
@@ -264,7 +272,7 @@ const resolvers = {
 
             return newRoll;
         },
-        registerUsername: (_: any, { username }: { username: string }, context: UserContext) => {
+        registerUsername: (_parent: unknown, { username }: { username: string }, context: UserContext) => {
             const sanitizedUsername = sanitizeUsername(username);
             const sessionId = context.sessionId;
             console.log(`Session ${sessionId} attempting to register username: ${sanitizedUsername}`);
@@ -346,7 +354,7 @@ const resolvers = {
                 message: 'Username registered successfully.'
             };
         },
-        setUserColor: (_: any, { color }: { color: string }, context: UserContext) => {
+        setUserColor: (_parent: unknown, { color }: { color: string }, context: UserContext) => {
             const sessionId = context.sessionId;
             console.log(`Session ${sessionId} attempting to set user color: ${color}`);
 
@@ -388,7 +396,7 @@ const resolvers = {
                 message: 'User color updated successfully.'
             };
         },
-        sendChatMessage: (_: any, { message }: { message: string }, context: UserContext) => {
+        sendChatMessage: (_parent: unknown, { message }: { message: string }, context: UserContext) => {
             const username = context.getUsername() || 'Anonymous';
             const trimmedMessage = message.trim();
 
@@ -412,15 +420,15 @@ const resolvers = {
     Subscription: {
         activityAdded: {
             subscribe: () => pubsub.subscribe('ACTIVITY_ADDED'),
-            resolve: (payload: any) => payload,
+            resolve: (payload: Activity) => payload,
         },
         userListChanged: {
             subscribe: () => pubsub.subscribe('USER_LIST_CHANGED'),
-            resolve: (payload: any) => payload,
+            resolve: (payload: Array<{ sessionId: string; username: string; color: string | undefined; isActive: boolean }>) => payload,
         },
         canvasEventsUpdated: {
             subscribe: () => pubsub.subscribe('CANVAS_EVENTS_UPDATED'),
-            resolve: (payload: any) => payload,
+            resolve: (payload: CanvasEvent[]) => payload,
         },
     },
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useMutation, useQuery, useSubscription } from '@apollo/client';
 import { REGISTER_USERNAME_MUTATION, GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
 import ColorPicker from './ColorPicker';
@@ -97,6 +97,18 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll, hideQuickRollComma
         }
     });
 
+    const attemptUsernameRegistration = useCallback((usernameToRegister: string) => {
+        if (!usernameToRegister || usernameToRegister === '') {
+            usernameToRegister = 'Anonymous';
+        }
+
+        registerUsername({
+            variables: {
+                username: usernameToRegister
+            }
+        });
+    }, [registerUsername]);
+
     useEffect(() => {
         if (usernameDebounceTimer.current) {
             clearTimeout(usernameDebounceTimer.current);
@@ -113,26 +125,14 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll, hideQuickRollComma
                 clearTimeout(usernameDebounceTimer.current);
             }
         };
-    }, [pendingUsername, username]);
-
-    const attemptUsernameRegistration = (usernameToRegister: string) => {
-        if (!usernameToRegister || usernameToRegister === '') {
-            usernameToRegister = 'Anonymous';
-        }
-
-        registerUsername({
-            variables: {
-                username: usernameToRegister
-            }
-        });
-    };
+    }, [pendingUsername, username, attemptUsernameRegistration]);
 
     const handleUsernameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         let newUsername = event.target.value;
 
         // Regex: Allow letters, numbers, spaces, and _'. -
         //    Remove anything else
-        const allowedCharsRegex = /[^a-zA-Z0-9 _'.\-]/g;
+        const allowedCharsRegex = /[^a-zA-Z0-9 _'.-]/g;
         newUsername = newUsername.replace(allowedCharsRegex, '');
 
         const maxLength = 60;
