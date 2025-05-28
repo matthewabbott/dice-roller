@@ -20,6 +20,7 @@ export const PhysicsWorld: React.FC<PhysicsWorldProps> = ({ onInitialized, child
         const initPhysics = async () => {
             try {
                 if (!DiceManager.isInitialized()) {
+                    console.log('🎲 Initializing physics world...');
                     DiceManager.setWorld();
 
                     // Add air resistance/dampening to make dice behavior more controlled
@@ -33,15 +34,15 @@ export const PhysicsWorld: React.FC<PhysicsWorldProps> = ({ onInitialized, child
                         world.addEventListener('addBody', (event: any) => {
                             const body = event.body;
                             if (body) {
-                                body.linearDamping = 0.1;  // Air resistance for movement
-                                body.angularDamping = 0.1; // Air resistance for rotation
+                                body.linearDamping = 0.1;  // Restored normal damping
+                                body.angularDamping = 0.1; // Restored normal damping
                             }
                         });
                     }
+                    console.log('🎲 Physics world initialized successfully');
                 }
                 setIsInitialized(true);
                 onInitialized?.(true);
-                console.log('🎲 Physics world initialized with dampening');
             } catch (error) {
                 console.error('❌ Failed to initialize physics:', error);
                 onInitialized?.(false);
@@ -49,7 +50,7 @@ export const PhysicsWorld: React.FC<PhysicsWorldProps> = ({ onInitialized, child
         };
 
         initPhysics();
-    }, [onInitialized]);
+    }, []); // Remove onInitialized from dependencies to prevent re-runs
 
     // Step the physics simulation every frame
     useFrame((_state, delta) => {

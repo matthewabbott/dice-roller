@@ -208,8 +208,8 @@ export abstract class DiceObject {
         });
 
         // Add damping to help dice come to rest naturally
-        body.linearDamping = 0.1;    // Linear velocity damping
-        body.angularDamping = 0.1;   // Angular velocity damping
+        body.linearDamping = 0.1;    // Restored normal damping
+        body.angularDamping = 0.1;   // Restored normal damping
 
         console.log('🎲 Created physics body:', {
             mass: this.geometry.mass,

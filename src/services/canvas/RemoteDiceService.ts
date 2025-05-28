@@ -1,5 +1,6 @@
 import { DiceManager, DiceD4, DiceD6, DiceD8, DiceD10, DiceD12, DiceD20 } from '../../physics';
 import type { RemoteDiceData } from '../CanvasSyncManager';
+import * as CANNON from 'cannon-es';
 
 // Define available dice types
 type DiceType = 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20';
@@ -122,6 +123,26 @@ export class RemoteDiceService {
             // Apply dampening for controlled behavior
             newDice.body.linearDamping = 0.1;
             newDice.body.angularDamping = 0.1;
+
+            // Add gentle spawn forces for dynamic entry
+            const spawnForce = new CANNON.Vec3(
+                (Math.random() - 0.5) * 8,  // Random horizontal force -4 to 4
+                Math.random() * 4,          // Random upward force 0 to 4
+                (Math.random() - 0.5) * 8   // Random horizontal force -4 to 4
+            );
+
+            newDice.body.velocity.set(spawnForce.x, spawnForce.y, spawnForce.z);
+
+            // Add gentle angular velocity for spinning
+            const angularForce = new CANNON.Vec3(
+                (Math.random() - 0.5) * 8,  // Random spin
+                (Math.random() - 0.5) * 8,  // Random spin  
+                (Math.random() - 0.5) * 8   // Random spin
+            );
+            newDice.body.angularVelocity.set(angularForce.x, angularForce.y, angularForce.z);
+
+            // Wake up the body to ensure physics simulation
+            newDice.body.wakeUp();
 
             // Store in remote dice map
             this.remoteDiceInstances.set(diceData.canvasId, newDice);

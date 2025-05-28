@@ -210,21 +210,14 @@ export class DiceD6 extends DiceObject {
 
         // Add gentle random spawn force for dynamic entry
         const spawnForce = new CANNON.Vec3(
-            PhysicsUtils.randomBetween(-200, 200), // 100x increase from -2,2
-            PhysicsUtils.randomBetween(0, 100),    // 100x increase from 0,1
-            PhysicsUtils.randomBetween(-200, 200)  // 100x increase from -2,2
+            PhysicsUtils.randomBetween(-4, 4),
+            PhysicsUtils.randomBetween(0, 2),
+            PhysicsUtils.randomBetween(-4, 4)
         );
         this.body.velocity.vadd(spawnForce, this.body.velocity);
 
         // Ensure the body is awake and ready for physics simulation
         this.body.wakeUp();
-
-        console.log('🎲 throwDice: Body woken up, velocities set:', {
-            position: this.body.position,
-            velocity: this.body.velocity,
-            angularVelocity: this.body.angularVelocity,
-            sleepState: this.body.sleepState
-        });
     }
 
     /**
