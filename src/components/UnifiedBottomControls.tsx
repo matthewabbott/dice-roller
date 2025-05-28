@@ -146,33 +146,19 @@ const UnifiedBottomControls: React.FC<UnifiedBottomControlsProps> = ({
             >
                 <div className={`p-4 transition-all duration-300 ${isPeeking ? 'scale-95 opacity-80' : 'scale-100 opacity-100'}`}>
                     {activePanel === 'dice' && (
-                        <div>
-                            {isPeeking && (
-                                <div className="mb-2 text-xs text-brand-text-muted italic">
-                                    💡 Click "Dice Controls" to expand fully
-                                </div>
-                            )}
-                            <DiceControlsPanel
-                                onQuickRoll={onQuickRoll}
-                                isPeeking={isPeeking}
-                            />
-                        </div>
+                        <DiceControlsPanel
+                            onQuickRoll={onQuickRoll}
+                            isPeeking={isPeeking}
+                        />
                     )}
                     {activePanel === 'camera' && (
-                        <div>
-                            {isPeeking && (
-                                <div className="mb-2 text-xs text-brand-text-muted italic">
-                                    💡 Click "Camera Controls" to expand fully
-                                </div>
-                            )}
-                            <CameraControlsPanel
-                                isCameraLocked={isCameraLocked}
-                                onToggleCameraLock={onToggleCameraLock}
-                                onResetCamera={onResetCamera}
-                                onToggleFullScreen={onToggleFullScreen}
-                                isPeeking={isPeeking}
-                            />
-                        </div>
+                        <CameraControlsPanel
+                            isCameraLocked={isCameraLocked}
+                            onToggleCameraLock={onToggleCameraLock}
+                            onResetCamera={onResetCamera}
+                            onToggleFullScreen={onToggleFullScreen}
+                            isPeeking={isPeeking}
+                        />
                     )}
                 </div>
             </div>

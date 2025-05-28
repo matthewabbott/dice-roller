@@ -36,14 +36,6 @@ const DiceControlsPanel: React.FC<DiceControlsPanelProps> = ({
         }
     };
 
-    const handleMixedRoll = () => {
-        const rollParts = commonDice.map(die => `${quantity}d${die.type}`);
-        const command = `/roll ${rollParts.join(' + ')}`;
-        if (onQuickRoll) {
-            onQuickRoll(command);
-        }
-    };
-
     // Show condensed view when peeking
     if (isPeeking) {
         return (
@@ -90,74 +82,64 @@ const DiceControlsPanel: React.FC<DiceControlsPanelProps> = ({
                 </div>
             </div>
 
-            {/* Quantity Selector */}
-            <div className="bg-brand-background/50 rounded-lg p-3 border border-white/10">
-                <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-brand-text">Number of Dice</span>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => handleQuantityChange(quantity - 1)}
-                            className="w-8 h-8 bg-gray-600 hover:bg-gray-500 text-white rounded text-sm flex items-center justify-center font-bold"
-                            disabled={quantity <= 1}
-                        >
-                            −
-                        </button>
-                        <span className="w-12 text-center text-lg font-bold text-brand-text bg-brand-surface rounded px-2 py-1">
-                            {quantity}
-                        </span>
-                        <button
-                            onClick={() => handleQuantityChange(quantity + 1)}
-                            className="w-8 h-8 bg-gray-600 hover:bg-gray-500 text-white rounded text-sm flex items-center justify-center font-bold"
-                            disabled={quantity >= 10}
-                        >
-                            +
-                        </button>
+            {/* Main Controls Layout */}
+            <div className="grid grid-cols-3 gap-4">
+                {/* Quantity Selector - 1/3 width */}
+                <div className="bg-brand-background/50 rounded-lg p-3 border border-white/10">
+                    <div className="text-center">
+                        <span className="text-sm font-medium text-brand-text block mb-2">Number of Dice</span>
+                        <div className="flex items-center justify-center gap-2">
+                            <button
+                                onClick={() => handleQuantityChange(quantity - 1)}
+                                className="w-8 h-8 bg-gray-600 hover:bg-gray-500 text-white rounded text-sm flex items-center justify-center font-bold"
+                                disabled={quantity <= 1}
+                            >
+                                −
+                            </button>
+                            <span className="w-10 text-center text-lg font-bold text-brand-text bg-brand-surface rounded px-2 py-1">
+                                {quantity}
+                            </span>
+                            <button
+                                onClick={() => handleQuantityChange(quantity + 1)}
+                                className="w-8 h-8 bg-gray-600 hover:bg-gray-500 text-white rounded text-sm flex items-center justify-center font-bold"
+                                disabled={quantity >= 10}
+                            >
+                                +
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Dice Controls Grid */}
-            <div>
-                <h3 className="text-sm font-medium text-brand-text-muted mb-3">Dice Types</h3>
-                <div className="grid grid-cols-2 gap-3">
-                    {commonDice.map((die) => (
-                        <button
-                            key={die.type}
-                            onClick={() => handleDiceRoll(die.type)}
-                            className={`
-                                ${die.color} 
-                                text-white 
-                                px-4 
-                                py-3 
-                                rounded-lg 
-                                font-medium 
-                                transition-colors 
-                                flex 
-                                items-center 
-                                justify-center 
-                                gap-2
-                            `}
-                            title={`Roll ${quantity}d${die.type} - creates shared dice visible to all players`}
-                        >
-                            <span className="text-lg">{die.emoji}</span>
-                            <span>{die.name}</span>
-                        </button>
-                    ))}
+                {/* Dice Controls Grid - 2/3 width */}
+                <div className="col-span-2">
+                    <h3 className="text-sm font-medium text-brand-text-muted mb-3">Dice Types</h3>
+                    <div className="grid grid-cols-3 gap-2">
+                        {commonDice.map((die) => (
+                            <button
+                                key={die.type}
+                                onClick={() => handleDiceRoll(die.type)}
+                                className={`
+                                    ${die.color} 
+                                    text-white 
+                                    px-2 
+                                    py-2 
+                                    rounded 
+                                    font-medium 
+                                    transition-colors 
+                                    flex 
+                                    items-center 
+                                    justify-center 
+                                    gap-1
+                                    text-sm
+                                `}
+                                title={`Roll ${quantity}d${die.type} - creates shared dice visible to all players`}
+                            >
+                                <span className="text-sm">{die.emoji}</span>
+                                <span>{die.name}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
-
-            {/* Mixed Roll Button */}
-            <div className="border-t border-brand-surface pt-3">
-                <button
-                    onClick={handleMixedRoll}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 px-4 rounded transition-colors"
-                    title="Roll all dice types together"
-                >
-                    🎯 Roll All Dice Types ({quantity} each)
-                </button>
-                <p className="text-xs text-brand-text-muted mt-2 text-center">
-                    Rolls: {commonDice.map(die => `${quantity}d${die.type}`).join(' + ')}
-                </p>
             </div>
         </div>
     );
