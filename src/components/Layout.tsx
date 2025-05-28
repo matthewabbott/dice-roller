@@ -1,5 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { useQuery, useSubscription } from '@apollo/client';
+import { GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
 import Header from './Header';
 import DiceRoller from './DiceRoller';
 import ActivityFeed from './ActivityFeed';
@@ -134,6 +136,14 @@ const LobbyPanel: React.FC = () => {
                 </div>
             </div>
 
+            {/* Active Players */}
+            <div className="bg-brand-surface/50 rounded-lg p-3 border border-white/10">
+                <h4 className="text-sm font-medium text-brand-text mb-3 flex items-center gap-2">
+                    👥 Active Players
+                </h4>
+                <ActivePlayersSection />
+            </div>
+
             {/* User Settings */}
             <div className="bg-brand-surface/50 rounded-lg p-3 border border-white/10">
                 <h3 className="text-sm font-medium text-brand-text mb-3 flex items-center gap-2">
@@ -159,11 +169,61 @@ const LobbyPanel: React.FC = () => {
                     </label>
                 </div>
             </div>
+        </div>
+    );
+};
 
-            {/* Active Players */}
-            <div>
-                <DiceRoller onQuickRoll={() => { }} hideQuickRollCommands={true} />
+// Active Players Section Component - Only shows players list without username/color customization
+interface User {
+    sessionId: string;
+    username: string;
+    color?: string;
+    isActive: boolean;
+}
+
+const ActivePlayersSection: React.FC = () => {
+    const [users, setUsers] = useState<User[]>([]);
+
+    const { data: usersData } = useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY, {
+        onCompleted: (data) => {
+            setUsers(data.activeUsers);
+        }
+    });
+
+    useSubscription<{ userListChanged: User[] }>(USER_LIST_CHANGED_SUBSCRIPTION, {
+        onData: ({ data: subscriptionData }) => {
+            const updatedUsers = subscriptionData?.data?.userListChanged;
+            if (updatedUsers) {
+                setUsers(updatedUsers);
+            }
+        }
+    });
+
+    return (
+        <div className="space-y-2">
+            <div className="text-xs text-brand-text-muted mb-2">
+                {users.length} player{users.length !== 1 ? 's' : ''} connected
             </div>
+            {users.map((user) => (
+                <div key={user.sessionId} className="flex items-center gap-2 p-2 bg-brand-background/50 rounded">
+                    <div
+                        className="w-3 h-3 rounded-full border border-gray-400"
+                        style={{ backgroundColor: user.color || '#ffffff' }}
+                        title={`${user.username}'s color`}
+                    />
+                    <span className="text-brand-text text-sm">{user.username}</span>
+                    {user.isActive && (
+                        <span className="text-xs text-green-400 bg-green-900/30 px-2 py-1 rounded">
+                            Online
+                        </span>
+                    )}
+                </div>
+            ))}
+            {users.length === 0 && (
+                <div className="text-center text-brand-text-muted text-sm py-4">
+                    No players connected
+                </div>
+            )}
         </div>
     );
 };

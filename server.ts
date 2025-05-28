@@ -304,6 +304,7 @@ const resolvers = {
             // TODO: still need to update user list to include new anonymous
             if (sanitizedUsername === 'Anonymous') {
                 context.setUsername('Anonymous');
+                publishUserListUpdate();
                 return {
                     success: true,
                     username: 'Anonymous',
@@ -519,11 +520,11 @@ useServer({
             console.log(`Set default username 'Anonymous' for new session ${sessionId}`);
         }
 
-        // Assign a random color to new users
+        // Assign a white color to new users (Anonymous default)
         if (!sessionToColor.has(sessionId)) {
-            const randomColor = generateRandomColor();
-            sessionToColor.set(sessionId, randomColor);
-            console.log(`Assigned random color ${randomColor} to new session ${sessionId}`);
+            const defaultColor = '#ffffff';
+            sessionToColor.set(sessionId, defaultColor);
+            console.log(`Assigned default white color ${defaultColor} to new session ${sessionId}`);
         }
 
         publishUserListUpdate();

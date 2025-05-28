@@ -24,9 +24,7 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll, hideQuickRollComma
     const [isUsernameRegistered, setIsUsernameRegistered] = useState(true); // Anonymous is always registered
     const [registrationMessage, setRegistrationMessage] = useState<string | null>(null);
     const [registrationStatus, setRegistrationStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-    const [userColor, setUserColor] = useState<string>(() => {
-        return PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];
-    });
+    const [userColor, setUserColor] = useState<string>('#ffffff');
     const [users, setUsers] = useState<User[]>([]);
     const [isLocalDiceExpanded, setIsLocalDiceExpanded] = useState(false);
 
@@ -219,7 +217,7 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll, hideQuickRollComma
                             <div key={user.sessionId} className="flex items-center gap-2 p-2 bg-brand-surface rounded">
                                 <div
                                     className="w-3 h-3 rounded-full border border-gray-400"
-                                    style={{ backgroundColor: user.color || '#888888' }}
+                                    style={{ backgroundColor: user.color || '#ffffff' }}
                                     title={`${user.username}'s color`}
                                 />
                                 <span className="text-brand-text text-sm">{user.username}</span>
