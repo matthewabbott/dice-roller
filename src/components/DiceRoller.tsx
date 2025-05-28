@@ -33,26 +33,44 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll, hideQuickRollComma
     const currentSessionId = getSessionId();
     const usernameDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-    // Query active users to get current user's color
+    // Query active users to get current user's data (username and color)
     const { data: usersData } = useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY, {
         onCompleted: (data) => {
             setUsers(data.activeUsers);
             const currentUser = data.activeUsers.find(user => user.sessionId === currentSessionId);
-            if (currentUser && currentUser.color) {
-                setUserColor(currentUser.color);
+            if (currentUser) {
+                // Sync username
+                if (currentUser.username) {
+                    setUsername(currentUser.username);
+                    setPendingUsername(currentUser.username);
+                    setIsUsernameRegistered(true);
+                }
+                // Sync color
+                if (currentUser.color) {
+                    setUserColor(currentUser.color);
+                }
             }
         }
     });
 
-    // Subscribe to user list changes to keep color in sync
+    // Subscribe to user list changes to keep username and color in sync
     useSubscription<{ userListChanged: User[] }>(USER_LIST_CHANGED_SUBSCRIPTION, {
         onData: ({ data: subscriptionData }) => {
             const updatedUsers = subscriptionData?.data?.userListChanged;
             if (updatedUsers) {
                 setUsers(updatedUsers);
                 const currentUser = updatedUsers.find(user => user.sessionId === currentSessionId);
-                if (currentUser && currentUser.color) {
-                    setUserColor(currentUser.color);
+                if (currentUser) {
+                    // Sync username
+                    if (currentUser.username && currentUser.username !== username) {
+                        setUsername(currentUser.username);
+                        setPendingUsername(currentUser.username);
+                        setIsUsernameRegistered(true);
+                    }
+                    // Sync color
+                    if (currentUser.color) {
+                        setUserColor(currentUser.color);
+                    }
                 }
             }
         }

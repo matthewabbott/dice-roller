@@ -58,6 +58,11 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ onQuickRoll, chatInputRef }
     const [showSystemMessages, setShowSystemMessages] = useState(true);
     const [showChatMessages, setShowChatMessages] = useState(true);
     const [isQuickRollModalOpen, setIsQuickRollModalOpen] = useState(false);
+    const [autoScrollEnabled, setAutoScrollEnabled] = useState(() => {
+        // Load from localStorage, default to true
+        const saved = localStorage.getItem('dice-roller-auto-scroll');
+        return saved !== null ? JSON.parse(saved) : true;
+    });
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     // Add highlighting functionality
@@ -68,12 +73,24 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ onQuickRoll, chatInputRef }
         setActivities(activities);
     }, [activities, setActivities]);
 
-    // Auto-scroll to bottom when new activities are added
+    // Listen for auto-scroll preference changes
     useEffect(() => {
-        if (scrollContainerRef.current) {
+        const handleAutoScrollChange = (event: CustomEvent) => {
+            setAutoScrollEnabled(event.detail);
+        };
+
+        window.addEventListener('autoScrollChanged', handleAutoScrollChange as EventListener);
+        return () => {
+            window.removeEventListener('autoScrollChanged', handleAutoScrollChange as EventListener);
+        };
+    }, []);
+
+    // Auto-scroll to bottom when new activities are added (if enabled)
+    useEffect(() => {
+        if (autoScrollEnabled && scrollContainerRef.current) {
             scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
         }
-    }, [activities]);
+    }, [activities, autoScrollEnabled]);
 
     const { data: usersData } = useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY, {
         onCompleted: (data) => {

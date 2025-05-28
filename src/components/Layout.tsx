@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import Header from './Header';
 import DiceRoller from './DiceRoller';
@@ -7,7 +7,7 @@ import type { ChatInputRef } from './ChatInput';
 import DiceCanvas from './DiceCanvas';
 import TranslucentSidebar from './TranslucentSidebar';
 import UnifiedBottomControls from './UnifiedBottomControls';
-import TabbedPanel from './TabbedPanel';
+
 import { useCameraControls } from '../hooks/controls/useCameraControls';
 
 const Layout: React.FC = () => {
@@ -100,36 +100,23 @@ const Layout: React.FC = () => {
     );
 };
 
-// Lobby Panel Component (now tabbed with Lobby and User Settings)
+// Consolidated Lobby Panel Component
 const LobbyPanel: React.FC = () => {
-    const tabs = [
-        {
-            id: 'lobby',
-            label: 'Lobby',
-            icon: '👥',
-            content: <LobbyTab />
-        },
-        {
-            id: 'settings',
-            label: 'Settings',
-            icon: '⚙️',
-            content: <UserSettingsTab />
-        }
-    ];
+    const [autoScrollEnabled, setAutoScrollEnabled] = useState(() => {
+        // Load from localStorage, default to true
+        const saved = localStorage.getItem('dice-roller-auto-scroll');
+        return saved !== null ? JSON.parse(saved) : true;
+    });
+
+    const handleAutoScrollChange = (enabled: boolean) => {
+        setAutoScrollEnabled(enabled);
+        localStorage.setItem('dice-roller-auto-scroll', JSON.stringify(enabled));
+        // Dispatch custom event to notify ActivityFeed
+        window.dispatchEvent(new CustomEvent('autoScrollChanged', { detail: enabled }));
+    };
 
     return (
-        <TabbedPanel
-            tabs={tabs}
-            defaultTab="lobby"
-            className="h-full"
-        />
-    );
-};
-
-// Lobby Tab - Player list and room information
-const LobbyTab: React.FC = () => {
-    return (
-        <div className="p-4 space-y-4">
+        <div className="h-full p-4 space-y-4 overflow-y-auto">
             {/* Room Info */}
             <div className="bg-brand-surface/50 rounded-lg p-3 border border-white/10">
                 <h3 className="text-sm font-medium text-brand-text mb-2 flex items-center gap-2">
@@ -147,56 +134,35 @@ const LobbyTab: React.FC = () => {
                 </div>
             </div>
 
-            {/* Active Players */}
-            <div>
-                <DiceRoller onQuickRoll={() => { }} hideQuickRollCommands={true} />
-            </div>
-        </div>
-    );
-};
-
-// User Settings Tab - Username, color picker, preferences
-const UserSettingsTab: React.FC = () => {
-    return (
-        <div className="p-4 space-y-4">
             {/* User Settings */}
-            <div>
+            <div className="bg-brand-surface/50 rounded-lg p-3 border border-white/10">
                 <h3 className="text-sm font-medium text-brand-text mb-3 flex items-center gap-2">
                     👤 User Profile
                 </h3>
                 <DiceRoller onQuickRoll={() => { }} hideQuickRollCommands={true} showOnlyUserSettings={true} />
             </div>
 
-            {/* Additional Settings */}
+            {/* Preferences */}
             <div className="bg-brand-surface/50 rounded-lg p-3 border border-white/10">
                 <h4 className="text-sm font-medium text-brand-text mb-3 flex items-center gap-2">
-                    🎛️ Preferences
+                    ⚙️ Preferences
                 </h4>
                 <div className="space-y-3">
                     <label className="flex items-center gap-2 text-sm">
                         <input
                             type="checkbox"
                             className="rounded border-gray-600 bg-brand-background text-brand-primary focus:ring-brand-primary focus:ring-offset-0"
-                            defaultChecked
-                        />
-                        <span className="text-brand-text-muted">Show dice result overlays</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                        <input
-                            type="checkbox"
-                            className="rounded border-gray-600 bg-brand-background text-brand-primary focus:ring-brand-primary focus:ring-offset-0"
-                            defaultChecked
+                            checked={autoScrollEnabled}
+                            onChange={(e) => handleAutoScrollChange(e.target.checked)}
                         />
                         <span className="text-brand-text-muted">Auto-scroll chat to bottom</span>
                     </label>
-                    <label className="flex items-center gap-2 text-sm">
-                        <input
-                            type="checkbox"
-                            className="rounded border-gray-600 bg-brand-background text-brand-primary focus:ring-brand-primary focus:ring-offset-0"
-                        />
-                        <span className="text-brand-text-muted">Enable sound effects</span>
-                    </label>
                 </div>
+            </div>
+
+            {/* Active Players */}
+            <div>
+                <DiceRoller onQuickRoll={() => { }} hideQuickRollCommands={true} />
             </div>
         </div>
     );
