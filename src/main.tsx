@@ -14,8 +14,14 @@ import { getSessionId } from './utils/sessionId';
 const sessionId = getSessionId();
 console.log('Using session ID:', sessionId);
 
+// Use environment-based URLs for production deployment
+const isDevelopment = import.meta.env.DEV;
+const baseUrl = isDevelopment ? 'localhost:4000' : window.location.host;
+const protocol = isDevelopment ? 'http' : window.location.protocol === 'https:' ? 'https' : 'http';
+const wsProtocol = isDevelopment ? 'ws' : window.location.protocol === 'https:' ? 'wss' : 'ws';
+
 const httpLink = new HttpLink({
-  uri: 'http://localhost:4000/dice/graphql',
+  uri: `${protocol}://${baseUrl}/dice/graphql`,
   headers: {
     'x-session-id': sessionId
   }
@@ -31,7 +37,7 @@ const timeoutLink = new TimeoutLink(5000);
 const httpLinkWithTimeout = from([timeoutLink as ApolloLink, httpLink]);
 
 const wsClient = createClient({
-  url: 'ws://localhost:4000/dice/graphql',
+  url: `${wsProtocol}://${baseUrl}/dice/graphql`,
   connectionParams: {
     sessionId: sessionId
   },

@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:prod": "tsc -b && vite build --mode production",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "tsx server.ts --watch"
+    "server": "tsx server.ts --watch",
+    "server:prod": "tsx server.ts"
   },
   "dependencies": {
     "@apollo/client": "^3.13.8",
