@@ -355,8 +355,8 @@ const resolvers = {
                 const systemMessage = createSystemMessage(`${currentUsername} changed their name to ${sanitizedUsername}`);
                 publishActivity(systemMessage);
             } else if (currentUsername === 'Anonymous') {
-                // Anonymous user registering a real name - this is their "join" moment
-                const systemMessage = createSystemMessage(`${sanitizedUsername} joined the room`);
+                // Anonymous user registering a real name - show as registration
+                const systemMessage = createSystemMessage(`Anonymous registered as ${sanitizedUsername}`);
                 publishActivity(systemMessage);
             }
 
@@ -498,6 +498,7 @@ const wsServer = new WebSocketServer({
 
 // connection tracking
 const activeSessions = new Set<string>();
+const announcedSessions = new Set<string>(); // Track which sessions have been announced
 
 wsServer.on('connection', (socket, request) => {
     console.log(`Raw WebSocket connection received. Total connections: ${wsServer.clients.size}`);
@@ -533,15 +534,21 @@ useServer({
         // Also publish a system message for new user joins
         setTimeout(() => {
             const username = sessionToUsername.get(sessionId) || 'Anonymous';
-            if (username === 'Anonymous') {
-                // For anonymous users, just update the user list without a system message
-                publishUserListUpdate();
-            } else {
-                // For named users, publish both system message and user list update
+
+            // Only publish join message for sessions that haven't been announced yet
+            if (!announcedSessions.has(sessionId)) {
+                console.log(`Publishing join message for NEW session ${sessionId} (${username})`);
+                console.log(`Current active sessions: [${Array.from(activeSessions).join(', ')}]`);
+                console.log(`Current announced sessions: [${Array.from(announcedSessions).join(', ')}]`);
+
                 const systemMessage = createSystemMessage(`${username} joined the room`);
                 publishActivity(systemMessage);
-                publishUserListUpdate();
+                announcedSessions.add(sessionId);
+            } else {
+                console.log(`Skipping join message for EXISTING session ${sessionId} (${username}) - already announced`);
             }
+
+            publishUserListUpdate();
             console.log(`Delayed user list update published for session ${sessionId} (${username})`);
         }, 100); // 100ms delay to ensure client subscriptions are established
 
@@ -562,6 +569,7 @@ useServer({
             const sessionId = context.sessionId;
 
             activeSessions.delete(sessionId);
+            announcedSessions.delete(sessionId); // Clean up announced sessions tracking
             console.log(`Session removed from active sessions. Remaining: ${Array.from(activeSessions).join(', ')}`);
 
             if (username && username !== 'Anonymous') {
@@ -596,6 +604,7 @@ useServer({
                     sessionToColor.delete(sessionId);
                 }
                 activeSessions.delete(sessionId);
+                announcedSessions.delete(sessionId); // Clean up announced sessions tracking
 
                 publishUserListUpdate();
             } else {
