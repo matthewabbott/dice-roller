@@ -1,37 +1,38 @@
+// Canvas and interaction hooks
 export { useDiceInteraction } from './useDiceInteraction';
 export { usePhysicsSync } from './usePhysicsSync';
-
-// Sync hooks
-export { useRemoteDice, useSyncStatus, useCanvasSync } from './sync';
+export { useCanvasSync } from './sync/useCanvasSync';
 
 // Control hooks
-export { useDiceControls, useCameraControls } from './controls';
+export { useCameraControls } from './controls';
 
+// Highlighting and UI hooks
+export { useHighlighting } from './useHighlighting';
+
+// Sync hooks
+export { useSyncStatus } from './sync/useSyncStatus';
+
+// Export types
 export type {
     DiceInteractionState,
     DiceInteractionHandlers,
     UseDiceInteractionProps
 } from './useDiceInteraction';
 
-export type { UsePhysicsSyncProps } from './usePhysicsSync';
-
-// Sync hook types
 export type {
-    UseRemoteDiceProps,
-    RemoteDiceOperations,
-    SyncStatus,
-    SyncStatusState,
-    UseSyncStatusProps,
+    UsePhysicsSyncProps
+} from './usePhysicsSync';
+
+export type {
     UseCanvasSyncProps
-} from './sync';
+} from './sync/useCanvasSync';
 
-// Control hook types
 export type {
-    DiceType,
-    DiceControlsState,
-    DiceControlsOperations,
-    UseDiceControlsProps,
     CameraControlsState,
     CameraControlsOperations,
     UseCameraControlsProps
-} from './controls'; 
+} from './controls';
+
+export type {
+    SyncStatus
+} from './sync/useSyncStatus'; 
