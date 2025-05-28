@@ -488,7 +488,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
         <>
             <Canvas
                 className={cameraState.isFullScreen ? "h-screen w-screen" : "w-full h-full"}
-                camera={{ position: [12, 36, 72], fov: 50 }}
+                camera={{ position: [12, 36, 72], fov: 20 }}
                 gl={{ antialias: true, alpha: false }}
                 style={{ backgroundColor: '#1a1f2c' }}
                 shadows

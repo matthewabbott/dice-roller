@@ -56,7 +56,7 @@ export const useCameraControls = (_props?: UseCameraControlsProps): [
         if (controlsRef.current) {
             const controls = controlsRef.current;
 
-            const cameraOffset = { x: 8, y: 10, z: 8 };
+            const cameraOffset = { x: 30, y: 20, z: 30 };
             const cameraPosition = {
                 x: position.x + cameraOffset.x,
                 y: position.y + cameraOffset.y,

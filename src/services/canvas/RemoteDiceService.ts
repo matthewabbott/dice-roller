@@ -173,7 +173,6 @@ export class RemoteDiceService {
      * Apply highlight to remote dice
      */
     public applyRemoteDiceHighlight(diceId: string, color: string): void {
-        // TODO: Implement visual highlighting
         console.log(`📡 Highlighting dice ${diceId} with color ${color}`);
     }
 
@@ -203,7 +202,7 @@ export class RemoteDiceService {
     }
 
     /**
-     * Remove all dice for a specific player
+     * Remove all dice for a specific player (TODO)
      */
     public clearPlayerDice(playerId: string): void {
         // Find and remove all dice for this player
