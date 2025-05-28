@@ -190,11 +190,8 @@ export const useDiceInteraction = ({
                 throwVelocity.set(0, -1, 0); // Gentler downward velocity
             }
 
-            // Cap maximum throwing velocity to prevent dice from flying too far
-            const maxThrowSpeed = 12; // Reasonable maximum
-            if (throwVelocity.length() > maxThrowSpeed) {
-                throwVelocity.normalize().multiplyScalar(maxThrowSpeed);
-            }
+            // No speed cap - let players fling dice as hard as they want!
+            // Removed: Cap maximum throwing velocity to prevent dice from flying too far
 
             // Apply the calculated velocity
             diceBody.velocity.set(throwVelocity.x, throwVelocity.y, throwVelocity.z);

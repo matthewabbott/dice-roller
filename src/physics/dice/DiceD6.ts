@@ -208,6 +208,14 @@ export class DiceD6 extends DiceObject {
         );
         this.body.angularVelocity.copy(angularVel);
 
+        // Add gentle random spawn force for dynamic entry
+        const spawnForce = new CANNON.Vec3(
+            PhysicsUtils.randomBetween(-2, 2), // Gentle horizontal forces
+            PhysicsUtils.randomBetween(0, 1),  // Small upward force
+            PhysicsUtils.randomBetween(-2, 2)  // Gentle horizontal forces
+        );
+        this.body.velocity.vadd(spawnForce, this.body.velocity);
+
         // Ensure the body is awake and ready for physics simulation
         this.body.wakeUp();
 

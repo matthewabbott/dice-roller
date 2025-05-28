@@ -183,16 +183,16 @@ export class DiceD8 extends DiceObject {
      * Applies a random throw force and rotation to the dice
      * Simulates a natural dice throw with realistic physics
      * D8 dice roll well due to their symmetrical octahedron shape
-     * @param throwForce - Optional force multiplier (default: 1.0 for normal D8 throws)
+     * @param throwForce - Optional force multiplier (default: 1.0 for balanced D8 throws)
      * @param throwPosition - Optional starting position (default: above center)
      */
     public throwDice(throwForce: number = 1.0, throwPosition?: THREE.Vector3): void {
         // Set starting position (above the table by default)
         // D8 starts at medium height due to intermediate size
         const startPos = throwPosition || new THREE.Vector3(
-            PhysicsUtils.randomBetween(-2, 2),
-            PhysicsUtils.randomBetween(3, 5),
-            PhysicsUtils.randomBetween(-2, 2)
+            PhysicsUtils.randomBetween(-2.2, 2.2),
+            PhysicsUtils.randomBetween(3.5, 5.5),
+            PhysicsUtils.randomBetween(-2.2, 2.2)
         );
         this.setPosition(startPos);
 
@@ -214,6 +214,14 @@ export class DiceD8 extends DiceObject {
         // Apply forces to the physics body
         this.body.velocity.set(forceX, forceY, forceZ);
         this.body.angularVelocity.set(angularX, angularY, angularZ);
+
+        // Add gentle random spawn force for dynamic entry
+        const spawnForce = new CANNON.Vec3(
+            PhysicsUtils.randomBetween(-2, 2),   // Gentle horizontal forces
+            PhysicsUtils.randomBetween(0, 1.2),  // Small upward force
+            PhysicsUtils.randomBetween(-2, 2)    // Gentle horizontal forces
+        );
+        this.body.velocity.vadd(spawnForce, this.body.velocity);
 
         // Wake up the body to ensure it participates in physics simulation
         this.body.wakeUp();

@@ -289,7 +289,7 @@ export class DiceD10 extends DiceObject {
         const throwForce = force * 8; // Base throwing force
         const randomDirection = new THREE.Vector3(
             (Math.random() - 0.5) * 2,
-            Math.random() * 0.5 + 0.5, // Mostly upward
+            Math.random() * 0.5 + 0.3, // Upward bias
             (Math.random() - 0.5) * 2
         ).normalize();
 
@@ -306,6 +306,14 @@ export class DiceD10 extends DiceObject {
             (Math.random() - 0.5) * 20,
             (Math.random() - 0.5) * 20
         );
+
+        // Add gentle random spawn force for dynamic entry
+        const spawnForce = new CANNON.Vec3(
+            PhysicsUtils.randomBetween(-2.2, 2.2), // Gentle horizontal forces
+            PhysicsUtils.randomBetween(0, 1.3),    // Small upward force
+            PhysicsUtils.randomBetween(-2.2, 2.2)  // Gentle horizontal forces
+        );
+        this.body.velocity.vadd(spawnForce, this.body.velocity);
 
         // Wake up the physics body
         this.body.wakeUp();

@@ -2,6 +2,8 @@ import { DiceObject } from '../DiceObject';
 import { D12Geometry, D12FaceValues, D12ValueToFace, D12FaceNormals, validateD12Geometry } from './geometries/D12Geometry';
 import type { DiceOptions } from '../types/DiceTypes';
 import * as THREE from 'three';
+import * as CANNON from 'cannon-es';
+import { PhysicsUtils } from '../utils/PhysicsUtils';
 
 /**
  * DiceD12 - Twelve-sided die (Dodecahedron)
@@ -175,7 +177,7 @@ export class DiceD12 extends DiceObject {
     /**
      * Applies a random throw force and rotation to the dice
      * Simulates throwing the dice with realistic physics
-     * @param throwForce Multiplier for throw strength (default: 1.1)
+     * @param throwForce Multiplier for throw strength (default: 1.1 for balanced throws)
      * @param throwPosition Optional specific position to throw from
      */
     public throwDice(throwForce: number = 1.1, throwPosition?: THREE.Vector3): void {
@@ -193,12 +195,12 @@ export class DiceD12 extends DiceObject {
         const throwStrength = throwForce * 4.0; // Base throw strength for D12
         const randomVelocity = new THREE.Vector3(
             (Math.random() - 0.5) * throwStrength,
-            Math.random() * throwStrength * 0.5 + throwStrength * 0.3, // Upward bias
+            Math.random() * throwStrength * 0.6 + throwStrength * 0.2, // Upward bias
             (Math.random() - 0.5) * throwStrength
         );
 
         // Apply random angular velocity for realistic tumbling
-        const angularStrength = throwForce * 8.0;
+        const angularStrength = throwForce * 10.0; // Angular strength
         const randomAngularVelocity = new THREE.Vector3(
             (Math.random() - 0.5) * angularStrength,
             (Math.random() - 0.5) * angularStrength,
@@ -208,6 +210,14 @@ export class DiceD12 extends DiceObject {
         // Set physics body velocities
         this.body.velocity.set(randomVelocity.x, randomVelocity.y, randomVelocity.z);
         this.body.angularVelocity.set(randomAngularVelocity.x, randomAngularVelocity.y, randomAngularVelocity.z);
+
+        // Add gentle random spawn force for dynamic entry
+        const spawnForce = new CANNON.Vec3(
+            PhysicsUtils.randomBetween(-2.3, 2.3), // Gentle horizontal forces
+            PhysicsUtils.randomBetween(0, 1.4),    // Small upward force
+            PhysicsUtils.randomBetween(-2.3, 2.3)  // Gentle horizontal forces
+        );
+        this.body.velocity.vadd(spawnForce, this.body.velocity);
 
         // Wake up the physics body to ensure it responds
         this.body.wakeUp();

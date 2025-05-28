@@ -219,6 +219,14 @@ export class DiceD4 extends DiceObject {
         this.body.velocity.copy(force);
         this.body.angularVelocity.copy(angularVelocity);
 
+        // Add gentle random spawn force for dynamic entry
+        const spawnForce = new CANNON.Vec3(
+            PhysicsUtils.randomBetween(-1.5, 1.5), // Gentle horizontal forces
+            PhysicsUtils.randomBetween(0, 0.8),    // Small upward force
+            PhysicsUtils.randomBetween(-1.5, 1.5)  // Gentle horizontal forces
+        );
+        this.body.velocity.vadd(spawnForce, this.body.velocity);
+
         // Mark as part of active simulation
         this.simulationRunning = true;
     }
