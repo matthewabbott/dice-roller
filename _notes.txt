@@ -28,6 +28,19 @@ TODOs:
 
 RESOLVED:
 
+Major snag, Anonymous user tracking and race condition bug (b68f058):
+- Anonymous users weren't appearing in lobby or getting a join message on opening page
+- Root cause: Race condition between WebSocket connection setup and client subscription readiness
+- Server called publishUserListUpdate() immediately, but client components weren't subscribed yet
+- Just decided to add a 100ms setTimeout delay before initial user list update, lol
+
+Minor snag, Duplicate "joined the room" system messages (f38aa1a):
+- "Anonymous joined the room" message would appear 3 times for (seemingly) a single user connection
+- Root cause: Multiple WebSocket connections being established for same session (React StrictMode, hot reloading, multiple subscription setups)
+- Each connection triggered a separate join message even though it was the same user session
+- 'Fixed' by manually tracking which sessions have been announced in 'announcedSessions'
+- Also added cleanup tracking for sessions disconnecting to prevent memory leaks
+
 Minor snag, camera control render loop
 - Moved camera controls from DiceCanvas to Layout level
 - ActivityFeed subscription started to repeatedly re-load
