@@ -351,9 +351,11 @@ const resolvers = {
 
             // Publish username change activity
             if (currentUsername && currentUsername !== 'Anonymous' && currentUsername !== sanitizedUsername) {
+                // Named user changing to different named user
                 const systemMessage = createSystemMessage(`${currentUsername} changed their name to ${sanitizedUsername}`);
                 publishActivity(systemMessage);
-            } else if (!currentUsername || currentUsername === 'Anonymous') {
+            } else if (currentUsername === 'Anonymous') {
+                // Anonymous user registering a real name - this is their "join" moment
                 const systemMessage = createSystemMessage(`${sanitizedUsername} joined the room`);
                 publishActivity(systemMessage);
             }
@@ -527,7 +529,21 @@ useServer({
             console.log(`Assigned default white color ${defaultColor} to new session ${sessionId}`);
         }
 
-        publishUserListUpdate();
+        // Delay user list update to ensure client subscriptions are ready
+        // Also publish a system message for new user joins
+        setTimeout(() => {
+            const username = sessionToUsername.get(sessionId) || 'Anonymous';
+            if (username === 'Anonymous') {
+                // For anonymous users, just update the user list without a system message
+                publishUserListUpdate();
+            } else {
+                // For named users, publish both system message and user list update
+                const systemMessage = createSystemMessage(`${username} joined the room`);
+                publishActivity(systemMessage);
+                publishUserListUpdate();
+            }
+            console.log(`Delayed user list update published for session ${sessionId} (${username})`);
+        }, 100); // 100ms delay to ensure client subscriptions are established
 
         return createUserContext(sessionId);
     },
@@ -550,6 +566,9 @@ useServer({
 
             if (username && username !== 'Anonymous') {
                 console.log(`Session ${sessionId} disconnected with username '${username}'. Removing from active usernames.`);
+                // Publish departure message for named users
+                const systemMessage = createSystemMessage(`${username} left the room`);
+                publishActivity(systemMessage);
                 removeUsernameSafely(username, sessionId);
             } else {
                 sessionToUsername.delete(sessionId);
@@ -568,6 +587,9 @@ useServer({
                 const username = sessionToUsername.get(sessionId);
                 if (username && username !== 'Anonymous') {
                     console.log(`Cleanup for session ${sessionId} with username '${username}'.`);
+                    // Publish departure message for named users
+                    const systemMessage = createSystemMessage(`${username} left the room`);
+                    publishActivity(systemMessage);
                     removeUsernameSafely(username, sessionId);
                 } else {
                     sessionToUsername.delete(sessionId);
