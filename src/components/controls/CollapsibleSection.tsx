@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-interface CollapsibleSectionProps {
+export interface CollapsibleSectionProps {
     title: string;
     icon?: string;
     tooltip?: string;
