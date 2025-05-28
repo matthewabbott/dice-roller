@@ -80,7 +80,6 @@ export const useHighlighting = () => {
      * Highlight an activity and all its associated dice (or clear if already highlighted)
      */
     const highlightFromActivity = useCallback((activityId: string, activities?: ActivityData[]) => {
-        // Check if this activity is already highlighted - if so, clear it
         if (globalHighlightState.highlightedActivityId === activityId) {
             updateGlobalState({
                 highlightedActivityId: null,
@@ -95,7 +94,6 @@ export const useHighlighting = () => {
 
         if (!activity?.roll?.canvasData?.dice) {
             console.warn(`No dice found for activity ${activityId}`);
-            // Still highlight the activity even if no dice
             updateGlobalState({
                 highlightedActivityId: activityId,
                 highlightedDiceIds: new Set()
@@ -112,7 +110,6 @@ export const useHighlighting = () => {
 
         console.log(`🎯 Highlighted activity ${activityId} with ${diceIds.length} dice:`, diceIds);
 
-        // Jump camera to the first dice if available
         if (diceIds.length > 0 && globalCameraJumpCallback && globalGetDicePositionCallback) {
             const firstDiceId = diceIds[0];
             const dicePosition = globalGetDicePositionCallback(firstDiceId);
@@ -127,7 +124,6 @@ export const useHighlighting = () => {
      * Highlight a dice and its associated activity + all dice from that roll (or clear if already highlighted)
      */
     const highlightFromDice = useCallback((diceId: string, activities?: ActivityData[]) => {
-        // Check if this dice is already highlighted - if so, clear all highlights
         if (globalHighlightState.highlightedDiceIds.has(diceId)) {
             updateGlobalState({
                 highlightedActivityId: null,
@@ -141,20 +137,17 @@ export const useHighlighting = () => {
 
         console.log(`🔍 Looking for dice ${diceId} in ${activitiesToSearch.length} activities`);
 
-        // Debug: log all available dice IDs
         const availableDiceIds = activitiesToSearch.flatMap(a =>
             a.roll?.canvasData?.dice?.map(die => die.canvasId) || []
         );
         console.log(`🔍 Available dice IDs:`, availableDiceIds);
 
-        // Find the activity that contains this dice
         const activity = activitiesToSearch.find(a =>
             a.roll?.canvasData?.dice?.some(die => die.canvasId === diceId)
         );
 
         if (!activity) {
             console.warn(`No activity found for dice ${diceId}`);
-            // Still highlight just this dice
             updateGlobalState({
                 highlightedActivityId: null,
                 highlightedDiceIds: new Set([diceId])
@@ -162,7 +155,6 @@ export const useHighlighting = () => {
             return;
         }
 
-        // Highlight the activity and all its dice
         const allDiceIds = activity.roll?.canvasData?.dice?.map(die => die.canvasId) || [];
 
         updateGlobalState({

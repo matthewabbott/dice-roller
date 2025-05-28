@@ -14,7 +14,6 @@ import { getSessionId } from './utils/sessionId';
 const sessionId = getSessionId();
 console.log('Using session ID:', sessionId);
 
-// Use environment-based URLs for production deployment
 const isDevelopment = import.meta.env.DEV;
 const baseUrl = isDevelopment ? 'localhost:4000' : window.location.host;
 const protocol = isDevelopment ? 'http' : window.location.protocol === 'https:' ? 'https' : 'http';
@@ -27,13 +26,10 @@ const httpLink = new HttpLink({
   }
 });
 
-// Timeout link - e.g., 5 seconds (5000 milliseconds)
 const timeoutLink = new TimeoutLink(5000);
 
-// Chain timeoutLink and httpLink for HTTP requests
 // timeoutLink is cast because its type definitions (Observable<unknown>)
 // are not directly compatible with Apollo Client 3's expected Link types (Observable<FetchResult>).
-// so not ideal... but works for now
 const httpLinkWithTimeout = from([timeoutLink as ApolloLink, httpLink]);
 
 const wsClient = createClient({

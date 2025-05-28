@@ -68,7 +68,6 @@ export class CanvasStateManager {
     ): CanvasEvent {
         const room = this.getOrCreateRoom(roomId);
 
-        // Create dice state
         const diceState: CanvasDiceState = {
             id: diceData.diceId,
             diceType: diceData.diceType,
@@ -81,10 +80,8 @@ export class CanvasStateManager {
             state: 'spawning'
         };
 
-        // Add to room state
         room.activeDice.set(diceData.diceId, diceState);
 
-        // Create and broadcast event
         const event: CanvasEvent = {
             id: this.generateEventId(),
             type: CanvasEventType.DICE_SPAWN,
@@ -117,15 +114,13 @@ export class CanvasStateManager {
         const dice = room.activeDice.get(diceId);
 
         if (!dice || dice.userId !== userId) {
-            return null; // Only owner can throw dice
+            return null;
         }
 
-        // Update dice state
         dice.velocity = velocity;
         dice.state = 'throwing';
         dice.timestamp = new Date().toISOString();
 
-        // Create and broadcast event
         const event: CanvasEvent = {
             id: this.generateEventId(),
             type: CanvasEventType.DICE_THROW,
@@ -156,16 +151,14 @@ export class CanvasStateManager {
         const dice = room.activeDice.get(diceId);
 
         if (!dice || dice.userId !== userId) {
-            return null; // Only owner can settle dice
+            return null;
         }
 
-        // Update dice state
         dice.position = finalPosition;
         dice.result = result;
         dice.state = 'settled';
         dice.timestamp = new Date().toISOString();
 
-        // Create and broadcast event
         const event: CanvasEvent = {
             id: this.generateEventId(),
             type: CanvasEventType.DICE_SETTLE,
@@ -198,14 +191,12 @@ export class CanvasStateManager {
         const dice = room.activeDice.get(diceId);
 
         if (!dice) {
-            return null; // Dice doesn't exist
+            return null;
         }
 
-        // Update dice state
         dice.state = 'highlighted';
         dice.timestamp = new Date().toISOString();
 
-        // Create and broadcast event
         const event: CanvasEvent = {
             id: this.generateEventId(),
             type: CanvasEventType.DICE_HIGHLIGHT,
@@ -234,13 +225,11 @@ export class CanvasStateManager {
         const dice = room.activeDice.get(diceId);
 
         if (!dice || dice.userId !== userId) {
-            return null; // Only owner can remove dice
+            return null;
         }
 
-        // Remove from room state
         room.activeDice.delete(diceId);
 
-        // Create and broadcast event
         const event: CanvasEvent = {
             id: this.generateEventId(),
             type: CanvasEventType.DICE_REMOVE,

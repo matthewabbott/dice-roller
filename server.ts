@@ -89,15 +89,10 @@ const sessionToColor = new Map<string, string>();
 const activities: Activity[] = [];
 const canvasEvents: CanvasEvent[] = [];
 
-// Initialize RollProcessor
 const rollProcessor = new RollProcessor();
-
-// Initialize DiceResultManager
 const diceResultManager = new DiceResultManager();
-
 const pubsub = createPubSub();
 
-// Setup CanvasStateManager subscription to broadcast events via GraphQL
 canvasStateManager.subscribe((canvasEvent) => {
     pubsub.publish('CANVAS_EVENTS_UPDATED', canvasEvent);
     console.log(`Published canvas event: ${canvasEvent.type} for dice ${canvasEvent.diceId} by user ${canvasEvent.userId}`);
@@ -195,17 +190,12 @@ function publishActivity(activity: Activity) {
     console.log(`Published activity: ${activity.type} - ${activity.message || (activity.roll ? `${activity.user} rolled dice` : 'unknown')}`);
 }
 
-// safety checking ensure data structure consistency when removing usernames
-// enforces synchronization between `activeUsernames`, `sessionToUsername`, and `usernameToSession`
-// ideally the code would have invariants that naturally enforce that relationship, but this was expedient...
 function removeUsernameSafely(username: string, sessionId: string): boolean {
-    // check that the username actually belongs to this session before removing
     const registeredSessionId = usernameToSession.get(username);
     if (registeredSessionId === sessionId) {
         activeUsernames.delete(username);
         usernameToSession.delete(username);
         sessionToUsername.delete(sessionId);
-        // intentionally don't delete sessionToColor here to preserve user's color
         console.log(`Safely removed username '${username}' for session ${sessionId}, preserving color`);
         return true;
     } else if (registeredSessionId) {
@@ -213,7 +203,6 @@ function removeUsernameSafely(username: string, sessionId: string): boolean {
         return false;
     } else {
         console.warn(`Username '${username}' not found in usernameToSession mapping.`);
-        // clean up stale entries
         activeUsernames.delete(username);
         sessionToUsername.delete(sessionId);
         return false;
@@ -230,18 +219,15 @@ const resolvers = {
             const username = context.getUsername() || 'Anonymous';
             let sanitizedUser = sanitizeUsername(username);
 
-            // Use RollProcessor to process the roll
             const processedRoll = rollProcessor.processRoll(expression);
 
-            // Create canvas events for each dice using CanvasStateManager
             const canvasEvents: CanvasEvent[] = [];
             if (processedRoll.canvasData && processedRoll.canvasData.diceRolls.length > 0) {
                 processedRoll.canvasData.diceRolls.forEach((diceRoll: any) => {
-                    // Register dice with result manager
                     diceResultManager.registerDiceRoll(
                         diceRoll.canvasId,
-                        uuidv4(), // activity ID will be set later
-                        uuidv4(), // roll ID placeholder
+                        uuidv4(),
+                        uuidv4(),
                         sanitizedUser,
                         context.sessionId,
                         diceRoll.diceType,
@@ -250,9 +236,9 @@ const resolvers = {
                         diceRoll.position
                     );
 
-                    // Use CanvasStateManager to spawn dice
                     const canvasEvent = canvasStateManager.spawnDice(
-                        'default-room', // TODO: implement proper room management
+                        // TODO: implement multi-room support
+                        'default-room',
                         sanitizedUser,
                         {
                             diceId: diceRoll.canvasId,
@@ -267,7 +253,6 @@ const resolvers = {
                 });
             }
 
-            // Create the new roll object matching the schema
             const newRoll: Roll = {
                 expression,
                 results: processedRoll.rolls,
@@ -301,7 +286,6 @@ const resolvers = {
             }
 
             // if registering as Anonymous, always allow
-            // TODO: still need to update user list to include new anonymous
             if (sanitizedUsername === 'Anonymous') {
                 context.setUsername('Anonymous');
                 publishUserListUpdate();

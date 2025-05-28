@@ -140,15 +140,12 @@ const PhysicsDice: React.FC<{ dice: DiceInstance; canvasId?: string }> = ({ dice
     const diceConfig = DICE_CONFIG[normalizedDiceType as keyof typeof DICE_CONFIG];
     const GeometryComponent = DICE_GEOMETRIES[normalizedDiceType as keyof typeof DICE_GEOMETRIES];
 
-    // Debug unknown dice types
     if (!diceConfig) {
         console.warn(`Unknown dice type: "${dice.diceType}" (normalized: "${normalizedDiceType}"). Available types:`, Object.keys(DICE_CONFIG));
     }
 
-    // Use the original dice color - highlighting is now handled by AnimatedMaterial
     const diceColor = diceConfig?.color || '#888888';
 
-    // Enhanced pointer handlers that include highlighting
     const enhancedPointerDown = useCallback((event: any) => {
         interactionHandlers.handlePointerDown(event);
         handleDiceClick(event);
@@ -314,10 +311,8 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
         }
     });
 
-    // Setup highlighting with camera jump functionality
     const { setCameraJumpCallback, setGetDicePositionCallback, getActivities, isDiceHighlighted } = useHighlighting();
 
-    // Extract virtual dice from activities
     const virtualDice: VirtualDiceData[] = React.useMemo(() => {
         const allVirtualDice: VirtualDiceData[] = [];
         const activities = getActivities();
@@ -335,7 +330,6 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
         return allVirtualDice;
     }, [getActivities]);
 
-    // Floating result numbers functionality
     const {
         overlays: resultOverlays,
         showResultOverlay,
@@ -345,7 +339,6 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
         hasVisibleOverlay
     } = useDiceResultOverlays();
 
-    // Global hotkeys for canvas camera and view controls only
     const hotkeyActions: HotkeyActions = {
         toggleCameraLock: cameraOperations.toggleCameraLock,
         toggleFullScreen: cameraOperations.toggleFullScreen,
@@ -357,20 +350,16 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
         showHints: true
     });
 
-    // Monitor highlighted dice and show/update overlays
     useEffect(() => {
         if (!isInitialized) return;
 
         const updateHighlightedDiceOverlays = () => {
-            // Helper function to get dice position
             const getDicePosition = (diceId: string): [number, number, number] | null => {
-                // Check remote dice
                 const remoteDie = remoteDice.get(diceId);
                 if (remoteDie && remoteDie.body) {
                     return [remoteDie.body.position.x, remoteDie.body.position.y, remoteDie.body.position.z];
                 }
 
-                // Check virtual dice
                 const virtualDie = virtualDice.find(die => die.canvasId === diceId);
                 if (virtualDie && virtualDie.position) {
                     return [virtualDie.position.x, virtualDie.position.y, virtualDie.position.z];
@@ -379,7 +368,6 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
                 return null;
             };
 
-            // Helper function to get roll data for highlighted dice
             const getHighlightedRollData = () => {
                 const activities = getActivities();
                 const highlightedRolls = new Map<string, { diceIds: string[], total: number, rollId: string }>();

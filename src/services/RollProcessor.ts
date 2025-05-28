@@ -223,7 +223,6 @@ export class RollProcessor {
                     break;
             }
         } else {
-            // Create individual physical dice
             const physicalDiceType = this.getPhysicalDiceType(dieType);
 
             for (let i = 0; i < numDice; i++) {
@@ -300,12 +299,10 @@ export class RollProcessor {
     private calculateComplexityScore(numDice: number, dieType: number): number {
         let score = numDice * dieType;
 
-        // Add penalty for non-standard dice
         if (!this.config.supportedDiceTypes.includes(`d${dieType}`)) {
             score += 50;
         }
 
-        // Add penalty for very large dice
         if (dieType > this.config.nonStandardDiceThreshold) {
             score += (dieType - this.config.nonStandardDiceThreshold) * 2;
         }

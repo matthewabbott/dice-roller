@@ -45,26 +45,13 @@ export class DiceManagerClass {
         const finalConfig: PhysicsConfig = { ...this.defaultConfig, ...config };
 
         try {
-            // Create the physics world
             this.world = new CANNON.World();
-
-            // Set gravity
             this.world.gravity.copy(finalConfig.gravity);
-
-            // Configure broadphase algorithm
             this.setBroadphase(finalConfig.broadphase);
-
-            // Configure solver
             this.configureSolver(finalConfig.solverIterations);
-
-            // Set sleep behavior
             this.world.allowSleep = finalConfig.allowSleep;
-
-            // Add global damping to help objects come to rest
             this.world.defaultContactMaterial.friction = 0.01;
             this.world.defaultContactMaterial.restitution = 0.3;
-
-            // Initialize materials system
             this.initializeMaterials();
 
             console.log('DiceManager: Physics world initialized successfully');
@@ -80,11 +67,9 @@ export class DiceManagerClass {
      */
     public resetWorld(config: Partial<PhysicsConfig> = {}): void {
         if (this.world) {
-            // Remove all bodies from the world
             const bodies = [...this.world.bodies];
             bodies.forEach(body => this.world!.removeBody(body));
 
-            // Clear contact materials
             this.world.contactmaterials.length = 0;
         }
 
@@ -92,7 +77,6 @@ export class DiceManagerClass {
         this.materials = null;
         this.throwRunning = false;
 
-        // Reinitialize with new config
         this.setWorld(config);
     }
 
@@ -126,7 +110,6 @@ export class DiceManagerClass {
     private configureSolver(iterations: number): void {
         if (!this.world) return;
 
-        // Set solver iterations for better accuracy
         (this.world.solver as CANNON.GSSolver).iterations = iterations;
     }
 
@@ -138,14 +121,12 @@ export class DiceManagerClass {
             throw new Error('Cannot initialize materials: physics world not set');
         }
 
-        // Create materials for different object types
         this.materials = {
             dice: new CANNON.Material('dice'),
             floor: new CANNON.Material('floor'),
             barrier: new CANNON.Material('barrier')
         };
 
-        // Configure contact materials for realistic interactions
         this.setupContactMaterials();
     }
 

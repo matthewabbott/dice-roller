@@ -20,14 +20,11 @@ export const PhysicsGround: React.FC<PhysicsGroundProps> = ({
     wallHeight = 20,
     wallThickness = 1
 }) => {
-    // Initialize physics ground and walls
     useEffect(() => {
-        // Create physics ground plane
         const groundShape = PhysicsUtils.createPlaneShape();
         const groundBody = new CANNON.Body({ mass: 0 });
         groundBody.addShape(groundShape);
         groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
-        // Position ground plane lower to ensure dice don't clip through
         groundBody.position.set(0, -1, 0);
 
         if (DiceManager.getMaterials()) {
@@ -36,7 +33,6 @@ export const PhysicsGround: React.FC<PhysicsGroundProps> = ({
 
         DiceManager.addBody(groundBody);
 
-        // Create much larger invisible walls to contain dice
         const walls = [
             // North wall
             { pos: [0, wallHeight / 2 - 1, -tableSize / 2], size: [tableSize, wallHeight, wallThickness] },
@@ -76,20 +72,17 @@ export const PhysicsGround: React.FC<PhysicsGroundProps> = ({
         };
     }, [tableSize, wallHeight, wallThickness]);
 
-    // Create a high-quality grid texture
     const gridTexture = React.useMemo(() => {
-        // Create a texture that tiles perfectly - 320x320 for 5x5 grid squares
         const canvas = document.createElement('canvas');
-        canvas.width = 320; // 5 grid squares * 64px each
+        canvas.width = 320;
         canvas.height = 320;
         const ctx = canvas.getContext('2d')!;
 
-        // Brand background color to match app theme
         ctx.fillStyle = '#1a1f2c';
         ctx.fillRect(0, 0, 320, 320);
 
-        const gridSize = 64; // Each grid square is 64px
-        const majorGridSpacing = gridSize * 5; // Major grid every 5 squares (320px)
+        const gridSize = 64;
+        const majorGridSpacing = gridSize * 5;
 
         // Keep smoothing enabled for better line quality
         ctx.imageSmoothingEnabled = true;
@@ -184,11 +177,11 @@ export const PhysicsGround: React.FC<PhysicsGroundProps> = ({
                 <planeGeometry args={[tableSize, tableSize]} />
                 <meshStandardMaterial
                     map={gridTexture}
-                    color="#ffffff" // Bright white to enhance the grid lines
+                    color="#ffffff"
                     roughness={0.7}
                     metalness={0.0}
-                    transparent={false} // Remove transparency for brighter appearance
-                    emissive="#111111" // Slight glow effect
+                    transparent={false}
+                    emissive="#111111"
                 />
             </mesh>
 
