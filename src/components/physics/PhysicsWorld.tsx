@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { DiceManager } from '../../physics';
 import * as CANNON from 'cannon-es';
@@ -29,15 +29,15 @@ export const PhysicsWorld: React.FC<PhysicsWorldProps> = ({ onInitialized, child
                     const world = DiceManager.getWorld();
                     if (world) {
                         // Set global dampening to simulate air resistance
-                        world.defaultContactMaterial.friction = 0.4; // Increase friction
-                        world.defaultContactMaterial.restitution = 0.3; // Reduce bounciness
+                        world.defaultContactMaterial.friction = 0.4;
+                        world.defaultContactMaterial.restitution = 0.3;
 
                         // Add linear and angular dampening to all bodies
-                        world.addEventListener('addBody', (event: any) => {
+                        world.addEventListener('addBody', (event: { body: CANNON.Body }) => {
                             const body = event.body;
                             if (body) {
-                                body.linearDamping = 0.1;  // Restored normal damping
-                                body.angularDamping = 0.1; // Restored normal damping
+                                body.linearDamping = 0.1;
+                                body.angularDamping = 0.1;
                             }
                         });
                     }

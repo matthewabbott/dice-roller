@@ -3,5 +3,5 @@ export { useCameraControls } from './useCameraControls';
 export type {
     CameraControlsState,
     CameraControlsOperations,
-    UseCameraControlsProps
+    CameraControlsProps
 } from './useCameraControls'; 

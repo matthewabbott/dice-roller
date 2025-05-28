@@ -30,7 +30,7 @@ export type {
 export type {
     CameraControlsState,
     CameraControlsOperations,
-    UseCameraControlsProps
+    CameraControlsProps
 } from './controls';
 
 export type {

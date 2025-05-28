@@ -1,7 +1,7 @@
 import React from 'react';
 import * as THREE from 'three';
 import { AnimatedMaterial } from './AnimatedMaterial';
-import { ThreeEvent } from '@react-three/fiber';
+import type { ThreeEvent } from '@react-three/fiber';
 
 export interface DiceGeometryProps {
     size: number;
