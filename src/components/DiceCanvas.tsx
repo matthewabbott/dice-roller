@@ -9,7 +9,7 @@ import { DiceManager, DiceD6, DiceD4, DiceD8, DiceD10, DiceD12, DiceD20 } from '
 import { DICE_GEOMETRIES } from './dice';
 import { PhysicsWorld, PhysicsGround } from './physics';
 import { RemoteDiceRenderer } from './sync';
-import { CanvasOverlay, InstructionsPanel } from './controls';
+import { CanvasOverlay } from './controls';
 import { useDiceInteraction, usePhysicsSync, useCanvasSync } from '../hooks';
 import { useHighlighting } from '../hooks/useHighlighting';
 import { useDiceResultOverlays } from '../hooks/canvas/useDiceResultOverlays';
@@ -572,12 +572,6 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
                 onResetCamera={cameraOperations.resetCamera}
                 onToggleFullScreen={cameraOperations.toggleFullScreen}
             />
-
-            {/* Instructions Panel */}
-            <InstructionsPanel
-                diceCount={remoteDice.size + virtualDice.length}
-                isFullScreen={cameraState.isFullScreen}
-            />
         </>
     );
 
@@ -590,9 +584,9 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
     }
 
     return (
-        <div className="space-y-4">
+        <div className="w-full h-full">
             {/* 3D Canvas */}
-            <div className="relative">
+            <div className="relative w-full h-full">
                 {canvasContent}
 
                 {/* Physics Loading Overlay */}
