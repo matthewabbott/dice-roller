@@ -17,12 +17,12 @@ const DiceControlsPanel: React.FC<DiceControlsPanelProps> = ({
     const [quantity, setQuantity] = useState(1);
 
     const commonDice = [
-        { type: 4, emoji: '▲', name: 'D4', color: 'bg-red-600 hover:bg-red-500' },
-        { type: 6, emoji: '⬜', name: 'D6', color: 'bg-blue-600 hover:bg-blue-500' },
-        { type: 8, emoji: '🔸', name: 'D8', color: 'bg-green-600 hover:bg-green-500' },
-        { type: 10, emoji: '🔟', name: 'D10', color: 'bg-yellow-600 hover:bg-yellow-500' },
-        { type: 12, emoji: '⬡', name: 'D12', color: 'bg-purple-600 hover:bg-purple-500' },
-        { type: 20, emoji: '🔴', name: 'D20', color: 'bg-pink-600 hover:bg-pink-500' }
+        { type: 4, emoji: '▲', name: 'D4', color: 'bg-slate-600 hover:bg-slate-500' },
+        { type: 6, emoji: '⬜', name: 'D6', color: 'bg-slate-600 hover:bg-slate-500' },
+        { type: 8, emoji: '🔸', name: 'D8', color: 'bg-slate-600 hover:bg-slate-500' },
+        { type: 10, emoji: '🔟', name: 'D10', color: 'bg-slate-600 hover:bg-slate-500' },
+        { type: 12, emoji: '⬡', name: 'D12', color: 'bg-slate-600 hover:bg-slate-500' },
+        { type: 20, emoji: '🔴', name: 'D20', color: 'bg-slate-600 hover:bg-slate-500' }
     ];
 
     const handleQuantityChange = (newQuantity: number) => {
