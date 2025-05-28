@@ -1,5 +1,11 @@
-import type { MultiRollResult } from '../dice/DiceRollingService';
 import { getSessionId } from '../../utils/sessionId';
+
+// Local type definition since DiceRollingService was removed
+export interface MultiRollResult {
+    total: number;
+    diceCount: number;
+    results: Array<{ value: number; diceType: string }>;
+}
 
 export interface LocalCanvasEvent {
     type: string;
