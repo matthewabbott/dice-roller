@@ -39,7 +39,7 @@ const DiceControlsPanel: React.FC<DiceControlsPanelProps> = ({
     // Show condensed view when peeking
     if (isPeeking) {
         return (
-            <div className="space-y-3">
+            <div>
                 {/* Quick Dice Buttons - Condensed */}
                 <div>
                     <h3 className="text-sm font-medium text-brand-text-muted mb-2">Quick Dice Rolls</h3>
@@ -55,13 +55,6 @@ const DiceControlsPanel: React.FC<DiceControlsPanelProps> = ({
                                 <span>{quantity}d{die.type}</span>
                             </button>
                         ))}
-                    </div>
-                </div>
-
-                {/* Quick Info */}
-                <div className="p-2 bg-blue-900/20 rounded border-l-2 border-blue-500">
-                    <div className="text-xs text-blue-300">
-                        <strong>Quick Rolls:</strong> Generate shared dice visible to all players
                     </div>
                 </div>
             </div>
