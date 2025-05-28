@@ -173,15 +173,12 @@ export const useDiceInteraction = ({
                     // Convert to velocity (units per second)
                     throwVelocity = positionDelta.multiplyScalar(1000 / timeSpan);
 
-                    // Reduce throwing force for more controlled behavior
+                    // Apply throwing force multiplier
                     const throwMultiplier = 1.0;
                     throwVelocity.multiplyScalar(throwMultiplier);
 
-                    // Add much less upward force to reduce the "jink" effect
-                    const horizontalSpeed = Math.sqrt(throwVelocity.x * throwVelocity.x + throwVelocity.z * throwVelocity.z);
-                    if (horizontalSpeed > 2) { // Only add upward force for faster horizontal movement
-                        throwVelocity.y += Math.min(horizontalSpeed * 0.15, 4); // Reduced from 0.3 and capped at 4
-                    }
+                    // Remove upward force - let dice follow mouse trajectory in camera plane
+                    // No artificial upward force added - pure mouse trajectory following
                 }
             }
 

@@ -217,9 +217,9 @@ export class DiceD8 extends DiceObject {
 
         // Add gentle random spawn force for dynamic entry
         const spawnForce = new CANNON.Vec3(
-            PhysicsUtils.randomBetween(-2, 2),   // Gentle horizontal forces
-            PhysicsUtils.randomBetween(0, 1.2),  // Small upward force
-            PhysicsUtils.randomBetween(-2, 2)    // Gentle horizontal forces
+            PhysicsUtils.randomBetween(-200, 200), // 100x increase from -2,2
+            PhysicsUtils.randomBetween(0, 120),    // 100x increase from 0,1.2
+            PhysicsUtils.randomBetween(-200, 200)  // 100x increase from -2,2
         );
         this.body.velocity.vadd(spawnForce, this.body.velocity);
 

@@ -102,15 +102,15 @@ const UnifiedBottomControls: React.FC<UnifiedBottomControlsProps> = ({
                         }
                     `}
                     title={expandedPanel === 'camera'
-                        ? 'Collapse Camera Controls'
+                        ? 'Collapse Canvas Controls'
                         : isPeeking && hoveredPanel === 'camera'
-                            ? 'Click to expand Camera Controls'
-                            : 'Camera Controls (hover to peek)'
+                            ? 'Click to expand Canvas Controls'
+                            : 'Canvas Controls (hover to peek)'
                     }
                 >
                     <span className="text-lg">📷</span>
                     <span className="font-medium">
-                        {isPeeking && hoveredPanel === 'camera' ? 'Camera Controls (Click to expand)' : 'Camera Controls'}
+                        {isPeeking && hoveredPanel === 'camera' ? 'Canvas Controls (Click to expand)' : 'Canvas Controls'}
                     </span>
                     <span
                         className={`transition-all duration-300 ml-auto ${expandedPanel === 'camera'

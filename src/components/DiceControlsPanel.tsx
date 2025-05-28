@@ -71,6 +71,7 @@ const DiceControlsPanel: React.FC<DiceControlsPanelProps> = ({
                     <div className="text-xs text-blue-300">
                         <strong>Shared Dice Commands:</strong> These controls generate <code>/roll</code> commands
                         that create dice visible to all players in the session. Results appear in chat and on the canvas.
+                        Shift + Click & Drag to pick up and throw dice yourself! (Purely cosmetic, does not propagate to other players)
                     </div>
                 </div>
             </div>
