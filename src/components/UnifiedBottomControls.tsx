@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import CameraControlsPanel from './CameraControlsPanel';
 import DiceControlsPanel from './DiceControlsPanel';
 
@@ -26,6 +26,8 @@ const UnifiedBottomControls: React.FC<UnifiedBottomControlsProps> = ({
 }) => {
     const [expandedPanel, setExpandedPanel] = useState<'dice' | 'camera' | null>(null);
     const [hoveredPanel, setHoveredPanel] = useState<'dice' | 'camera' | null>(null);
+    const [contentHeight, setContentHeight] = useState<number>(0);
+    const contentRef = useRef<HTMLDivElement>(null);
 
     const togglePanel = (panel: 'dice' | 'camera') => {
         setExpandedPanel(expandedPanel === panel ? null : panel);
@@ -35,6 +37,16 @@ const UnifiedBottomControls: React.FC<UnifiedBottomControlsProps> = ({
     const activePanel = expandedPanel || hoveredPanel;
     const isExpanded = expandedPanel !== null;
     const isPeeking = !isExpanded && hoveredPanel !== null;
+
+    // Measure content height for smooth transitions
+    useEffect(() => {
+        if (contentRef.current && activePanel) {
+            const height = contentRef.current.scrollHeight;
+            setContentHeight(height);
+        } else {
+            setContentHeight(0);
+        }
+    }, [activePanel, isExpanded, isPeeking]);
 
     return (
         <div className="absolute bottom-0 left-0 right-0 z-20">
@@ -115,7 +127,7 @@ const UnifiedBottomControls: React.FC<UnifiedBottomControlsProps> = ({
 
             {/* Expandable Content with improved animations */}
             <div
-                className={`
+                className="
                     overflow-hidden 
                     transition-all 
                     duration-500
@@ -124,13 +136,16 @@ const UnifiedBottomControls: React.FC<UnifiedBottomControlsProps> = ({
                     backdrop-blur-sm 
                     border-t 
                     border-white/10
-                    ${activePanel
+                "
+                style={{
+                    height: activePanel ? `${contentHeight}px` : '0px',
+                    opacity: activePanel ? (isExpanded ? 1 : 0.75) : 0,
+                    boxShadow: activePanel
                         ? isExpanded
-                            ? 'max-h-96 opacity-100 shadow-2xl'
-                            : 'max-h-32 opacity-75 shadow-lg'
-                        : 'max-h-0 opacity-0'
-                    }
-                `}
+                            ? '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                            : '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                        : 'none'
+                }}
                 onMouseEnter={() => {
                     // Keep hover state when mouse enters the content area
                     if (isPeeking) {
@@ -144,7 +159,10 @@ const UnifiedBottomControls: React.FC<UnifiedBottomControlsProps> = ({
                     }
                 }}
             >
-                <div className={`p-4 transition-all duration-300 ${isPeeking ? 'scale-95 opacity-80' : 'scale-100 opacity-100'}`}>
+                <div
+                    ref={contentRef}
+                    className={`p-4 transition-all duration-500 ease-out ${isPeeking ? 'scale-95 opacity-80' : 'scale-100 opacity-100'}`}
+                >
                     {activePanel === 'dice' && (
                         <DiceControlsPanel
                             onQuickRoll={onQuickRoll}
