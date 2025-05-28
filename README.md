@@ -1,135 +1,166 @@
 # TTRPG Dice Roller 🎲
 
-A multiplayer dice rolling application for tabletop role-playing games, built with React, TypeScript, and Three.js physics simulation.
+Multiplayer dice rolling application for tabletop role-playing games.
 
-## Features
+**🌐 Live Demo: [mbabbott.com/dice](https://mbabbott.com/dice)**
 
-### 🎲 **Realistic 3D Dice Physics**
-- **D4 (Tetrahedron)** - Four-sided dice with inverted reading (reads from bottom face) ✅
-- **D6 (Cube)** - Standard six-sided dice ✅
-- **D8 (Octahedron)** - Eight-sided dice 🚧 *Coming Soon*
-- **D10 (Pentagonal Trapezohedron)** - Ten-sided dice 🚧 *Coming Soon*
-- **D12 (Dodecahedron)** - Twelve-sided dice 🚧 *Coming Soon*
-- **D20 (Icosahedron)** - Twenty-sided dice 🚧 *Coming Soon*
+## ✨ Features
 
-### 🔧 **Physics Engine**
-- **cannon-es** physics simulation for realistic dice rolling
-- **ConvexPolyhedron** shapes for accurate collision detection
-- **Gravity-based** value determination
-- **Proper mass distribution** and damping for natural dice behavior
+### 🎲 **Dice Physics System**
+- **Dice!**: d4, d6, d8, d10, d12, d20 modeled in three.js (credit to https://github.com/byWulf/threejs-dice for the math)
+- **Physics!**: 3D physics simulation using cannon-es
+- **Sandbox**: Pick up and throw the dice after they spawn in
 
-### 🎮 **Interactive Interface**
-- **3D Canvas** with orbital controls for viewing dice
-- **Dice Selection Panel** with visual dice type picker
-- **One-click rolling** with physics simulation
-- **Roll History** tracking recent results
-- **Full-screen mode** for immersive experience
+### 🎮 **Interface**
+- **3D Canvas**: Full-screen 3D environment with orbital camera controls
+- **Hover-to-Peek Controls**: Bottom panels for dice and camera controls
+- **Highlighting System**: Click dice to highlight their roll. Or click a roll to jump to the resulting dice
 
-### 🌐 **Multiplayer Support**
-- Real-time dice rolling with GraphQL subscriptions
-- User registration and activity tracking
-- Live activity feed showing all user rolls
-- WebSocket-based real-time updates
+### 🌐 **Real-time Multiplayer**
+- **Live Collaboration**: See other players' dice rolls in real-time
+- **Chat!**: See other players' messages in the chat room.
+- **User Management**: Join as Anonymous or select a username
+- **Color Customization**: Personal color selection for user identification
 
-## Getting Started
+### 🎨 **UI/UX design**
+- **Translucent Panels**: Glass-morphism design
+- **Responsive Layout**: Resizable sidebars and adaptive interface
+- **Smooth Animations**: Polished transitions and hover effects
 
-### Prerequisites
-- Node.js (v16 or higher)
-- npm or yarn
+## 🚀 Quick Start
 
-### Installation
+### **Play Online**
+Visit **[mbabbott.com/dice](https://mbabbott.com/dice)** to start rolling immediately!
+
+### **Local Development**
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/your-username/dice-roller.git
 cd dice-roller
 
 # Install dependencies
 npm install
 
-# Start the development server
-npm run dev
-
-# Start the backend server (in another terminal)
-npm run server
+# Start development servers
+npm run dev     # Frontend (Vite dev server)
+npm run server  # Backend (GraphQL + WebSocket server)
 ```
 
-### Usage
+Open [http://localhost:5173](http://localhost:5173) to view the application.
 
-1. **Select Dice Type**: Choose from available dice types (D4, D6, etc.)
-2. **Roll Dice**: Click the "Roll" button to throw the dice with physics
-3. **View Results**: Watch the dice settle and see the result
-4. **Track History**: Check recent rolls in the history panel
-5. **Multiplayer**: Register a username to see other players' rolls
+## 🏗️ Technical Architecture
 
-## Technical Implementation
+### **Frontend Stack**
+- **React 18** + **TypeScript** for type-safe component development
+- **Three.js** + **React Three Fiber** for 3D graphics and physics
+- **Apollo Client** for GraphQL state management and real-time subscriptions
+- **Tailwind CSS** for utility-first styling
+- **Vite** for fast development and optimized builds
 
-### 🏗️ **Architecture**
-- **Frontend**: React + TypeScript + Three.js + React Three Fiber
-- **Backend**: GraphQL + WebSocket subscriptions
-- **Physics**: cannon-es physics engine
-- **Styling**: Tailwind CSS
+### **Backend Stack**
+- **GraphQL Yoga** for flexible API with subscriptions
+- **WebSocket** for real-time multiplayer communication
+- **Node.js** + **TypeScript** for server-side logic
+- **Session Management** for user tracking and state persistence
 
-### 🎲 **Dice Physics**
-Each dice type has its own implementation:
+### **Physics Engine**
+- **cannon-es** for realistic 3D physics simulation
+- **Custom Dice Classes** for each dice type with accurate geometry
+- **ConvexPolyhedron** shapes for complex dice (D4, D8, D10, D12, D20)
+
+## 🎲 Dice Implementation
+
+Each dice type features accurate 3D geometry and physics:
 
 ```typescript
-// D4 Example - Tetrahedron with inverted reading
-const d4 = new DiceD4({
-    size: 100,
-    fontColor: '#000000',
-    backColor: '#ffffff'
-});
+// Physical dice with realistic physics
+const d20 = new DiceD20({ size: 1 });
+d20.throwDice(1.0); // Natural physics throw
+const result = d20.getUpperValue(); // 1-20
 
-// Roll the dice
-d4.throwDice(1.0); // Force multiplier
-
-// Get result (reads from bottom face for D4)
-const value = d4.getUpperValue(); // 1-4
+// Virtual dice for large quantities
+const virtualRoll = rollProcessor.processRoll("1000d6");
+// Rolls a single die because my VPS isn't powerful enough. You gotta bear with me, but its result shows the BIG number
 ```
 
-### 🔧 **Key Features**
-- **Inverted Reading**: D4 dice read from the bottom face (realistic behavior)
-- **Physics Shapes**: ConvexPolyhedron for complex dice, Box for simple cubes
-- **Value Mapping**: Accurate face-to-value relationships for each dice type
-- **Error Handling**: Graceful fallbacks and validation
+### **Supported Dice Types**
+- **d4 (Tetrahedron)**: Reads from bottom face (realistic behavior)
+- **d6 (Cube)**: Standard six-sided dice
+- **d8 (Octahedron)**: Eight-sided dice
+- **d10 (Pentagonal Trapezohedron)**: Ten-sided dice
+- **d12 (Dodecahedron)**: Twelve-sided dice
+- **d20 (Icosahedron)**: Twenty-sided dice
 
-## Development Roadmap
+## 🔧 Development
 
-### ✅ **Completed**
-- ✅ Foundation Setup (Physics world, types, utilities)
-- ✅ Core Physics Engine (DiceManager, DiceObject base class)
-- ✅ D6 Implementation (Cube dice)
-- ✅ D4 Implementation (Tetrahedron dice)
-- ✅ DiceCanvas Integration (3D rendering and controls)
-- ✅ Enhanced UI (Dice selection, roll history)
+### **Project Structure**
+```
+src/
+├── components/          # React components
+│   ├── dice/           # 3D dice geometry components
+│   ├── physics/        # Physics world components
+│   └── controls/       # UI control panels
+├── hooks/              # Custom React hooks
+├── physics/            # Dice physics engine
+│   ├── dice/          # Individual dice implementations
+│   └── types/         # TypeScript type definitions
+├── services/           # Business logic services
+└── graphql/           # GraphQL schema and operations
+```
 
-### 🚧 **In Progress**
-- 🚧 D20 Implementation (Icosahedron)
-- 🚧 D8 Implementation (Octahedron)
-- 🚧 D10 & D12 Implementation
+### **Key Commands**
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run server       # Start GraphQL server
+npm run lint         # Run ESLint
+npm run preview      # Preview production build
+```
 
-### 📋 **Upcoming**
-- 📋 Advanced Features (Sound effects, animations)
-- 📋 Performance Optimization
-- 📋 Mobile Support
-- 📋 Custom Dice Themes
+### **Environment Setup**
+The application automatically detects development vs production:
+- **Development**: Uses `localhost:4000` for GraphQL endpoint
+- **Production**: Uses current domain with `/dice/graphql` endpoint
 
-## Contributing
+## 🚀 Deployment
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+The application is configured for deployment at `/dice` subpath:
 
-## License
+### **Build for Production**
+```bash
+npm run build:prod
+```
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### **Server Requirements**
+- **Node.js 16+** for the GraphQL server
+- **Static hosting** for the built frontend files
+- **WebSocket support** for real-time features
 
-## Acknowledgments
+### **Nginx Configuration**
+```nginx
+# Frontend static files
+location /dice/ {
+    alias /path/to/dice-roller/dist/;
+    try_files $uri $uri/ /dice/index.html;
+}
 
-- **threejs-dice** - Original inspiration for dice physics implementation
-- **cannon-es** - Modern physics engine
-- **Three.js** - 3D graphics library
-- **React Three Fiber** - React renderer for Three.js
+# Backend GraphQL endpoint
+location /dice/graphql {
+    proxy_pass http://localhost:4000/dice/graphql;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    proxy_cache_bypass $http_upgrade;
+}
+```
+
+## 🙏 Acknowledgments
+
+- **cannon-es** - Modern physics engine for realistic dice simulation
+- **Three.js** - Powerful 3D graphics library
+- **React Three Fiber** - Elegant React integration for Three.js
+- **GraphQL Yoga** - Flexible GraphQL server with subscription support
+- **Apollo Client** - Comprehensive GraphQL client with real-time capabilities
+- **Threejs Dice**(https://github.com/byWulf/threejs-dice) - Dice implementation for an older version of Three.js, which I adapted for Three.js v0.176.0
