@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useSubscription } from '@apollo/client';
 import { ACTIVITY_ADDED_SUBSCRIPTION, GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
 import { useHighlighting } from '../hooks/useHighlighting';
-import { CollapsibleSection } from './controls/CollapsibleSection';
 import ChatInput from './ChatInput';
 import type { ChatInputRef } from './ChatInput';
 import QuickRollModal from './QuickRollModal';
@@ -92,7 +91,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ onQuickRoll, chatInputRef }
         }
     }, [activities, autoScrollEnabled]);
 
-    const { data: usersData } = useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY, {
+    useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY, {
         onCompleted: (data) => {
             setUsers(data.activeUsers);
         }
@@ -108,7 +107,7 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ onQuickRoll, chatInputRef }
         }
     });
 
-    const { data, loading, error } = useSubscription<{ activityAdded: Activity }>(ACTIVITY_ADDED_SUBSCRIPTION, {
+    useSubscription<{ activityAdded: Activity }>(ACTIVITY_ADDED_SUBSCRIPTION, {
         onData: ({ data: subscriptionData }) => {
             const newActivity = subscriptionData?.data?.activityAdded;
             if (newActivity) {
@@ -126,8 +125,6 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ onQuickRoll, chatInputRef }
             console.error('Error in activity subscription:', err);
         }
     });
-
-    if (error) console.error('Activity subscription hook error object:', error);
 
     const formatTimestamp = (timestamp: string) => {
         const date = new Date(timestamp);
@@ -253,21 +250,12 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ onQuickRoll, chatInputRef }
         return true;
     });
 
-    const handleDieButtonClick = (dieType: number) => {
-        const command = `/roll 1d${dieType}`;
-        if (onQuickRoll) {
-            onQuickRoll(command);
-        }
-    };
-
     const handleQuickRollFromModal = (command: string) => {
         if (onQuickRoll) {
             onQuickRoll(command);
         }
         setIsQuickRollModalOpen(false);
     };
-
-    const commonDice = [4, 6, 8, 10, 12, 20];
 
     return (
         <div className="h-full flex flex-col">

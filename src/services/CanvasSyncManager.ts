@@ -188,7 +188,7 @@ export class CanvasSyncManager {
     /**
      * Handle dice throw event
      */
-    private handleDiceThrow(event: CanvasEvent, isLocal: boolean): void {
+    private handleDiceThrow(event: CanvasEvent, _isLocal: boolean): void {
         if (!this.callbacks || !event.data?.velocity) return;
 
         // Update dice data
@@ -204,7 +204,7 @@ export class CanvasSyncManager {
     /**
      * Handle dice settle event
      */
-    private handleDiceSettle(event: CanvasEvent, isLocal: boolean): void {
+    private handleDiceSettle(event: CanvasEvent, _isLocal: boolean): void {
         if (!this.callbacks || !event.data?.position || event.data.result === undefined) return;
 
         // Update dice data
@@ -221,7 +221,7 @@ export class CanvasSyncManager {
     /**
      * Handle dice highlight event
      */
-    private handleDiceHighlight(event: CanvasEvent, isLocal: boolean): void {
+    private handleDiceHighlight(event: CanvasEvent, _isLocal: boolean): void {
         if (!this.callbacks || !event.data?.highlightColor) return;
 
         this.callbacks.onDiceHighlight(event.diceId, event.data.highlightColor, event.userId);
@@ -352,7 +352,7 @@ export function useCanvasSync(callbacks: CanvasSyncCallbacks, config?: Partial<S
     }, [callbacks, config]);
 
     // Subscribe to canvas events
-    const { data, loading, error } = useSubscription<{ canvasEventsUpdated: CanvasEvent }>(
+    const { loading, error } = useSubscription<{ canvasEventsUpdated: CanvasEvent }>(
         CANVAS_EVENTS_SUBSCRIPTION,
         {
             onData: ({ data: subscriptionData }) => {

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useSubscription } from '@apollo/client';
 import { REGISTER_USERNAME_MUTATION, GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
 import ColorPicker from './ColorPicker';
-import { PRESET_COLORS } from '../constants/colors';
 import { getSessionId } from '../utils/sessionId';
 
 interface User {
@@ -32,7 +31,7 @@ const DiceRoller: React.FC<DiceRollerProps> = ({ onQuickRoll, hideQuickRollComma
     const usernameDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
     // Query active users to get current user's data (username and color)
-    const { data: usersData } = useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY, {
+    useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY, {
         onCompleted: (data) => {
             setUsers(data.activeUsers);
             const currentUser = data.activeUsers.find(user => user.sessionId === currentSessionId);

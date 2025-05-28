@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useSubscription } from '@apollo/client';
 import { GET_ACTIVE_USERS_QUERY, USER_LIST_CHANGED_SUBSCRIPTION } from '../graphql/operations';
 
@@ -12,7 +12,7 @@ interface User {
 const UserList: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
 
-    const { data: queryData, loading: queryLoading, error: queryError } = useQuery<{ activeUsers: User[] }>(
+    const { loading: queryLoading, error: queryError } = useQuery<{ activeUsers: User[] }>(
         GET_ACTIVE_USERS_QUERY,
         {
             onCompleted: (data) => {
@@ -25,7 +25,7 @@ const UserList: React.FC = () => {
         }
     );
 
-    const { data: subscriptionData, loading: subscriptionLoading, error: subscriptionError } = useSubscription<{ userListChanged: User[] }>(
+    const { loading: subscriptionLoading, error: subscriptionError } = useSubscription<{ userListChanged: User[] }>(
         USER_LIST_CHANGED_SUBSCRIPTION,
         {
             onData: ({ data: subscriptionData }) => {

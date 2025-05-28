@@ -14,7 +14,7 @@ export interface DiceResultOverlayProps {
  * Shows the dice result with a smooth animation: appear -> visible -> fade out
  */
 export const DiceResultOverlay: React.FC<DiceResultOverlayProps> = ({
-    diceId,
+    diceId: _diceId,
     result,
     position,
     isVisible,

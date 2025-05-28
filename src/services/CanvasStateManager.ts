@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import type { CanvasEvent, CanvasDiceState, CanvasRoomState, Position, Velocity } from '../types/canvas.js';
 import { CanvasEventType } from '../types/canvas.js';
 

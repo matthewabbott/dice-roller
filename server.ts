@@ -4,7 +4,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/use/ws';
-import { PRESET_COLORS } from './src/constants/colors';
 import { RollProcessor } from './src/services/RollProcessor';
 import { DiceResultManager } from './src/services/DiceResultManager';
 import { canvasStateManager } from './src/services/CanvasStateManager';
@@ -87,7 +86,6 @@ const usernameToSession = new Map<string, string>();
 const sessionToColor = new Map<string, string>();
 
 const activities: Activity[] = [];
-const canvasEvents: CanvasEvent[] = [];
 
 const rollProcessor = new RollProcessor();
 const diceResultManager = new DiceResultManager();
@@ -123,10 +121,6 @@ function sanitizeUsername(username: string): string {
 function validateColor(color: string): boolean {
     // Basic hex color validation - allows 3 or 6 character hex codes
     return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color);
-}
-
-function generateRandomColor(): string {
-    return PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];
 }
 
 function getActiveUsers(): Array<{ sessionId: string; username: string; color: string | undefined; isActive: boolean }> {
@@ -484,7 +478,7 @@ const wsServer = new WebSocketServer({
 const activeSessions = new Set<string>();
 const announcedSessions = new Set<string>(); // Track which sessions have been announced
 
-wsServer.on('connection', (socket, request) => {
+wsServer.on('connection', (socket, _request) => {
     console.log(`Raw WebSocket connection received. Total connections: ${wsServer.clients.size}`);
 
     socket.on('close', (code, reason) => {

@@ -184,7 +184,7 @@ interface User {
 const ActivePlayersSection: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
 
-    const { data: usersData } = useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY, {
+    useQuery<{ activeUsers: User[] }>(GET_ACTIVE_USERS_QUERY, {
         onCompleted: (data) => {
             setUsers(data.activeUsers);
         }

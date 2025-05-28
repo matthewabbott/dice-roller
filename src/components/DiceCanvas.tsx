@@ -4,7 +4,7 @@ import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { Html } from '@react-three/drei';
 
-import { DiceManager, DiceD6, DiceD4, DiceD8, DiceD10, DiceD12, DiceD20 } from '../physics';
+import { DiceD6, DiceD4, DiceD8, DiceD10, DiceD12, DiceD20 } from '../physics';
 
 import { DICE_GEOMETRIES } from './dice';
 import { PhysicsWorld, PhysicsGround } from './physics';
@@ -303,7 +303,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
     const [isInitialized, setIsInitialized] = useState(false);
 
     // Canvas synchronization using new sync hooks
-    const { remoteDice, syncStatus, stats } = useCanvasSync({
+    const { remoteDice } = useCanvasSync({
         isInitialized,
         onDiceSettle: (diceId: string, result: number, position: [number, number, number]) => {
             console.log(`🎲 Remote dice ${diceId} settled with result ${result}, showing overlay`);
@@ -345,7 +345,7 @@ const DiceCanvas: React.FC<DiceCanvasProps> = ({
         resetCamera: cameraOperations.resetCamera
     };
 
-    const { getHotkeyHints } = useGlobalHotkeys(hotkeyActions, {
+    useGlobalHotkeys(hotkeyActions, {
         enabled: true,
         showHints: true
     });

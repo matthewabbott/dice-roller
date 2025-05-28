@@ -348,7 +348,6 @@ export class RollProcessor {
 
         if (this.config.enableSmartClustering && numDice > this.config.maxPhysicalDicePerType) {
             // Smart clustering: multiple representative dice
-            const clusterSize = Math.ceil(numDice / this.config.maxPhysicalDicePerType);
             return {
                 strategy: 'cluster',
                 physicalDiceCount: Math.min(this.config.maxPhysicalDicePerType, numDice),
@@ -474,9 +473,6 @@ export class RollProcessor {
         if (!this.config.supportedDiceTypes.includes(`d${dieType}`)) {
             reasons.push(`Unsupported die type (d${dieType})`);
         }
-        if (complexityScore > this.config.complexityThreshold) {
-            reasons.push(`High complexity (${complexityScore})`);
-        }
 
         return {
             isVirtual: true,
@@ -487,4 +483,4 @@ export class RollProcessor {
             reasons
         };
     }
-} 
+}

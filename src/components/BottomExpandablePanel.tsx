@@ -5,7 +5,6 @@ interface BottomExpandablePanelProps {
     icon?: string;
     defaultExpanded?: boolean;
     children: React.ReactNode;
-    expandDirection?: 'up' | 'down';
     className?: string;
 }
 
@@ -19,7 +18,6 @@ const BottomExpandablePanel: React.FC<BottomExpandablePanelProps> = ({
     icon,
     defaultExpanded = false,
     children,
-    expandDirection = 'up',
     className = ''
 }) => {
     const [isExpanded, setIsExpanded] = useState(defaultExpanded);

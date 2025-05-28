@@ -11,14 +11,16 @@ export interface Velocity {
     z: number;
 }
 
-export enum CanvasEventType {
-    DICE_SPAWN = 'DICE_SPAWN',
-    DICE_THROW = 'DICE_THROW',
-    DICE_SETTLE = 'DICE_SETTLE',
-    DICE_HIGHLIGHT = 'DICE_HIGHLIGHT',
-    DICE_REMOVE = 'DICE_REMOVE',
-    CANVAS_CLEAR = 'CANVAS_CLEAR'
-}
+export const CanvasEventType = {
+    DICE_SPAWN: 'DICE_SPAWN',
+    DICE_THROW: 'DICE_THROW',
+    DICE_SETTLE: 'DICE_SETTLE',
+    DICE_HIGHLIGHT: 'DICE_HIGHLIGHT',
+    DICE_REMOVE: 'DICE_REMOVE',
+    CANVAS_CLEAR: 'CANVAS_CLEAR'
+} as const;
+
+export type CanvasEventType = typeof CanvasEventType[keyof typeof CanvasEventType];
 
 export interface CanvasEventData {
     position?: Position;
