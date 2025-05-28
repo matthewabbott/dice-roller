@@ -5,21 +5,72 @@ interface CameraControlsPanelProps {
     onToggleCameraLock: () => void;
     onResetCamera: () => void;
     onToggleFullScreen: () => void;
+    isPeeking?: boolean;
 }
 
 /**
  * CameraControlsPanel Component
  * Contains camera controls and help information for the bottom expandable panel
  * Consolidates camera lock, reset, fullscreen, and help instructions
+ * Supports both full expanded view and condensed peek view
  */
 const CameraControlsPanel: React.FC<CameraControlsPanelProps> = ({
     isCameraLocked,
     onToggleCameraLock,
     onResetCamera,
-    onToggleFullScreen
+    onToggleFullScreen,
+    isPeeking = false
 }) => {
     const [isHelpExpanded, setIsHelpExpanded] = useState(false);
 
+    // Show condensed view when peeking
+    if (isPeeking) {
+        return (
+            <div className="space-y-3">
+                {/* Quick Camera Actions - Condensed */}
+                <div>
+                    <h3 className="text-sm font-medium text-brand-text-muted mb-2">Quick Camera Controls</h3>
+                    <div className="grid grid-cols-3 gap-2">
+                        <button
+                            onClick={onToggleCameraLock}
+                            className={`${isCameraLocked
+                                ? 'bg-red-600 hover:bg-red-500'
+                                : 'bg-green-600 hover:bg-green-500'
+                                } text-white font-medium py-1.5 px-2 rounded transition-colors text-xs`}
+                            title={isCameraLocked ? "Unlock camera - Space" : "Lock camera - Space"}
+                        >
+                            {isCameraLocked ? '🔒' : '🔓'}
+                        </button>
+
+                        <button
+                            onClick={onResetCamera}
+                            className="bg-gray-600 hover:bg-gray-500 text-white font-medium py-1.5 px-2 rounded transition-colors text-xs"
+                            title="Reset camera - V"
+                        >
+                            📷
+                        </button>
+
+                        <button
+                            onClick={onToggleFullScreen}
+                            className="bg-blue-600 hover:bg-blue-500 text-white font-medium py-1.5 px-2 rounded transition-colors text-xs"
+                            title="Fullscreen - F"
+                        >
+                            ⛶
+                        </button>
+                    </div>
+                </div>
+
+                {/* Quick Hotkeys Reference */}
+                <div className="p-2 bg-blue-900/20 rounded border-l-2 border-blue-500">
+                    <div className="text-xs text-blue-300">
+                        <strong>Quick Keys:</strong> Space (lock) • V (reset) • F (fullscreen) • Esc (unfocus)
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Full expanded view
     return (
         <div className="space-y-4">
             {/* Camera Action Buttons */}
@@ -29,8 +80,8 @@ const CameraControlsPanel: React.FC<CameraControlsPanelProps> = ({
                     <button
                         onClick={onToggleCameraLock}
                         className={`${isCameraLocked
-                                ? 'bg-red-600 hover:bg-red-500 border-red-500'
-                                : 'bg-green-600 hover:bg-green-500 border-green-500'
+                            ? 'bg-red-600 hover:bg-red-500 border-red-500'
+                            : 'bg-green-600 hover:bg-green-500 border-green-500'
                             } text-white font-medium py-2 px-3 rounded border transition-colors text-sm`}
                         title={isCameraLocked ? "Unlock camera (enable rotation/pan) - Hotkey: Space" : "Lock camera (disable rotation/pan) - Hotkey: Space"}
                     >
