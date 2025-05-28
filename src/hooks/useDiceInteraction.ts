@@ -146,8 +146,9 @@ export const useDiceInteraction = ({
             const newTargetPosition = dragStart.worldPos.clone();
             newTargetPosition.add(worldMovement);
 
-            // Keep target above the table but remove restrictive bounds during dragging
-            newTargetPosition.y = Math.max(newTargetPosition.y, 0.5);
+            // Allow dice to get very close to the ground for knocking into other dice
+            // Only prevent going underground, not hovering above it
+            newTargetPosition.y = Math.max(newTargetPosition.y, 0.1); // Much lower constraint
 
             setTargetPosition(newTargetPosition);
 

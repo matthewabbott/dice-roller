@@ -32,7 +32,18 @@ export const usePhysicsSync = ({
             );
 
             // Calculate lag - dice follows target with some delay (like a heavy object)
-            const lagFactor = 0.08; // Lower = more lag/weight feel, higher = more responsive
+            // Make downward movement more responsive to reduce lag
+            const movementDirection = new THREE.Vector3();
+            movementDirection.subVectors(targetPosition, currentPos);
+
+            // Base lag factor
+            let lagFactor = 0.08;
+
+            // Increase responsiveness for downward movement to reduce lag
+            if (movementDirection.y < 0) {
+                lagFactor = Math.min(0.15, lagFactor + Math.abs(movementDirection.y) * 0.02);
+            }
+
             const newPos = currentPos.clone();
             newPos.lerp(targetPosition, lagFactor);
 
